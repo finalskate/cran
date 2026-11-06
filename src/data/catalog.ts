@@ -106,6 +106,7 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'pushup-straps',
+            videoQuery: 'TRX push up',
             name: 'Pompes aux sangles',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -146,6 +147,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pushup-archer',
+            videoQuery: 'archer push up tutorial',
             name: 'Pompes archer',
             needs: [],
             space: 'medium',
@@ -197,6 +199,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pike-pushup',
+            videoQuery: 'pike push up tutorial',
             name: 'Pike push-up',
             needs: [],
             space: 'small',
@@ -233,6 +236,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pike-pushup-elevated',
+            videoQuery: 'elevated pike push up',
             name: 'Pike pieds surélevés',
             needs: ['bench'],
             space: 'small',
@@ -254,6 +258,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'wall-hspu-partial',
+            videoQuery: 'wall handstand push up partial range',
             name: 'Appui renversé au mur, partiel',
             needs: ['wall'],
             space: 'small',
@@ -276,6 +281,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'wall-hspu',
+            videoQuery: 'wall handstand push up',
             name: 'Appui renversé au mur, complet',
             needs: ['wall'],
             space: 'small',
@@ -306,6 +312,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'dips-straps-assisted',
+            videoQuery: 'TRX dips assisted',
             name: 'Dips aux sangles assistés',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'medium',
@@ -373,6 +380,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-straps-easy',
+            videoQuery: 'TRX row beginner',
             name: 'Rowing sangles, corps peu incliné',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -388,6 +396,7 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'row-band',
+            videoQuery: 'resistance band row anchored door',
             name: 'Rowing élastique',
             needs: ['bands', ['anchor', 'pullup-bar']],
             space: 'small',
@@ -407,6 +416,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-straps-inclined',
+            videoQuery: 'TRX row',
             name: 'Rowing sangles, incliné',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -426,6 +436,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-table-bent',
+            videoQuery: 'inverted row under table bent knees',
             name: 'Rowing sous table, genoux fléchis',
             needs: ['table'],
             space: 'small',
@@ -441,6 +452,7 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'row-straps-horizontal-bent',
+            videoQuery: 'TRX inverted row bent knees',
             name: 'Rowing sangles horizontal, genoux fléchis',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -460,6 +472,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-table-straight',
+            videoQuery: 'inverted row under table',
             name: 'Rowing sous table, jambes tendues',
             needs: ['table'],
             space: 'small',
@@ -475,6 +488,7 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'row-straps-horizontal',
+            videoQuery: 'TRX inverted row',
             name: 'Rowing sangles horizontal, jambes tendues',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -494,6 +508,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-table-feet-up',
+            videoQuery: 'feet elevated inverted row table',
             name: 'Rowing sous table, pieds surélevés',
             needs: ['table', 'bench'],
             space: 'small',
@@ -509,6 +524,7 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'row-straps-feet-up',
+            videoQuery: 'TRX feet elevated row',
             name: 'Rowing sangles, pieds surélevés',
             needs: ['straps', ['anchor', 'pullup-bar'], 'bench'],
             space: 'large',
@@ -528,6 +544,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'row-straps-archer',
+            videoQuery: 'TRX archer row',
             name: 'Rowing archer aux sangles',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -556,6 +573,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'scap-pulls',
+            videoQuery: 'scapular pull ups',
             name: 'Suspension active et élévations d’omoplates',
             needs: ['pullup-bar'],
             space: 'small',
@@ -575,6 +593,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pullup-negative',
+            videoQuery: 'negative pull ups',
             name: 'Tractions négatives (5 s)',
             needs: ['pullup-bar'],
             space: 'small',
@@ -594,6 +613,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pullup-band',
+            videoQuery: 'band assisted pull up',
             name: 'Tractions assistées à l’élastique',
             needs: ['pullup-bar', 'bands'],
             space: 'small',
@@ -613,6 +633,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pullup',
+            videoQuery: 'chin up tutorial',
             name: 'Tractions',
             needs: ['pullup-bar'],
             space: 'small',
@@ -651,6 +672,7 @@ export const CATALOG: Movement[] = [
     substitutes: [
       {
         id: 'pulldown-band',
+        videoQuery: 'kneeling band lat pulldown door anchor',
         name: 'Tirage élastique ancré en haut',
         needs: ['bands', 'anchor'],
         space: 'small',
@@ -667,6 +689,7 @@ export const CATALOG: Movement[] = [
       },
       {
         id: 'pulldown-straps',
+        videoQuery: 'TRX kneeling lat pulldown',
         name: 'Tirage vertical aux sangles, à genoux',
         needs: ['straps', 'anchor'],
         space: 'small',
@@ -695,6 +718,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'box-squat',
+            videoQuery: 'box squat chair bodyweight',
             name: 'Squat sur chaise',
             needs: ['bench'],
             space: 'small',
@@ -752,6 +776,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'reverse-lunge',
+            videoQuery: 'reverse lunge tutorial',
             name: 'Fente arrière',
             needs: [],
             space: 'small',
@@ -772,6 +797,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'bulgarian-split-squat',
+            videoQuery: 'bulgarian split squat bodyweight',
             name: 'Squat bulgare',
             needs: ['bench'],
             space: 'small',
@@ -792,6 +818,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pistol-assisted',
+            videoQuery: 'TRX assisted pistol squat',
             name: 'Pistol assisté',
             needs: [['straps', 'wall']],
             space: 'small',
@@ -812,6 +839,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'pistol',
+            videoQuery: 'pistol squat tutorial',
             name: 'Pistol',
             needs: [],
             space: 'small',
@@ -859,6 +887,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'glute-bridge-single',
+            videoQuery: 'single leg glute bridge',
             name: 'Pont fessier une jambe',
             needs: [],
             space: 'small',
@@ -879,6 +908,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'hip-thrust-single',
+            videoQuery: 'single leg hip thrust couch',
             name: 'Hip thrust une jambe',
             needs: ['bench'],
             space: 'small',
@@ -899,6 +929,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'single-leg-rdl',
+            videoQuery: 'single leg romanian deadlift',
             name: 'Soulevé de terre une jambe',
             needs: ['backpack'],
             space: 'small',
@@ -919,6 +950,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'leg-curl-straps',
+            videoQuery: 'TRX hamstring curl',
             name: 'Leg curl aux sangles',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -949,6 +981,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'wall-sit',
+            videoQuery: 'wall sit',
             name: 'Chaise contre un mur (deux jambes)',
             needs: ['wall'],
             space: 'small',
@@ -976,6 +1009,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'spanish-squat',
+            videoQuery: 'spanish squat patellar tendon',
             name: 'Spanish squat',
             needs: [['straps', 'bands'], ['anchor', 'pullup-bar']],
             space: 'small',
@@ -1002,6 +1036,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'step-down',
+            videoQuery: 'eccentric step down knee',
             name: 'Descente de marche lente',
             needs: ['step'],
             space: 'small',
@@ -1029,6 +1064,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'calf-eccentric',
+            videoQuery: 'eccentric calf raise step',
             name: 'Mollets sur marche, descente lente',
             needs: ['step'],
             space: 'small',
@@ -1055,6 +1091,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'band-walk',
+            videoQuery: 'mini band lateral walk',
             name: 'Marche latérale à la mini-bande',
             needs: ['mini-bands'],
             space: 'small',
@@ -1082,6 +1119,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'side-plank-abduction',
+            videoQuery: 'side plank hip abduction',
             name: 'Gainage latéral avec abduction',
             needs: [],
             space: 'small',
@@ -1131,6 +1169,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'rkc-plank',
+            videoQuery: 'RKC plank',
             name: 'Planche RKC',
             needs: [],
             space: 'small',
@@ -1150,6 +1189,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'dead-bug',
+            videoQuery: 'dead bug exercise',
             name: 'Dead bug',
             needs: [],
             space: 'medium',
@@ -1170,6 +1210,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'hollow-hold',
+            videoQuery: 'hollow body hold',
             name: 'Hollow body',
             needs: [],
             space: 'small',
@@ -1209,6 +1250,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'copenhagen-knee',
+            videoQuery: 'copenhagen plank short lever',
             name: 'Copenhague, genou en appui',
             needs: ['bench'],
             space: 'medium',
@@ -1229,6 +1271,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'copenhagen-foot',
+            videoQuery: 'copenhagen plank long lever',
             name: 'Copenhague, pied en appui',
             needs: ['bench'],
             space: 'medium',
@@ -1249,6 +1292,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'fallout-straps',
+            videoQuery: 'TRX fallout',
             name: 'Fallout aux sangles',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -1268,6 +1312,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'body-saw-straps',
+            videoQuery: 'TRX body saw',
             name: 'Body saw aux sangles',
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
@@ -1296,6 +1341,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'band-pull-apart',
+            videoQuery: 'band pull apart',
             name: 'Pull-apart élastique',
             needs: ['bands'],
             space: 'small',
@@ -1322,6 +1368,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'band-face-pull',
+            videoQuery: 'band face pull',
             name: 'Face pull élastique',
             needs: ['bands', ['anchor', 'pullup-bar']],
             space: 'small',
@@ -1348,6 +1395,7 @@ export const CATALOG: Movement[] = [
         variants: [
           {
             id: 'ytw-floor',
+            videoQuery: 'prone Y T W raises',
             name: 'Y-T-W au sol',
             needs: [],
             space: 'medium',

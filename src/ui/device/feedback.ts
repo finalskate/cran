@@ -96,19 +96,27 @@ export async function requestNotifyPermission(): Promise<NotifyPermission> {
   }
 }
 
+/** Préfixe commun des notifications de fin de repos. */
+const NOTIFY_TAG = 'cran-rest';
+
 /**
  * Notification système via le service worker : les notifications intelligentes de la montre
- * la relaient, elle vibre au poignet (SPEC §4.12). Remplace la précédente (même `tag`).
+ * la relaient, elle vibre au poignet (SPEC §4.12).
+ *
+ * Chaque notification a un `tag` UNIQUE : la montre ne relaie que les nouvelles notifications.
+ * Remplacer la précédente (même tag) mettait à jour celle du téléphone sans faire vibrer la montre.
+ * Pour ne pas encombrer le volet, les anciennes notifications de repos sont fermées d'abord.
  */
 export async function notify(title: string, body: string): Promise<void> {
   if (notifyPermission() !== 'granted' || !('serviceWorker' in navigator)) return;
   try {
     const reg = await navigator.serviceWorker.ready;
+    const previous = await reg.getNotifications();
+    previous.filter((n) => n.tag.startsWith(NOTIFY_TAG)).forEach((n) => n.close());
     await reg.showNotification(title, {
       body,
-      tag: 'cran-rest',
-      // `renotify` : vibrer à nouveau même si une notification « cran-rest » est déjà affichée.
-      ...({ renotify: true, vibrate: [200, 100, 200] } as object),
+      tag: `${NOTIFY_TAG}-${Date.now()}`,
+      ...({ vibrate: [200, 100, 200] } as object),
       icon: `${import.meta.env.BASE_URL}pwa-192x192.png`,
       silent: false,
     });

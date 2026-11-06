@@ -97,6 +97,11 @@ export interface Variant {
   mistakes: string[];
   /** Substitut faible : proposé faute de mieux, ne fait pas progresser le niveau (ex. tirage élastique). */
   substitute?: boolean;
+  /**
+   * Termes de recherche vidéo, quand le nom français donne de mauvais résultats
+   * (par défaut : le nom + « exercice »).
+   */
+  videoQuery?: string;
 }
 
 /** Un niveau de l'échelle : une ou plusieurs variantes équivalentes, pour des matériels différents. */

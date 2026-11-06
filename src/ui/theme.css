@@ -292,11 +292,32 @@ h3 {
   color: #ffe4d6;
 }
 
+/*
+ * Zone du pouce : en bas de l'écran quand tout tient, et COLLÉE au-dessus de la barre de
+ * navigation quand le contenu déborde (petit écran, police agrandie) : le bouton principal
+ * reste toujours visible sans défiler. Ses contrôles sont opaques, le contenu passe dessous.
+ */
 .bottom-zone {
   margin-top: auto;
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom) + var(--nav-height) + 12px);
+  z-index: 5;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.screen--focus .bottom-zone {
+  bottom: calc(env(safe-area-inset-bottom) + 12px);
+}
+
+.bottom-zone .btn,
+.bottom-zone .select-chip select {
+  background: var(--surface-solid);
+}
+
+.screen--session .bottom-zone .btn {
+  background: var(--surface-session);
 }
 
 /* ─── Barre de navigation ─── */
@@ -752,6 +773,11 @@ h3 {
   height: 220px;
 }
 
+.rest__ring svg {
+  width: 100%;
+  height: 100%;
+}
+
 .rest__time {
   position: absolute;
   inset: 0;
@@ -814,4 +840,62 @@ h3 {
 
 .ladder__names {
   font-size: 14px;
+}
+
+/* ─── Écrans peu hauts (petits téléphones, police système agrandie) : tout se resserre ─── */
+@media (max-height: 760px) {
+  .screen {
+    gap: 10px;
+    padding-top: calc(env(safe-area-inset-top) + 14px);
+  }
+
+  .screen-header__title {
+    font-size: 26px;
+  }
+
+  .cta {
+    min-height: 64px;
+  }
+
+  .cta__title {
+    font-size: 19px;
+  }
+
+  .work__name {
+    font-size: 24px;
+  }
+
+  .counter__btn {
+    width: 68px;
+    height: 68px;
+  }
+
+  .counter__number {
+    font-size: 72px;
+  }
+
+  .rest__ring {
+    width: 180px;
+    height: 180px;
+  }
+
+  .rest__time {
+    font-size: 46px;
+  }
+
+  .btn--big {
+    min-height: 50px;
+  }
+}
+
+/* ─── Lien « voir une démo » ─── */
+.demo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-soft);
+  text-decoration: none;
 }

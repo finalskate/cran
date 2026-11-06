@@ -25,6 +25,7 @@ import {
   type SessionState,
   type Step,
 } from '../../domain/session';
+import { DemoLink } from '../components/DemoLink';
 import { SwapPicker } from '../components/SwapPicker';
 import { beep, notify, speak, vibrate } from '../device/feedback';
 import { useWakeLock } from '../device/wakeLock';
@@ -248,6 +249,7 @@ function WorkView({ state, step }: { state: SessionState; step: Step }) {
           {item.handSupport ? ` · ${HAND_LABEL[item.handSupport]}` : ''}
           {variant.substitute ? ' · substitut' : ''}
         </span>
+        {!item.guided && <DemoLink variant={variant} />}
       </div>
 
       <details class="card cues">

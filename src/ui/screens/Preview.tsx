@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { startSession } from '../../domain/session';
 import type { PlanItem } from '../../domain/types';
+import { DemoLink } from '../components/DemoLink';
 import { SwapPicker } from '../components/SwapPicker';
 import { requestNotifyPermission, unlockAudio } from '../device/feedback';
 import { formatTarget, HAND_LABEL } from '../format';
@@ -71,6 +72,7 @@ export function Preview() {
                     {item.handSupport ? ` · ${HAND_LABEL[item.handSupport]}` : ''}
                     {item.adapted ? ' · adapté au lieu' : ''}
                   </span>
+                  {!item.guided && <DemoLink variant={variant} />}
                 </div>
                 {!item.guided && swapping !== key && (
                   <button type="button" class="btn btn--small" onClick={() => setSwapping(key)}>
@@ -93,14 +95,11 @@ export function Preview() {
       ))}
 
       <div class="bottom-zone">
-        {prefs.value.watchReminder && (
-          <p class="muted" style={{ margin: 0, textAlign: 'center', fontSize: '14px' }}>
-            Pense à lancer l’activité « Musculation » sur ta montre.
-          </p>
-        )}
         <button class="cta" type="button" onClick={() => void start()}>
           <span class="cta__title">C’est parti</span>
-          <span class="cta__sub">L’écran restera allumé</span>
+          <span class="cta__sub">
+            {prefs.value.watchReminder ? 'Lance « Musculation » sur ta montre' : 'L’écran restera allumé'}
+          </span>
         </button>
       </div>
     </main>

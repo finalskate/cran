@@ -56,6 +56,16 @@ npm test
 
 > Le build vérifie aussi les types TypeScript : une erreur de type bloque le build, et donc le déploiement.
 
+Test de bout en bout dans un vrai Chrome, en taille téléphone. Il déroule une séance complète, reprise comprise, et
+écrit des captures dans `.e2e/`.
+
+> Il faut Google Chrome installé et un `npm run build` à jour : le test sert le dossier `dist/`.
+> Pour simuler un petit écran : `E2E_SIZE=360x640 npm run e2e`.
+
+```sh
+npm run e2e
+```
+
 Construire la version de production, puis la servir en local pour tester le service worker (adresse : http://localhost:4173/cran/) :
 
 ```sh

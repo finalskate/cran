@@ -1,0 +1,24 @@
+# Consignes pour Claude Code — projet « Cran »
+
+Le besoin complet est dans `docs/private/SPEC.md`. Lis-le avant toute chose et respecte ses principes (§2).
+`docs/private/` est une jonction vers le dossier OneDrive privé du projet : elle est ignorée par git et ne doit jamais être versionnée.
+
+## Façon de travailler
+- **Par jalons** (SPEC §5). À la fin de chaque jalon : résumé de ce qui a été fait, de ce qui reste et des choix faits, puis **attendre ma validation** avant de passer au suivant.
+- Limiter les allers-retours : poser toutes les questions bloquantes **en début de jalon**, en une seule fois.
+- **Livraison = delta** : ne présenter que les fichiers modifiés ou ajoutés, jamais tout le projet.
+- **Me corriger et proposer** : si un point de la spec est discutable ou améliorable, le dire et argumenter. Viser le meilleur (performance, UX soignée), s'inspirer de l'existant pour l'améliorer.
+
+## Code
+- Code **bien documenté et commenté** : je le relis. Commentaires et docs **en français**, identifiants en anglais.
+- Logique métier en **fonctions pures** dans `src/domain/`, couverte par **Vitest**.
+- Le catalogue d'exercices est une **donnée** éditable, pas du code.
+- Schéma IndexedDB **versionné**, chaque changement passe par une migration (`src/data/db.ts`).
+- Pas de dépendance lourde sans justification. Versions figées, publiées depuis au moins deux semaines.
+
+## Confidentialité (dépôt public)
+- **Aucune donnée personnelle** dans le code, les commentaires, les tests, les commits ou le README : mensurations, santé, famille, contexte professionnel, lieux, dates de départ. Les valeurs personnelles se saisissent dans l'appli et restent sur le téléphone.
+- Ne jamais ajouter `docs/private/` à git.
+
+## Procédures (README, déploiement, commandes)
+- Dans toute procédure pas à pas, placer les **avertissements et conseils AVANT la commande** qu'ils concernent, jamais après : j'exécute au fil de la lecture.

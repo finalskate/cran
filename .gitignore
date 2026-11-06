@@ -1,0 +1,15 @@
+# Dépendances et productions de build
+node_modules/
+dist/
+dev-dist/
+coverage/
+
+# Documents privés : jonction vers le dossier OneDrive (spec avec données personnelles).
+# Ne JAMAIS versionner : le dépôt est public.
+docs/private/
+CLAUDE.local.md
+
+# Divers
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Icône Cran : un escalier qui monte, « monter d'un cran ». Couleurs du thème Aube. -->
+  <!-- Fond uni de la couleur de l'appli : sur l'icône « maskable » d'Android, les coins arrondis
+       se fondent alors dans le fond ajouté par le générateur (pwa-assets.config.ts). -->
+  <defs>
+    <linearGradient id="trait" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#fb923c"/>
+      <stop offset="1" stop-color="#f472b6"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#120b12"/>
+  <path d="M136 376 H216 V296 H296 V216 H376 V136" fill="none" stroke="url(#trait)"
+        stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

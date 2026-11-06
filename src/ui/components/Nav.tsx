@@ -1,5 +1,5 @@
 /**
- * Barre de navigation du bas. Deux entrées au J0 ; Progrès et Assiette arrivent avec leurs jalons.
+ * Barre de navigation du bas. Progrès et Assiette arrivent avec leurs jalons.
  */
 import type { ComponentChildren } from 'preact';
 import { routeHref, type RouteName } from '../../domain/route';
@@ -17,6 +17,11 @@ const ITEMS: Item[] = [
     route: 'today',
     label: "Aujourd'hui",
     icon: <path d="M4 11l8-7 8 7v9H4z" />,
+  },
+  {
+    route: 'levels',
+    label: 'Niveaux',
+    icon: <path d="M4 20h4v-5h4v-5h4V5h4" />,
   },
   {
     route: 'settings',

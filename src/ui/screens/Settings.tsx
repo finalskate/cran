@@ -6,8 +6,17 @@ import { SCHEMA_VERSION } from '../../data/db';
 import type { FxLevel } from '../../data/settings';
 import { getStorageInfo, type StorageInfo } from '../../data/storage';
 import { offlineReady } from '../../pwa/registerSW';
+import { Toggle } from '../components/Toggle';
+import {
+  notify,
+  notifyPermission,
+  requestNotifyPermission,
+  speak,
+  unlockAudio,
+  voiceAvailable,
+} from '../device/feedback';
 import { formatBytes } from '../format';
-import { fx, persistState, refreshPersistence, setFx } from '../state';
+import { persistState, prefs, refreshPersistence, setFx, setPref } from '../state';
 
 const FX_OPTIONS: { value: FxLevel; label: string }[] = [
   { value: 'full', label: 'Complets' },
@@ -36,6 +45,23 @@ export function Settings() {
     void getStorageInfo().then(setInfo);
   }, [persistState.value]);
 
+  const p = prefs.value;
+  const [notifyState, setNotifyState] = useState(notifyPermission());
+
+  /** Activer la notification demande l'autorisation Android dans la foulée. */
+  async function toggleNotify(on: boolean) {
+    if (on) setNotifyState(await requestNotifyPermission());
+    await setPref('watchNotify', on);
+  }
+
+  /** Test réel : 5 s pour verrouiller l'écran ou poser le téléphone et sentir la montre vibrer. */
+  async function testNotify() {
+    const permission = await requestNotifyPermission();
+    setNotifyState(permission);
+    unlockAudio();
+    setTimeout(() => void notify('Repos terminé', 'Test : pompes archer, série 2 sur 3'), 5000);
+  }
+
   const persist = persistLabel(persistState.value);
 
   return (
@@ -55,7 +81,7 @@ export function Settings() {
               key={opt.value}
               class="btn"
               type="button"
-              aria-pressed={fx.value === opt.value}
+              aria-pressed={prefs.value.fx === opt.value}
               onClick={() => void setFx(opt.value)}
             >
               {opt.label}
@@ -65,6 +91,55 @@ export function Settings() {
         <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
           « Réduits » retire les halos et le flou : utile si la batterie est faible ou le téléphone lent.
         </p>
+      </section>
+
+      <section class="card" aria-labelledby="session-title">
+        <span id="session-title" class="card__label">
+          Pendant la séance
+        </span>
+        <Toggle
+          label="Règle poignet"
+          hint="Pompes sur poignées ou sur les poings, jamais main à plat"
+          checked={p.wristRule}
+          onChange={(v) => void setPref('wristRule', v)}
+        />
+        <Toggle label="Vibration en fin de repos" checked={p.vibration} onChange={(v) => void setPref('vibration', v)} />
+        <Toggle label="Bip en fin de repos" checked={p.beep} onChange={(v) => void setPref('beep', v)} />
+        <Toggle
+          label="Annonces vocales"
+          hint={voiceAvailable() ? 'Pratique au casque, téléphone posé' : 'Synthèse vocale indisponible'}
+          checked={p.voice}
+          onChange={(v) => void setPref('voice', v)}
+        />
+        {p.voice && (
+          <button type="button" class="btn btn--small" onClick={() => speak('Repos terminé. Pompes archer, série 2 sur 3.')}>
+            Tester la voix
+          </button>
+        )}
+        <Toggle
+          label="Notification en fin de repos"
+          hint="La montre la relaie et vibre au poignet"
+          checked={p.watchNotify}
+          onChange={(v) => void toggleNotify(v)}
+        />
+        {p.watchNotify && (
+          <>
+            <button type="button" class="btn btn--small" onClick={() => void testNotify()}>
+              Tester dans 5 s
+            </button>
+            {notifyState === 'denied' && (
+              <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
+                Notifications refusées : autorise-les dans les réglages Android de l’appli Cran.
+              </p>
+            )}
+          </>
+        )}
+        <Toggle
+          label="Rappel « activité montre »"
+          hint="Au démarrage : lancer « Musculation » sur la montre"
+          checked={p.watchReminder}
+          onChange={(v) => void setPref('watchReminder', v)}
+        />
       </section>
 
       <section class="card" aria-labelledby="storage-title">

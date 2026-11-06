@@ -360,3 +360,458 @@ h3 {
   flex: 1;
   font-size: 14px;
 }
+
+/* ════════════════════════ J1 : séance, niveaux, lieux ════════════════════════ */
+
+/* Écrans de séance (score genou, aperçu, séance, bilan) : pas de barre de navigation. */
+.screen--focus {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 20px);
+}
+
+/* Chiffres en Space Grotesk. Pas de `tabular-nums` : le « 1 » tabulaire de cette police porte
+   un trait d'empattement disgracieux aux grandes tailles. */
+.num {
+  font-family: var(--font-display);
+}
+
+.accent {
+  color: var(--accent-soft);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ─── Boutons supplémentaires ─── */
+.btn--big {
+  min-height: 56px;
+  font-size: 16px;
+}
+
+.btn--accent {
+  border-color: var(--accent);
+  color: #fed7aa;
+}
+
+.btn--danger {
+  border-color: rgba(252, 165, 165, 0.4);
+  color: var(--danger);
+}
+
+/* Lien présenté comme un bouton. */
+.btn--link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.btn[aria-pressed='true'],
+.btn[aria-checked='true'] {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.14);
+  color: #fed7aa;
+}
+
+.icon-btn {
+  width: var(--tap);
+  height: var(--tap);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-session);
+}
+
+.card--link {
+  color: inherit;
+  text-decoration: none;
+  border-color: rgba(251, 146, 60, 0.35);
+}
+
+.row--button {
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  text-align: left;
+}
+
+/* ─── Sélecteurs lieu / durée (natifs : grande liste plein écran sur Android) ─── */
+.select-chip select,
+.field select,
+.field input[type='text'] {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  appearance: none;
+}
+
+.field select,
+.field input[type='text'] {
+  border-radius: var(--radius-btn);
+  text-align: left;
+  font-weight: 400;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.check {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-height: 40px;
+  padding: 6px 0;
+}
+
+.check input {
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+
+.check__hint,
+.toggle__hint {
+  display: block;
+  font-size: 13px;
+}
+
+/* ─── Interrupteur ─── */
+.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 4px 0;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.toggle__text {
+  display: flex;
+  flex-direction: column;
+}
+
+.toggle__track {
+  position: relative;
+  width: 46px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.15s;
+}
+
+.toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  transition: transform 0.15s;
+}
+
+.toggle[aria-checked='true'] .toggle__track {
+  background: var(--accent);
+}
+
+.toggle[aria-checked='true'] .toggle__thumb {
+  transform: translateX(18px);
+}
+
+/* ─── Score genou ─── */
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.score {
+  min-height: 52px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.score[aria-checked='true'].score--low {
+  border: 2px solid var(--ok);
+  background: rgba(134, 239, 172, 0.14);
+}
+
+.score[aria-checked='true'].score--mid {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.16);
+}
+
+.score[aria-checked='true'].score--high {
+  border: 2px solid var(--danger);
+  background: rgba(252, 165, 165, 0.16);
+}
+
+/* ─── Aperçu de séance ─── */
+.plan-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.plan-item:first-of-type {
+  border-top: none;
+}
+
+.plan-item__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.plan-item__name {
+  font-weight: 600;
+}
+
+.plan-item__meta {
+  font-size: 13px;
+}
+
+.swap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.swap__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  text-align: left;
+}
+
+.swap__meta {
+  font-size: 13px;
+}
+
+/* ─── Séance ─── */
+.session__top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.session__progress {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.bar {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.bar__fill {
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  transition: width 0.3s;
+}
+
+.work__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.work__name {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.cues summary {
+  cursor: pointer;
+  min-height: 24px;
+  list-style: none;
+}
+
+.cues summary::-webkit-details-marker {
+  display: none;
+}
+
+.cues ul {
+  margin: 4px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.counter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px;
+}
+
+.counter__btn {
+  width: 80px;
+  height: 80px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-session);
+  font-size: 36px;
+  line-height: 1;
+}
+
+.counter__btn:active {
+  background: rgba(251, 146, 60, 0.2);
+}
+
+.counter__value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.counter__number {
+  font-size: 88px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.timed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.timed .btn {
+  min-width: 180px;
+}
+
+.rest {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding-top: 8px;
+}
+
+.rest__ring {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+
+.rest__time {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56px;
+  font-weight: 700;
+}
+
+/* ─── Échelle des niveaux ─── */
+.ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ladder__step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 12px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+}
+
+.ladder__step--done {
+  color: var(--text-muted);
+}
+
+.ladder__step[aria-pressed='true'] {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.ladder__num {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.ladder__step--done .ladder__num {
+  background: rgba(251, 146, 60, 0.25);
+  color: #fed7aa;
+}
+
+.ladder__names {
+  font-size: 14px;
+}

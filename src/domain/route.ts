@@ -7,7 +7,15 @@
  */
 
 /** Écrans connus de l'appli. S'enrichit à chaque jalon. */
-export type RouteName = 'today' | 'settings';
+export type RouteName =
+  | 'today'
+  | 'settings'
+  | 'levels'
+  | 'locations'
+  | 'knee' // score genou avant la séance
+  | 'preview' // aperçu de la séance proposée
+  | 'session' // séance en cours
+  | 'summary'; // séance terminée
 
 export interface Route {
   name: RouteName;
@@ -17,6 +25,12 @@ export interface Route {
 const PATHS: Record<string, RouteName> = {
   '': 'today',
   reglages: 'settings',
+  niveaux: 'levels',
+  lieux: 'locations',
+  genou: 'knee',
+  apercu: 'preview',
+  seance: 'session',
+  bravo: 'summary',
 };
 
 /**

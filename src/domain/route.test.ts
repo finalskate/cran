@@ -25,7 +25,7 @@ describe('parseRoute', () => {
 
 describe('routeHref', () => {
   it('construit des liens que parseRoute relit à l’identique', () => {
-    for (const name of ['today', 'settings'] as const) {
+    for (const name of ['today', 'settings', 'levels', 'locations', 'knee', 'preview', 'session', 'summary'] as const) {
       expect(parseRoute(routeHref(name)).name).toBe(name);
     }
   });

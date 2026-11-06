@@ -10,6 +10,26 @@ export function formatLongDate(date: Date): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+/** Minuteur : « 1:05 », « 0:30 ». */
+export function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** Fourchette d'une série : « 8–15 rép. », « 30–45 s », « 5–10 rép. / côté ». */
+export function formatTarget(target: { kind: 'reps' | 'time'; min: number; max: number }, perSide?: boolean): string {
+  const range = target.min === target.max ? `${target.min}` : `${target.min}–${target.max}`;
+  const unit = target.kind === 'reps' ? ' rép.' : ' s';
+  return `${range}${unit}${perSide ? ' / côté' : ''}`;
+}
+
+/** Support des mains (règle poignet). */
+export const HAND_LABEL = {
+  handles: 'Sur poignées',
+  fists: 'Sur les poings (à limiter)',
+  flat: 'Mains à plat',
+} as const;
+
 /** Taille lisible : « 1,2 Mo ». */
 export function formatBytes(bytes: number): string {
   const units = ['o', 'Ko', 'Mo', 'Go'];

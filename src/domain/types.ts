@@ -2,6 +2,7 @@
  * Types du domaine : catalogue d'exercices, lieux, plan de séance.
  * Aucune dépendance au navigateur ni à la base : ces types sont partagés par la logique pure et l'UI.
  */
+import type { SessionFeel } from './history';
 
 // ─── Matériel et lieux ───
 
@@ -148,6 +149,8 @@ export interface PlanItem {
   handSupport?: HandSupport;
   /** Exercice guidé (échauffement, retour au calme) : on suit le minuteur, rien à noter. */
   guided?: boolean;
+  /** Séries de la dernière séance avec cette variante (rappel du carnet pendant la séance). */
+  last?: number[];
 }
 
 /** Un bloc : un exercice seul, un superset (2 exercices alternés) ou un circuit. */
@@ -171,4 +174,6 @@ export interface Plan {
   blocks: PlanBlock[];
   /** Estimation en minutes. */
   estimatedMinutes: number;
+  /** Ressenti global de la séance précédente, rappelé dans l'aperçu (« la dernière fois, c'était dur »). */
+  recall?: { feel: SessionFeel; startedAt: string; locationId: string };
 }

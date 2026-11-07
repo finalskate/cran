@@ -1,10 +1,12 @@
 /**
  * Écran « Réglages ». Au J0 : effets visuels, état du stockage persistant (SPEC §3.1), version.
+ * Retouches J1 : export complet des données (sauvegarde et journal d'usage, SPEC §4.11).
  */
 import { useEffect, useState } from 'preact/hooks';
 import { SCHEMA_VERSION } from '../../data/db';
-import type { FxLevel } from '../../data/settings';
+import { getSetting, setSetting, type FxLevel } from '../../data/settings';
 import { getStorageInfo, type StorageInfo } from '../../data/storage';
+import { track } from '../../data/usage';
 import { offlineReady } from '../../pwa/registerSW';
 import { Toggle } from '../components/Toggle';
 import {
@@ -15,7 +17,8 @@ import {
   unlockAudio,
   voiceAvailable,
 } from '../device/feedback';
-import { formatBytes } from '../format';
+import { exportData } from '../device/exportFile';
+import { formatBytes, formatLongDate } from '../format';
 import { persistState, prefs, refreshPersistence, setFx, setPref } from '../state';
 
 const FX_OPTIONS: { value: FxLevel; label: string }[] = [
@@ -47,6 +50,29 @@ export function Settings() {
 
   const p = prefs.value;
   const [notifyState, setNotifyState] = useState(notifyPermission());
+  const [lastExport, setLastExport] = useState<string | undefined>(undefined);
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    void getSetting('lastExportAt').then(setLastExport);
+  }, []);
+
+  async function runExport() {
+    setExporting(true);
+    try {
+      const outcome = await exportData();
+      track('export', { outcome });
+      if (outcome !== 'cancelled') {
+        const at = new Date().toISOString();
+        await setSetting('lastExportAt', at);
+        setLastExport(at);
+      }
+    } catch (e) {
+      alert(`L’export a échoué : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setExporting(false);
+    }
+  }
 
   /** Activer la notification demande l'autorisation Android dans la foulée. */
   async function toggleNotify(on: boolean) {
@@ -167,6 +193,14 @@ export function Settings() {
             <span class="muted">{formatBytes(info.usage)}</span>
           </div>
         )}
+        <button type="button" class="btn" disabled={exporting} onClick={() => void runExport()}>
+          {exporting ? 'Préparation…' : 'Exporter mes données'}
+        </button>
+        <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
+          Tout dans un fichier : séances, niveaux, réglages et journal d’usage. Partage-le vers OneDrive pour
+          le garder à l’abri (et me le faire lire).
+          {lastExport ? ` Dernier export : ${formatLongDate(new Date(lastExport)).toLowerCase()}.` : ' Aucun export pour l’instant.'}
+        </p>
         <div class="row">
           <span>Mode avion</span>
           <span class={`status ${offlineReady.value ? 'status--ok' : 'status--warn'}`}>

@@ -49,6 +49,29 @@ export function applyUpdate(): void {
   void applyUpdateFn?.(true);
 }
 
+/** Clé de sessionStorage posée juste avant le rechargement d'une mise à jour. */
+const UPDATE_RELOAD_KEY = 'cran-update-reload';
+
+/** Marque le rechargement à venir comme « dû à une mise à jour » (diagnostic du journal d'usage). */
+export function markUpdateReload(): void {
+  try {
+    sessionStorage.setItem(UPDATE_RELOAD_KEY, String(Date.now()));
+  } catch {
+    /* stockage indisponible : diagnostic perdu, sans gravité */
+  }
+}
+
+/** Vrai si ce démarrage suit l'acceptation d'une mise à jour (et efface la marque). */
+export function consumeUpdateReload(): boolean {
+  try {
+    const marked = sessionStorage.getItem(UPDATE_RELOAD_KEY) !== null;
+    sessionStorage.removeItem(UPDATE_RELOAD_KEY);
+    return marked;
+  } catch {
+    return false;
+  }
+}
+
 /** Masque le bandeau jusqu'au prochain lancement. */
 export function postponeUpdate(): void {
   updateAvailable.value = false;

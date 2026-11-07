@@ -1,14 +1,38 @@
 /**
  * Niveaux par mouvement, visualisés en échelle (SPEC §4.10) ; choix manuel au J1,
- * en attendant le test de placement (J2). Toucher un niveau le sélectionne.
+ * en attendant le test de placement (J2).
+ *
+ * Toucher un niveau ouvre sa FICHE (consignes, vidéo, bientôt l'animation) : on peut regarder
+ * n'importe quel exercice sans rien changer. Le niveau ne change qu'avec « Choisir ce niveau ».
+ *
+ * L'échelle se lit sans la couleur : ✓ = niveau acquis, badge « Ton niveau » = niveau actuel,
+ * numéro gris = niveaux à venir.
  */
+import { useState } from 'preact/hooks';
 import { CATALOG } from '../../data/catalog';
+import { track } from '../../data/usage';
+import type { Movement } from '../../domain/types';
+import { ExerciseSheet } from '../components/ExerciseSheet';
 import { chooseLevel, levels, prefs } from '../state';
 
 /** Mouvements à échelle (les exercices tournants de prévention n'ont qu'un niveau). */
 const LADDERS = CATALOG.filter((m) => m.levels.length > 1);
 
 export function Levels() {
+  // Fiche ouverte : mouvement et index du niveau.
+  const [open, setOpen] = useState<{ movement: Movement; level: number } | null>(null);
+
+  async function choose(m: Movement, i: number) {
+    const heavy = m.levels[i]!.variants.some((v) => v.wristHeavy);
+    if (heavy && prefs.value.wristRule) {
+      const ok = confirm('Ce niveau charge beaucoup le poignet. À choisir seulement si ton poignet est indolore. Continuer ?');
+      if (!ok) return;
+    }
+    track('level', { movementId: m.id, from: levels.value[m.id] ?? 0, to: i });
+    await chooseLevel(m.id, i);
+    setOpen(null);
+  }
+
   return (
     <main class="screen screen--calm">
       <header class="screen-header">
@@ -17,8 +41,8 @@ export function Levels() {
       </header>
 
       <p class="muted" style={{ margin: 0 }}>
-        Choisis le niveau où tu fais confortablement le bas de la fourchette. Selon le lieu, l’appli
-        propose la variante équivalente.
+        Touche un exercice pour voir sa fiche. Choisis le niveau où tu fais confortablement le bas de la
+        fourchette ; selon le lieu, l’appli propose la variante équivalente.
       </p>
 
       {LADDERS.map((m) => {
@@ -41,27 +65,30 @@ export function Levels() {
             <ol class="ladder">
               {m.levels.map((level, i) => {
                 const heavy = level.variants.some((v) => v.wristHeavy);
+                const state = i < current ? 'done' : i === current ? 'current' : 'next';
                 return (
                   <li key={i}>
                     <button
                       type="button"
-                      class={`ladder__step ${i < current ? 'ladder__step--done' : ''}`}
-                      aria-pressed={i === current}
-                      onClick={() => {
-                        if (heavy && prefs.value.wristRule && i !== current) {
-                          const ok = confirm(
-                            'Ce niveau charge beaucoup le poignet. À choisir seulement si ton poignet est indolore. Continuer ?',
-                          );
-                          if (!ok) return;
-                        }
-                        void chooseLevel(m.id, i);
-                      }}
+                      class={`ladder__step ladder__step--${state}`}
+                      aria-current={state === 'current' ? 'step' : undefined}
+                      onClick={() => setOpen({ movement: m, level: i })}
                     >
-                      <span class="ladder__num num">{i + 1}</span>
+                      <span class="ladder__num num" aria-hidden={state === 'done' ? 'true' : undefined}>
+                        {state === 'done' ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12l5 5 9-10" />
+                          </svg>
+                        ) : (
+                          i + 1
+                        )}
+                      </span>
                       <span class="ladder__names">
+                        {state === 'done' && <span class="visually-hidden">Acquis : </span>}
                         {level.variants.map((v) => v.name).join(' · ')}
                         {heavy ? ' ⚠ poignet' : ''}
                       </span>
+                      {state === 'current' && <span class="ladder__badge">Ton niveau</span>}
                     </button>
                   </li>
                 );
@@ -70,6 +97,27 @@ export function Levels() {
           </section>
         );
       })}
+
+      {open && (
+        <ExerciseSheet
+          open
+          from="levels"
+          onClose={() => setOpen(null)}
+          variants={open.movement.levels[open.level]!.variants}
+          kicker={`${open.movement.name} · niveau ${open.level + 1} / ${open.movement.levels.length}`}
+          footer={
+            (levels.value[open.movement.id] ?? 0) === open.level ? (
+              <p class="muted" style={{ margin: 0, textAlign: 'center' }}>
+                C’est ton niveau actuel.
+              </p>
+            ) : (
+              <button type="button" class="cta" onClick={() => void choose(open.movement, open.level)}>
+                <span class="cta__title">Choisir ce niveau</span>
+              </button>
+            )
+          }
+        />
+      )}
     </main>
   );
 }

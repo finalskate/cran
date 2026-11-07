@@ -1,15 +1,23 @@
 /**
- * Bilan de la séance terminée : durée et séries faites, dans l'esprit du carnet (SPEC §4.5).
+ * Bilan de la séance terminée : durée et séries faites, dans l'esprit du carnet (SPEC §4.5),
+ * puis le ressenti global de la séance, facultatif (« trop facile / bien dosée / trop dure »).
+ * Ce ressenti est rappelé dans l'aperçu de la séance suivante ; il pourra moduler le volume au J2.
  * Les records et les déblocages de niveau arrivent avec la progression (J2).
  */
-import { useEffect } from 'preact/hooks';
-import { formatClock } from '../format';
+import { useEffect, useState } from 'preact/hooks';
+import { setWorkoutFeel } from '../../data/repo';
+import { track } from '../../data/usage';
+import type { SessionFeel } from '../../domain/history';
+import { formatClock, SESSION_FEEL_LABEL } from '../format';
 import { movementById } from '../planner';
 import { go } from '../router';
 import { lastRecord } from '../summary';
 
+const FEELS = Object.entries(SESSION_FEEL_LABEL) as [SessionFeel, string][];
+
 export function Summary() {
   const last = lastRecord.value;
+  const [feel, setFeel] = useState<SessionFeel | undefined>(last?.record.sessionFeel);
 
   useEffect(() => {
     if (!last) go('today', true);
@@ -19,6 +27,12 @@ export function Summary() {
   const { record } = last;
   const seconds = (new Date(record.endedAt).getTime() - new Date(record.startedAt).getTime()) / 1000;
   const totalSets = record.entries.reduce((n, e) => n + e.sets.length, 0);
+
+  function pick(f: SessionFeel) {
+    setFeel(f);
+    track('session-feel', { feel: f });
+    if (record.id !== undefined) void setWorkoutFeel(record.id, f);
+  }
 
   return (
     <main class="screen screen--calm screen--focus">
@@ -56,6 +70,29 @@ export function Summary() {
           );
         })}
         {record.entries.length === 0 && <p class="muted">Aucune série notée.</p>}
+      </section>
+
+      <section class="card" aria-labelledby="feel-title">
+        <div class="row" style={{ minHeight: 0 }}>
+          <span id="feel-title" class="card__label">
+            La séance, globalement
+          </span>
+          <span class="muted" style={{ fontSize: '13px' }}>
+            facultatif
+          </span>
+        </div>
+        <div class="segmented" role="radiogroup" aria-labelledby="feel-title">
+          {FEELS.map(([value, label]) => (
+            <button key={value} type="button" class="btn" role="radio" aria-checked={feel === value} onClick={() => pick(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {feel && (
+          <span class="muted" style={{ fontSize: '14px' }}>
+            Noté : je te le rappellerai avant la prochaine séance.
+          </span>
+        )}
       </section>
 
       <div class="bottom-zone">

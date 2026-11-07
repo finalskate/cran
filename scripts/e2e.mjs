@@ -1,8 +1,9 @@
 /**
  * Test de bout en bout (fumée) dans un vrai Chrome, en taille téléphone.
  *
- * Parcours : niveaux → accueil (Parc, 20 min) → score genou 3 → aperçu (un remplacement)
- * → séance complète, avec « fermeture » de l'appli et reprise en cours de route → bilan.
+ * Parcours : niveaux (fiche, choix) → accueil (Parc, 20 min) → score genou 3 → aperçu (fiche,
+ * un remplacement) → séance complète (menu « ⋯ », chrono d'exercice), avec « fermeture » de
+ * l'appli et reprise en cours de route → bilan (ressenti) → export depuis Réglages.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -53,13 +54,18 @@ try {
   await shot('01-accueil-vierge');
 
   // Niveaux : pompes au niveau 6 (archer), tirer vertical au niveau 4 (tractions).
+  // Toucher un niveau ouvre sa fiche ; « Choisir ce niveau » le sélectionne.
   await page.goto(`${BASE}#/niveaux`);
   await wait(300);
-  await page.evaluate(() => {
-    const steps = (id) => document.getElementById(id).closest('section').querySelectorAll('.ladder__step');
-    steps('lvl-push-h')[5].click();
-    steps('lvl-pull-v')[3].click();
-  });
+  const openStep = (id, i) =>
+    page.evaluate((id, i) => document.getElementById(id).closest('section').querySelectorAll('.ladder__step')[i].click(), id, i);
+  await openStep('lvl-push-h', 5);
+  await wait(300);
+  await shot('02a-fiche-niveau');
+  await click('Choisir ce niveau');
+  await openStep('lvl-pull-v', 3);
+  await wait(200);
+  await click('Choisir ce niveau');
   await wait(300);
   await shot('02-niveaux');
 
@@ -80,6 +86,13 @@ try {
   await page.waitForFunction(() => document.body.innerText.includes('Ta séance'));
   await wait(200);
   await shot('05-apercu', true);
+
+  // Fiche d'un exercice depuis l'aperçu, puis fermeture.
+  await page.evaluate(() => document.querySelectorAll('.plan-item__fiche')[2].click());
+  await wait(300);
+  await shot('05b-fiche-apercu');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
 
   // Remplacement du 3e exercice (pompes) par la première option proposée.
   await page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.innerText.includes('Remplacer'))[2].click());
@@ -111,10 +124,38 @@ try {
     if (t.includes('Passer le repos')) {
       if (!seen.has('rest')) (seen.add('rest'), await shot('08-repos'));
       await click('Passer le repos');
+    } else if (t.includes('Démarrer le chrono')) {
+      // Exercice en durée : la première fois, chrono complet (mise en place, effort, arrêt) ;
+      // ensuite « Noter sans chrono » pour aller vite.
+      if (!seen.has('timed')) {
+        seen.add('timed');
+        await shot('10a-chrono-pret');
+        await click('Démarrer le chrono');
+        await wait(2000);
+        await shot('10b-chrono-mise-en-place');
+        await wait(5000);
+        await shot('10c-chrono-effort');
+        await click('J’arrête');
+        await shot('10d-chrono-tenu');
+      } else {
+        await click('Noter sans chrono');
+      }
+      await click('Valider la série');
     } else if (t.includes('Valider la série')) {
-      const timed = t.includes('Lancer le minuteur');
-      if (timed && !seen.has('timed')) (seen.add('timed'), await shot('10-serie-duree'));
-      if (!timed && !seen.has('work')) (seen.add('work'), await shot('07-serie'));
+      if (!seen.has('work')) {
+        seen.add('work');
+        await shot('07-serie');
+        // Menu « ⋯ » : capture, puis fermeture.
+        await page.click('[aria-label^="Plus d"]');
+        await wait(300);
+        await shot('07b-menu');
+        await page.click('dialog[open] [aria-label="Fermer"]');
+        await wait(200);
+      } else if (!seen.has('work2')) {
+        // Deuxième série : les cases montrent la série faite.
+        seen.add('work2');
+        await shot('07c-serie-suivante');
+      }
       await click('Valider la série');
     } else if (t.includes('Suivant')) {
       await click('Suivant');
@@ -126,7 +167,26 @@ try {
   }
 
   await page.waitForFunction(() => document.body.innerText.includes('Bien joué'), { timeout: 5000 });
+  await click('Bien dosée');
   await shot('12-bilan', true);
+  await click('Terminer');
+
+  // Export : sans partage de fichiers (navigateur de test), l'appli se rabat sur le téléchargement.
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { value: undefined }));
+  await click('Exporter mes données');
+  await page.waitForFunction(() => document.body.innerText.includes('Dernier export'), { timeout: 5000 });
+  await shot('13-reglages-export', true);
+
+  // Nouvelle séance : l'aperçu rappelle le ressenti de la précédente.
+  await page.goto(BASE);
+  await wait(300);
+  await click('Démarrer la séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
+  await click('Voir la séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Séance jugée'), { timeout: 5000 });
+  await shot('14-apercu-rappel');
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } finally {
   await browser.close();

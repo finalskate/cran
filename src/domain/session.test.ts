@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   adjustRest,
+  blockProgress,
   buildSteps,
   completeStep,
   currentStep,
@@ -8,6 +9,7 @@ import {
   previousResults,
   progress,
   restRemaining,
+  setsOfItem,
   skipBlock,
   startSession,
   toRecord,
@@ -112,5 +114,27 @@ describe('déroulé', () => {
     const restored = JSON.parse(JSON.stringify(s));
     expect(restored).toEqual(s);
     expect(restRemaining(restored, T0 + 1_000)).toBe(19);
+  });
+});
+
+describe('avancement par bloc et cases de séries', () => {
+  it('remplit la barre bloc par bloc', () => {
+    let s = startSession(PLAN, T0);
+    expect(blockProgress(s)).toEqual([{ done: 0, total: 1 }, { done: 0, total: 4 }]);
+    s = endRest(completeStep(s, null, T0)); // échauffement fait
+    s = completeStep(s, { value: 8, feel: 'ok' }, T0); // A1 validée, repos en cours
+    expect(blockProgress(s)).toEqual([{ done: 1, total: 1 }, { done: 1, total: 4 }]);
+  });
+
+  it('donne l’état de chaque série de l’exercice en cours', () => {
+    let s = startSession(PLAN, T0);
+    s = endRest(completeStep(s, null, T0)); // échauffement
+    s = endRest(completeStep(s, { value: 8 }, T0)); // A1
+    s = endRest(completeStep(s, null, T0)); // B1 sautée
+    // On est sur A2 : A1 faite, A2 à faire.
+    expect(setsOfItem(s, currentStep(s)!)).toEqual([{ value: 8 }, undefined]);
+    s = completeStep(s, { value: 9 }, T0); // A2, repos
+    s = endRest(s); // B2
+    expect(setsOfItem(s, currentStep(s)!)).toEqual([null, undefined]);
   });
 });

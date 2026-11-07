@@ -2,7 +2,7 @@
  * Accès aux données de l'appli (lieux, niveaux, genou, historique, séance en cours).
  * Fines fonctions au-dessus de Dexie : l'UI ne manipule jamais les tables directement.
  */
-import type { WorkoutRecord } from '../domain/history';
+import type { SessionFeel, WorkoutRecord } from '../domain/history';
 import type { SessionState } from '../domain/session';
 import type { Location } from '../domain/types';
 import { db, type KneeLogRow } from './db';
@@ -64,10 +64,19 @@ export async function clearActiveSession(): Promise<void> {
   await db.activeSession.delete('current');
 }
 
-/** Enregistre la séance terminée et efface la séance en cours, en une seule transaction. */
-export async function finishWorkout(record: WorkoutRecord): Promise<void> {
-  await db.transaction('rw', db.workouts, db.activeSession, async () => {
-    await db.workouts.add(record);
+/**
+ * Enregistre la séance terminée et efface la séance en cours, en une seule transaction.
+ * Renvoie l'identifiant de la séance (pour y ajouter ensuite le ressenti global).
+ */
+export async function finishWorkout(record: WorkoutRecord): Promise<number> {
+  return db.transaction('rw', db.workouts, db.activeSession, async () => {
+    const id = await db.workouts.add(record);
     await db.activeSession.delete('current');
+    return id;
   });
+}
+
+/** Ajoute (ou change) le ressenti global d'une séance déjà enregistrée. */
+export async function setWorkoutFeel(id: number, feel: SessionFeel): Promise<void> {
+  await db.workouts.update(id, { sessionFeel: feel });
 }

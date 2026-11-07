@@ -13,6 +13,7 @@
  * Historique :
  *  - v1 (J0) : settings.
  *  - v2 (J1) : locations, levels, kneeLogs, workouts, activeSession ; lieux par défaut créés.
+ *  - v3 (retouches J1) : events (journal d'usage local, cf. src/data/usage.ts).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
@@ -24,7 +25,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -48,6 +49,18 @@ export interface KneeLogRow {
   context: 'session' | 'run' | 'morning';
 }
 
+/**
+ * Événement du journal d'usage : ce qui se passe dans l'appli (écran vu, série validée, repos…).
+ * Reste sur le téléphone ; n'en sort que dans un export choisi par l'utilisateur.
+ */
+export interface EventRow {
+  id?: number;
+  /** Horodatage (ms depuis l'époque). */
+  at: number;
+  type: string;
+  data?: Record<string, unknown>;
+}
+
 /** Séance en cours (une seule ligne, clé « current »). */
 export interface ActiveSessionRow {
   key: 'current';
@@ -61,6 +74,7 @@ export class CranDB extends Dexie {
   kneeLogs!: Table<KneeLogRow, number>;
   workouts!: Table<WorkoutRecord, number>;
   activeSession!: Table<ActiveSessionRow, string>;
+  events!: Table<EventRow, number>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -82,6 +96,11 @@ export class CranDB extends Dexie {
       })
       // Base existante en v1 : on ajoute les lieux par défaut (les réglages sont conservés).
       .upgrade((tx) => seedLocations(tx));
+
+    // v3 — journal d'usage. Nouvelle table vide : rien à transformer.
+    this.version(3).stores({
+      events: '++id, at',
+    });
 
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.
     this.on('populate', (tx) => seedLocations(tx));

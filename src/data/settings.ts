@@ -26,6 +26,8 @@ export interface SettingsMap {
   watchNotify: boolean;
   /** Rappel « lance l'activité Musculation sur la montre » au démarrage. */
   watchReminder: boolean;
+  /** Date ISO du dernier export (pour le rappel hebdomadaire du J6). */
+  lastExportAt: string;
 }
 
 export type SettingKey = keyof SettingsMap;

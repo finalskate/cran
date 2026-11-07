@@ -6,7 +6,7 @@ import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
 import { listWorkouts } from '../data/repo';
 import { alternatives, handSupport, resolveVariant, type Context, type Resolved } from '../domain/availability';
 import { buildPlan } from '../domain/engine';
-import { lastBestByVariant, lastDoneByMovement } from '../domain/history';
+import { lastBestByVariant, lastDoneByMovement, lastSessionFeel, lastSetsByVariant } from '../domain/history';
 import type { Duration, Location, Movement, Plan, PlanItem } from '../domain/types';
 import { levels, prefs } from './state';
 
@@ -29,9 +29,22 @@ export function contextFor(location: Location, kneeScore: number): Context {
   return { location, kneeScore, wristRule: prefs.value.wristRule };
 }
 
+/**
+ * Séries de la dernière séance, par variante. Gardées depuis le dernier plan construit pour
+ * qu'un exercice remplacé (aperçu ou séance) ait lui aussi son rappel du carnet.
+ */
+let lastSets: Record<string, number[]> = {};
+
+/** Ajoute à un élément de plan le rappel de sa dernière séance, s'il y en a une. */
+function withLast(item: PlanItem): PlanItem {
+  const last = lastSets[item.variantId];
+  return last && !item.guided ? { ...item, last } : item;
+}
+
 export async function makePlan(location: Location, duration: Duration, kneeScore: number): Promise<Plan> {
   const workouts = await listWorkouts();
-  return buildPlan({
+  lastSets = lastSetsByVariant(workouts);
+  const plan = buildPlan({
     catalog: CATALOG,
     warmup: WARMUP,
     cooldown: COOLDOWN,
@@ -42,6 +55,12 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
     lastBest: lastBestByVariant(workouts),
     now: new Date(),
   });
+  const recall = lastSessionFeel(workouts);
+  return {
+    ...plan,
+    blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map(withLast) })),
+    ...(recall ? { recall } : {}),
+  };
 }
 
 /** Une option de remplacement : variante d'un mouvement, prête à devenir un élément de plan. */
@@ -75,7 +94,7 @@ export function swapOptions(item: PlanItem, plan: Plan, ctx: Context): SwapOptio
 export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): PlanItem {
   const { variant, level, adapted } = option.resolved;
   const support = handSupport(variant, ctx);
-  return {
+  return withLast({
     movementId: option.movement.id,
     variantId: variant.id,
     level,
@@ -85,5 +104,5 @@ export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): 
     prefill: variant.target.min,
     ...(variant.perSide ? { perSide: true } : {}),
     ...(support ? { handSupport: support } : {}),
-  };
+  });
 }

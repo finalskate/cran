@@ -33,7 +33,7 @@ describe('CranDB', () => {
     const database = freshDb();
     await database.open();
     expect(database.tables.map((t) => t.name).sort()).toEqual(
-      ['activeSession', 'kneeLogs', 'levels', 'locations', 'settings', 'workouts'].sort(),
+      ['activeSession', 'events', 'kneeLogs', 'levels', 'locations', 'settings', 'workouts'].sort(),
     );
   });
 
@@ -57,9 +57,37 @@ describe('migration v1 → v2', () => {
     const v2 = new CranDB(name);
     opened.push(v2);
     await v2.open();
-    expect(v2.verno).toBe(2);
+    expect(v2.verno).toBe(SCHEMA_VERSION);
     expect(await getSetting('fx', v2)).toBe('reduced');
     expect(await v2.locations.count()).toBe(DEFAULT_LOCATIONS.length);
+  });
+});
+
+describe('migration v2 → v3', () => {
+  it('conserve l’historique et ajoute le journal d’usage', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée au J1 (schéma v2).
+    const v2 = new Dexie(name);
+    v2.version(1).stores({ settings: '&key' });
+    v2.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    await v2.table('workouts').add({ startedAt: '2026-11-07T18:00:00Z', entries: [] });
+    await v2.table('levels').put({ movementId: 'push-h', level: 5, updatedAt: '2026-11-07T18:00:00Z' });
+    v2.close();
+
+    const v3 = new CranDB(name);
+    opened.push(v3);
+    await v3.open();
+    expect(v3.verno).toBe(3);
+    expect(await v3.workouts.count()).toBe(1);
+    expect((await v3.levels.get('push-h'))?.level).toBe(5);
+    expect(await v3.events.count()).toBe(0);
   });
 });
 

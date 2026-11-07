@@ -150,6 +150,35 @@ export function progress(state: SessionState): { done: number; total: number } {
 }
 
 /**
+ * Avancement par bloc, pour la barre segmentée en tête de séance : une part par bloc,
+ * remplie selon les séries terminées du bloc.
+ */
+export function blockProgress(state: SessionState): { done: number; total: number }[] {
+  const { done } = progress(state);
+  return state.plan.blocks.map((_, b) => {
+    let total = 0;
+    let finished = 0;
+    state.steps.forEach((s, k) => {
+      if (s.block !== b) return;
+      total++;
+      if (k < done) finished++;
+    });
+    return { done: finished, total };
+  });
+}
+
+/**
+ * État de chaque série de l'exercice d'une étape (cases « ✓ 9 · en cours · à venir ») :
+ * valeur saisie, `null` si elle a été sautée, `undefined` si elle reste à faire.
+ */
+export function setsOfItem(state: SessionState, step: Step): (SetResult | null | undefined)[] {
+  return state.steps
+    .map((s, k) => ({ s, k }))
+    .filter(({ s }) => s.block === step.block && s.item === step.item)
+    .map(({ k }) => (k < state.index ? state.results[k] : undefined));
+}
+
+/**
  * Résultats déjà saisis pour l'exercice d'une étape (pour afficher « Série 1 : 8 · OK »).
  * Les séries sont attribuées à la variante en cours au moment de la saisie.
  */

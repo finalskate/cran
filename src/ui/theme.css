@@ -72,6 +72,27 @@ body {
   overscroll-behavior-y: none;
 }
 
+/*
+ * Hauteur de l'écran : chaîne html → body → #app → .screen en hauteurs relatives, plutôt que
+ * `100dvh` sur l'écran. Après le rechargement d'une mise à jour, Chrome Android calculait parfois
+ * un `100dvh` trop grand (défilement parasite sur l'accueil, disparu au changement d'écran).
+ * La hauteur de <html> suit toujours la fenêtre réelle.
+ */
+html {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+#app {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
 button {
   font: inherit;
   color: inherit;
@@ -98,7 +119,8 @@ h3 {
 /* ─── Écrans ─── */
 .screen {
   position: relative;
-  min-height: 100dvh;
+  /* Occupe toute la hauteur de #app (voir plus haut), sans unité de fenêtre. */
+  flex: 1 0 auto;
   /* Marges système de l'appli installée (encoche, barre de gestes). */
   padding: calc(env(safe-area-inset-top) + 20px) var(--gutter)
     calc(env(safe-area-inset-bottom) + var(--nav-height) + 20px);
@@ -689,9 +711,10 @@ h3 {
 }
 
 .work__name {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
-  line-height: 1.15;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
 }
 
 .cues summary {
@@ -811,13 +834,25 @@ h3 {
   text-align: left;
 }
 
-.ladder__step--done {
+/* Trois états lisibles sans la couleur : ✓ (acquis), badge « Ton niveau » (actuel), numéro gris (à venir). */
+.ladder__step--current {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.ladder__step--next {
   color: var(--text-muted);
 }
 
-.ladder__step[aria-pressed='true'] {
-  border: 2px solid var(--accent);
-  background: rgba(251, 146, 60, 0.14);
+.ladder__badge {
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #1a0d05;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .ladder__num {
@@ -834,8 +869,19 @@ h3 {
 }
 
 .ladder__step--done .ladder__num {
-  background: rgba(251, 146, 60, 0.25);
-  color: #fed7aa;
+  background: rgba(134, 239, 172, 0.16);
+  color: var(--ok);
+}
+
+.ladder__step--current .ladder__num {
+  background: var(--accent);
+  color: #1a0d05;
+}
+
+.ladder__step--next .ladder__num {
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
 }
 
 .ladder__names {
@@ -898,4 +944,373 @@ h3 {
   font-weight: 600;
   color: var(--accent-soft);
   text-decoration: none;
+}
+
+/* ════════════════════════ Retouches J1 : fiche, écran exercice ════════════════════════ */
+
+/* ─── Panneau du bas (fiche d'exercice, menu de séance) ─── */
+.sheet {
+  /* Le <dialog> natif est centré : on le colle en bas, pleine largeur, comme un panneau Android. */
+  margin: auto 0 0;
+  width: 100%;
+  max-width: 100%;
+  max-height: 88dvh;
+  padding: 0;
+  border: none;
+  border-radius: 24px 24px 0 0;
+  background: var(--surface-solid);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.sheet::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.sheet__body {
+  display: flex;
+  flex-direction: column;
+  max-height: 88dvh;
+  padding: 18px var(--gutter) calc(env(safe-area-inset-bottom) + 16px);
+  gap: 14px;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.sheet__titles {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sheet__title {
+  font-size: 22px;
+  line-height: 1.2;
+  outline: none;
+}
+
+.sheet__content {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sheet__footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fiche {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fiche + .fiche {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.fiche__name {
+  font-size: 17px;
+}
+
+.fiche__meta {
+  font-size: 14px;
+}
+
+.fiche__list {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Menu « ⋯ » de la séance. */
+.menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu .btn {
+  text-align: left;
+}
+
+/* ─── Aperçu : nom d'exercice cliquable (ouvre la fiche), rappel du ressenti ─── */
+.plan-item__fiche {
+  align-self: flex-start;
+  padding: 2px 0;
+  border: none;
+  background: none;
+  text-align: left;
+  text-decoration: underline dotted var(--text-muted);
+  text-underline-offset: 4px;
+}
+
+.recall {
+  border-color: rgba(244, 114, 182, 0.35);
+}
+
+/* ─── Séance : barre d'avancement par bloc ─── */
+.segbar {
+  display: grid;
+  gap: 4px;
+}
+
+.segbar__seg {
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.segbar__fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 0.3s;
+}
+
+.icon-btn--round {
+  border-radius: 999px;
+}
+
+/* Réserve la place du bouton « ⋯ » pendant le repos : la barre ne saute pas. */
+.icon-btn--spacer {
+  width: var(--tap);
+  flex-shrink: 0;
+}
+
+/* ─── Séance : en-tête de l'exercice ─── */
+.work__kicker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(251, 146, 60, 0.45);
+  color: var(--accent-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Consigne principale ; toucher ouvre la fiche complète. */
+.cue-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 10px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+  background: var(--surface-session);
+  text-align: left;
+}
+
+.cue-card__text {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.cue-card__more {
+  flex-shrink: 0;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ─── Séance : séries en cases ─── */
+.series {
+  gap: 10px;
+}
+
+.series__goal {
+  color: var(--text);
+}
+
+.series__cells {
+  display: grid;
+  gap: 8px;
+}
+
+.series__cell {
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.series__cell--done {
+  background: rgba(251, 146, 60, 0.22);
+  color: #fed7aa;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.series__cell--current {
+  border: 2px solid var(--accent);
+  color: var(--accent-soft);
+  font-weight: 700;
+}
+
+.series__cell--next {
+  border: 1px solid var(--border-strong);
+  color: var(--text-muted);
+}
+
+.series__last {
+  font-size: 13px;
+}
+
+.series__last-values {
+  color: var(--text);
+}
+
+.counter__hint {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.counter__hint--up {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+/* ─── Séance : chrono d'exercice (anneau « Effort ») ─── */
+.effort {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.effort__label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.effort__label--over {
+  color: var(--accent-2);
+}
+
+.effort__row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+/* Boutons ±5 s : ronds comme ceux du compteur, plus petits pour encadrer l'anneau. */
+.effort__adjust {
+  width: 56px;
+  height: 56px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.effort__restart {
+  align-self: center;
+}
+
+.effort__ring {
+  position: relative;
+  width: 230px;
+  height: 230px;
+}
+
+.effort__ring svg {
+  width: 100%;
+  height: 100%;
+}
+
+.effort__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.effort__time {
+  font-size: 60px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.effort__time--over {
+  color: #f9a8d4;
+}
+
+.effort__sub {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Bouton principal en contour (« J'arrête », « Annuler ») : bien visible, mais pas le dégradé. */
+.cta--outline {
+  background: var(--surface-session);
+  border: 2px solid var(--accent);
+  box-shadow: none;
+  color: var(--text);
+}
+
+.cta--outline .cta__sub {
+  color: var(--text-muted);
+}
+
+@media (max-height: 760px) {
+  .effort__ring {
+    width: 180px;
+    height: 180px;
+  }
+
+  .effort__time {
+    font-size: 46px;
+  }
+
+  .series__cell {
+    height: 34px;
+  }
+}
+
+/* Très petits écrans : l'anneau rétrécit encore pour que le ressenti reste visible au-dessus du bouton. */
+@media (max-height: 700px) {
+  .effort__ring {
+    width: 150px;
+    height: 150px;
+  }
+
+  .effort__time {
+    font-size: 38px;
+  }
+
+  .effort__adjust {
+    width: 50px;
+    height: 50px;
+  }
 }

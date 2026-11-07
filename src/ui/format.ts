@@ -23,6 +23,26 @@ export function formatTarget(target: { kind: 'reps' | 'time'; min: number; max: 
   return `${range}${unit}${perSide ? ' / côté' : ''}`;
 }
 
+/** Famille de mouvement, en surtitre de l'écran exercice. */
+export const CATEGORY_LABEL = {
+  push: 'Pousser',
+  pull: 'Tirer',
+  legs: 'Jambes',
+  knee: 'Genou',
+  core: 'Gainage',
+  shoulders: 'Épaules',
+  warmup: 'Échauffement',
+  cooldown: 'Retour au calme',
+  volume: 'Volume pompes',
+} as const;
+
+/** Ressenti global de séance (écran de bilan). */
+export const SESSION_FEEL_LABEL = {
+  'too-easy': 'Trop facile',
+  right: 'Bien dosée',
+  'too-hard': 'Trop dure',
+} as const;
+
 /** Support des mains (règle poignet). */
 export const HAND_LABEL = {
   handles: 'Sur poignées',

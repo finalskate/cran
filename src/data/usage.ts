@@ -29,11 +29,15 @@
  *   update         mise à jour de l'appli acceptée ou reportée
  *   export         export des données
  *   profile        profil enregistré : cible calculée, plancher appliqué ou non (pas les mensurations)
- *   food-add       aliment noté : méthode (scan, liste, main, libre), repas, jour passé ou non
+ *   food-add       aliment noté : méthode (scan, liste, main, libre), repas, jour passé ou non, provenance
+ *   food-search    recherche en ligne par nom : résultat (trouvé, hors ligne, saturé), nombre (pas les mots)
+ *   food-create    aliment créé sans code-barres : valeurs pour 100 g ou par pièce
  *   food-edit      entrée modifiée ou supprimée
  *   scan           code-barres lu : caméra ou saisie, résultat (connu, trouvé, inconnu, hors ligne)
  *   combo          repas type enregistré : nombre d'entrées
  *   weigh          pesée notée : matin ou non (pas le poids, qui est déjà dans sa table)
+ *   day-count      journée comptée ou mise de côté à la main pour l'ajustement
+ *   adjust         ajustement de cible proposé, accepté ou refusé : ancienne et nouvelle cible
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

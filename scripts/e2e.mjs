@@ -198,6 +198,22 @@ try {
   await page.setRequestInterception(true);
   page.on('request', (req) => {
     if (!req.url().includes('openfoodfacts.org')) return req.continue();
+    // Recherche par nom : deux produits de marque fictifs.
+    if (req.url().includes('cgi/search.pl')) {
+      const product = (code, name, kcal) => ({
+        code,
+        product_name: name,
+        brands: 'Enseigne test',
+        nutriments: { 'energy-kcal_100g': kcal, proteins_100g: 12 },
+        serving_quantity: 190,
+      });
+      return req.respond({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({ products: [product('3000000000017', 'Wrap poulet bacon (test)', 235), product('3000000000024', 'Wrap poulet curry (test)', 210)] }),
+      });
+    }
     if (req.url().includes('3017620422003')) {
       return req.respond({
         status: 200,
@@ -291,7 +307,34 @@ try {
   await click('Ajouter');
   await wait(300);
   await shot('26-ajouter-liste');
-  await page.click('dialog[open] [aria-label="Fermer"]');
+
+  // Recherche par nom : aliments génériques (Ciqual, hors ligne), puis en ligne (simulé).
+  await fill('#food-search', 'wrap poulet');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Wrap poulet crudités'), { timeout: 5000 });
+  await shot('26b-recherche-ciqual');
+  await clickIn('en ligne');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Wrap poulet bacon (test)'), { timeout: 5000 });
+  await shot('26c-recherche-en-ligne', true);
+  await clickIn('Wrap poulet crudités');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('1 wrap'), { timeout: 5000 });
+  await shot('26d-portion-ciqual');
+  await clickIn('Midi');
+  await clickIn('Ajouter');
+
+  // Introuvable : créer l'aliment, valeurs par pièce (site d'une enseigne).
+  await click('Ajouter');
+  await fill('#food-search', 'menu test');
+  await wait(300);
+  await clickIn('Créer');
+  await clickIn('Pour une pièce');
+  await fill('#pf-kcal', '850');
+  await fill('#pf-prot', '30');
+  await fill('#pf-piece', '1 menu');
+  await wait(200);
+  await shot('26e-creer-aliment');
+  await clickIn('Créer');
+  await clickIn('Midi');
+  await clickIn('Ajouter');
   await wait(200);
   await shot('27-assiette-jour', true);
 
@@ -311,6 +354,48 @@ try {
   await clickIn('Noter');
   await page.waitForFunction(() => document.body.innerText.includes('80,0 kg'), { timeout: 5000 });
   await shot('31-accueil-pese');
+
+  // Ajustement adaptatif : 15 jours fictifs de notes et de pesées écrits directement dans la base,
+  // la veille très peu notée (journée partielle), puis rechargement.
+  await page.evaluate(async () => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const day = (offset) => {
+      const d = new Date(Date.now() - 4 * 3600_000);
+      d.setDate(d.getDate() + offset);
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    };
+    const idb = await new Promise((ok, ko) => {
+      const r = indexedDB.open('cran');
+      r.onsuccess = () => ok(r.result);
+      r.onerror = () => ko(r.error);
+    });
+    const tx = idb.transaction(['settings', 'foodLog', 'weights'], 'readwrite');
+    tx.objectStore('settings').put({ key: 'calibrationStart', value: day(-15) });
+    for (let i = -14; i <= -1; i++) {
+      const kcal = i === -1 ? 500 : 2000;
+      tx.objectStore('foodLog').add({
+        day: day(i), at: new Date().toISOString(), meal: 'noon', label: 'Repas (test)', portion: '1 portion', count: 1,
+        unit: { kcal, protein: 100 }, method: 'free',
+      });
+    }
+    [[-14, 80.6], [-10, 80.5], [-6, 80.3], [-2, 80.1]].forEach(([i, kg]) =>
+      tx.objectStore('weights').put({ day: day(i), at: new Date().toISOString(), kg }),
+    );
+    await new Promise((ok) => (tx.oncomplete = ok));
+    idb.close();
+  });
+  await page.goto(`${BASE}#/assiette`);
+  await page.reload();
+  await page.waitForFunction(() => document.body.textContent.includes('Ta dépense réelle'), { timeout: 5000 });
+  await shot('32-ajustement', true);
+  await click('Adopter');
+  await page.waitForFunction(() => !document.body.textContent.includes('Ta dépense réelle'), { timeout: 5000 });
+  await page.click('[aria-label="Jour précédent"]');
+  await wait(300);
+  await shot('33-veille-mise-de-cote');
+  await click('La compter');
+  await wait(200);
+  if (!(await text()).includes('Compte pour le calcul')) throw new Error('journée non comptée après « La compter »');
 
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } finally {

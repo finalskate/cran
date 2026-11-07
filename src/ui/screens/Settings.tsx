@@ -227,6 +227,11 @@ export function Settings() {
           <span>Schéma de données</span>
           <span class="muted">v{SCHEMA_VERSION}</span>
         </div>
+        {/* Mentions exigées par les licences des bases d'aliments. */}
+        <p class="muted calc__note">
+          Aliments génériques : table Ciqual 2025 de l’Anses (licence ouverte Etalab 2.0). Produits scannés : Open Food
+          Facts (licence ODbL).
+        </p>
       </section>
     </main>
   );

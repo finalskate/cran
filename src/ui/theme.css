@@ -1725,3 +1725,41 @@ h3 {
   font-weight: 600;
   color: var(--text-muted);
 }
+
+/* ─── J4A 2e partie : recherche, ajustement ─── */
+
+/* Groupes de résultats de « Ajouter » (mes aliments, génériques, en ligne). */
+.food-list > .card__label {
+  margin: 6px 0 2px;
+}
+
+.food-list > .card__label + .food-row {
+  border-top: none;
+}
+
+.food-list > .btn {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* « Compte pour le calcul » sous les jauges d'un jour passé. */
+.day-count {
+  min-height: 0;
+  font-size: 14px;
+  gap: 8px;
+}
+
+.adjust p {
+  margin: 0;
+}
+
+.adjust__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.day-count .btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}

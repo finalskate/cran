@@ -2,6 +2,7 @@
  * Accès typé aux réglages stockés dans la table `settings`.
  * Chaque nouvelle clé se déclare dans SettingsMap : le compilateur vérifie alors le type des valeurs.
  */
+import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { Profile } from '../domain/nutrition';
 import type { Duration } from '../domain/types';
 import { db, type CranDB } from './db';
@@ -33,6 +34,10 @@ export interface SettingsMap {
   profile: Profile;
   /** Premier jour de la calibration alimentaire (« 2026-11-14 »), fixé à la création du profil. */
   calibrationStart: string;
+  /** Journées comptées ou mises de côté à la main pour l'ajustement adaptatif (clé = jour). */
+  dayOverrides: Record<string, DayOverride>;
+  /** Décisions d'ajustement de la cible, de la plus ancienne à la plus récente. */
+  adjustments: AdjustmentRecord[];
 }
 
 export type SettingKey = keyof SettingsMap;

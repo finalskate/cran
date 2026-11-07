@@ -59,8 +59,10 @@ export function basalMetabolism(profile: Profile, weightKg: number, year: number
 export interface Targets {
   /** Métabolisme de base (kcal). */
   bmr: number;
-  /** Dépense estimée = métabolisme × facteur d'activité (kcal). */
+  /** Dépense : métabolisme × facteur d'activité, ou dépense mesurée par l'ajustement (kcal). */
   expenditure: number;
+  /** Vrai si la dépense vient de l'ajustement adaptatif (et non de la formule). */
+  measured: boolean;
   /** Cible calorique du jour (kcal), arrondie à la dizaine. */
   kcal: number;
   /** Vrai si le plancher a relevé la cible. */
@@ -71,14 +73,19 @@ export interface Targets {
   weightKg: number;
 }
 
-export function computeTargets(profile: Profile, weightKg: number, year: number): Targets {
+/**
+ * Cible du jour. `measuredExpenditure` (dépense retenue lors d'un ajustement adaptatif accepté)
+ * remplace alors l'estimation par formule.
+ */
+export function computeTargets(profile: Profile, weightKg: number, year: number, measuredExpenditure?: number): Targets {
   const bmr = Math.round(basalMetabolism(profile, weightKg, year));
-  const expenditure = Math.round(bmr * ACTIVITY[profile.activity].factor);
+  const expenditure = measuredExpenditure ?? Math.round(bmr * ACTIVITY[profile.activity].factor);
   const raw = Math.round((expenditure - DEFICIT_KCAL) / 10) * 10;
   const floor = KCAL_FLOOR[profile.sex];
   return {
     bmr,
     expenditure,
+    measured: measuredExpenditure !== undefined,
     kcal: Math.max(raw, floor),
     floored: raw < floor,
     protein: Math.round(PROTEIN_PER_KG * weightKg),
@@ -143,11 +150,12 @@ export interface Portion {
  *  - label   saisi à la main depuis l'étiquette (produit inconnu ou scan hors ligne)
  *  - custom  aliment ou plat perso, valeurs par portion
  *  - combo   repas type enregistré à partir de plusieurs entrées
+ *  - ciqual  aliment générique de la table Ciqual embarquée (gardé localement dès qu'on le note)
  */
-export type FoodSource = 'off' | 'label' | 'custom' | 'combo';
+export type FoodSource = 'off' | 'label' | 'custom' | 'combo' | 'ciqual';
 
 export interface Food {
-  /** « ean:3017620422003 » pour un produit à code-barres, « perso:… » sinon. */
+  /** « ean:3017620422003 » (code-barres), « ciqual:25647 » (table Ciqual), « perso:… » sinon. */
   id: string;
   source: FoodSource;
   name: string;
@@ -296,23 +304,50 @@ export function rankFoods(foods: readonly Food[]): Food[] {
   });
 }
 
-/** Texte sans accents ni majuscules, pour la recherche (« Pâtes » trouve « pates »). */
+/** Texte sans accents ni majuscules, pour la recherche (« Pâtes » trouve « pates », « œuf » « oeuf »). */
 export function normalize(text: string): string {
   return text
     .normalize('NFD')
     .replace(/[̀-ͯ]/g, '')
+    .replace(/œ/gi, 'oe')
     .toLowerCase()
     .trim();
 }
 
+/**
+ * Mots d'une recherche, normalisés. Le « s » final est retiré (au-delà de 3 lettres) : « frites »
+ * trouve aussi « frite », « oeufs » trouve « oeuf ».
+ */
+export function searchWords(query: string): string[] {
+  return normalize(query)
+    .split(/[\s,'’]+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 && w.endsWith('s') ? w.slice(0, -1) : w));
+}
+
+/**
+ * Pertinence d'un texte (déjà normalisé) pour des mots de recherche ; 0 = ne correspond pas.
+ * Tous les mots doivent y figurer. Un mot trouvé en début de mot compte plus qu'au milieu
+ * (« riz » préfère « Riz blanc » à « Chorizo »), le premier mot en tête du nom encore plus, et
+ * à égalité les noms courts (souvent les plus génériques) passent devant.
+ */
+export function matchScore(hay: string, words: readonly string[]): number {
+  if (words.length === 0) return 0;
+  const tokens = hay.split(/[^a-z0-9]+/);
+  let score = 0;
+  for (const w of words) {
+    if (!hay.includes(w)) return 0;
+    score += tokens.some((t) => t.startsWith(w)) ? 3 : 1;
+  }
+  if (hay.startsWith(words[0]!)) score += 4;
+  return score + 1 / (1 + hay.length / 40);
+}
+
 /** Aliments dont le nom (ou la marque) contient tous les mots de la recherche. */
 export function searchFoods(foods: readonly Food[], query: string): Food[] {
-  const words = normalize(query).split(/\s+/).filter(Boolean);
+  const words = searchWords(query);
   if (words.length === 0) return rankFoods(foods);
-  return rankFoods(foods.filter((f) => {
-    const hay = normalize(`${f.name} ${f.brand ?? ''}`);
-    return words.every((w) => hay.includes(w));
-  }));
+  return rankFoods(foods.filter((f) => matchScore(normalize(`${f.name} ${f.brand ?? ''}`), words) > 0));
 }
 
 // ─── Pesée ───

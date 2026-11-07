@@ -2,6 +2,9 @@
  * Choix de la portion d'un aliment connu (scanné, favori, récent) : portion, nombre (par ½),
  * repas, puis « Ajouter ». Jamais de grammes obligatoires : les portions toutes prêtes
  * (« ½ paquet », « 1 portion ») suffisent ; les grammes restent possibles si on les connaît.
+ *
+ * Un aliment trouvé par la recherche (Ciqual, en ligne) n'est gardé localement qu'au moment
+ * où on le note ou le met en favori : regarder ne remplit pas la liste.
  */
 import { useState } from 'preact/hooks';
 import {
@@ -13,7 +16,7 @@ import {
   type Meal,
   type Portion,
 } from '../../domain/nutrition';
-import { setFavorite } from '../../data/foodRepo';
+import { saveFood, setFavorite } from '../../data/foodRepo';
 import { track } from '../../data/usage';
 import { Sheet } from '../components/Sheet';
 import { Stepper } from '../components/Stepper';
@@ -26,6 +29,8 @@ interface Props {
   day: string;
   /** D'où vient l'aliment (journal d'usage). */
   method: 'scan' | 'list';
+  /** Vrai si l'aliment n'est pas encore dans la base locale (résultat de recherche). */
+  unsaved?: boolean;
   onClose: () => void;
   /** Valeurs manquantes ou fausses : ouvrir la saisie depuis l'étiquette. */
   onEditValues?: () => void;
@@ -34,12 +39,13 @@ interface Props {
 /** Index spécial : quantité libre en grammes. */
 const CUSTOM = -1;
 
-export function PortionSheet({ food, day, method, onClose, onEditValues }: Props) {
+export function PortionSheet({ food, day, method, unsaved, onClose, onEditValues }: Props) {
   const [choice, setChoice] = useState(0);
   const [grams, setGrams] = useState('');
   const [count, setCount] = useState(1);
   const [meal, setMeal] = useState<Meal>(mealForTime(new Date()));
   const [favorite, setFav] = useState(!!food.favorite);
+  const [saved, setSaved] = useState(!unsaved);
 
   const portion: Portion | undefined =
     choice === CUSTOM ? (parseDecimal(grams) ? amountPortion(food, parseDecimal(grams)!) : undefined) : food.portions[choice];
@@ -49,6 +55,7 @@ export function PortionSheet({ food, day, method, onClose, onEditValues }: Props
 
   async function add() {
     if (!portion) return;
+    if (!saved) await saveFood(food);
     await logEntry(makeEntry(day, meal, food.name, portion.label, count, unit, method, food.id));
     track('food-add', { method, meal, past: isPastDay(day), source: food.source });
     onClose();
@@ -56,7 +63,12 @@ export function PortionSheet({ food, day, method, onClose, onEditValues }: Props
 
   async function toggleFavorite() {
     setFav(!favorite);
-    await setFavorite(food.id, !favorite);
+    if (saved) {
+      await setFavorite(food.id, !favorite);
+    } else {
+      await saveFood({ ...food, favorite: !favorite });
+      setSaved(true);
+    }
   }
 
   return (

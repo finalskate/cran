@@ -114,6 +114,10 @@ docs/       documentation (docs/private/ est local et n'est jamais versionné)
   nouvelle version, avec une migration si besoin. Les règles sont en tête du fichier.
 - **Icônes** : une seule source, `public/icon.svg`. Toutes les tailles sont générées au build (`pwa-assets.config.ts`).
 - **Dépendances** : versions exactes, publiées depuis au moins deux semaines au moment de leur ajout.
+- **Base d'aliments** : `src/data/ciqual.json` est extrait de la table Ciqual de l'Anses (licence ouverte Etalab 2.0)
+  par `node scripts/build-ciqual.mjs`. Il est versionné : le build ne dépend pas du réseau. Le script ne sert qu'à
+  passer à une nouvelle édition de la table. Les portions types par catégorie sont dans `src/data/ciqualPortions.ts`.
+- **Open Food Facts** (licence ODbL) : interrogé seulement par code-barres, ou par nom sur demande explicite.
 
 ## 5. Confidentialité
 

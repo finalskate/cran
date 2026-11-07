@@ -4,6 +4,7 @@
  * Ces valeurs restent sur le téléphone (jamais dans le code ni dans le dépôt).
  */
 import { useState } from 'preact/hooks';
+import { adoptedExpenditure } from '../../domain/adaptive';
 import {
   ACTIVITY,
   computeTargets,
@@ -19,7 +20,7 @@ import {
 import { track } from '../../data/usage';
 import { NumberField } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
-import { profile, saveProfile, weights } from '../foodState';
+import { adjustments, profile, saveProfile, weights } from '../foodState';
 import { formatInt, formatKg, formatLongDate, parseDecimal } from '../format';
 import { go } from '../router';
 
@@ -51,7 +52,8 @@ export function Profile() {
 
   // Le calcul utilise la dernière pesée si elle existe (comme la cible du jour).
   const usedWeight = lastWeight?.kg ?? w;
-  const t = draft && usedWeight ? computeTargets(draft, usedWeight, year) : null;
+  // Après un ajustement accepté, la dépense mesurée remplace la formule.
+  const t = draft && usedWeight ? computeTargets(draft, usedWeight, year, adoptedExpenditure(adjustments.value)) : null;
 
   async function save() {
     if (!draft || !t) return;
@@ -119,10 +121,19 @@ export function Profile() {
         <section class="card" aria-label="Calcul de la cible">
           <span class="card__label">Le calcul</span>
           <div class="calc">
-            <span>Métabolisme de base (Mifflin-St Jeor)</span>
-            <span class="num">{formatInt(t.bmr)} kcal</span>
-            <span>× activité ({ACTIVITY[activity].factor.toLocaleString('fr-FR')})</span>
-            <span class="num">{formatInt(t.expenditure)} kcal</span>
+            {t.measured ? (
+              <>
+                <span>Dépense mesurée (ajustement)</span>
+                <span class="num">{formatInt(t.expenditure)} kcal</span>
+              </>
+            ) : (
+              <>
+                <span>Métabolisme de base (Mifflin-St Jeor)</span>
+                <span class="num">{formatInt(t.bmr)} kcal</span>
+                <span>× activité ({ACTIVITY[activity].factor.toLocaleString('fr-FR')})</span>
+                <span class="num">{formatInt(t.expenditure)} kcal</span>
+              </>
+            )}
             <span>− déficit</span>
             <span class="num">{formatInt(DEFICIT_KCAL)} kcal</span>
             <strong>Cible du jour</strong>
@@ -132,8 +143,9 @@ export function Profile() {
           </div>
           {t.floored && <p class="muted calc__note">La cible est relevée au plancher : descendre plus bas ferait perdre du muscle.</p>}
           <p class="muted calc__note">
-            C’est un point de départ. Après deux semaines de notes et de pesées, l’appli mesurera ta dépense réelle et
-            proposera d’ajuster.
+            {t.measured
+              ? 'Ta dépense a été mesurée d’après tes notes et tes pesées : l’activité ne sert plus au calcul. Un nouveau point est proposé toutes les deux semaines.'
+              : 'C’est un point de départ. Après deux semaines de notes et de pesées, l’appli mesurera ta dépense réelle et proposera d’ajuster.'}
           </p>
         </section>
       )}

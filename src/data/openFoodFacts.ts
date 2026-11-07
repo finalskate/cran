@@ -3,8 +3,9 @@
  * quand il y a du réseau (SPEC §4.8). Le produit trouvé est ensuite gardé dans la base locale :
  * le scanner suivant le reconnaît hors ligne.
  *
- * Seul le code-barres part sur le réseau (une requête publique, sans identifiant) ; rien de ce
- * que l'utilisateur mange ou pèse ne quitte le téléphone.
+ * Seul le code-barres (ou, pour une recherche par nom demandée, les mots tapés) part sur le
+ * réseau, dans une requête publique sans identifiant ; rien de ce que l'utilisateur mange ou
+ * pèse ne quitte le téléphone.
  */
 import { formatAmount, type Food, type Nutrients, type Portion } from '../domain/nutrition';
 
@@ -138,6 +139,73 @@ export async function lookupBarcode(
     if (!res.ok) return { status: 'offline' };
     const product = parseOffProduct(code, await res.json(), now);
     return product ? { status: 'found', product } : { status: 'not-found' };
+  } catch {
+    return { status: 'offline' };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// ─── Recherche par nom (en ligne, sur demande) ───
+
+/**
+ * Recherche plein texte d'Open Food Facts, limitée aux produits vendus en France (sous-domaine
+ * « fr »). C'est la seule API de recherche par nom ouverte aux applis web (CORS). Elle est
+ * fortement limitée (une dizaine de recherches par minute) : on ne l'appelle que sur un appui
+ * explicite, jamais à chaque lettre. Seuls les mots tapés partent sur le réseau.
+ */
+const SEARCH_API = 'https://fr.openfoodfacts.org/cgi/search.pl';
+
+export type NameSearchResult =
+  | { status: 'found'; products: ParsedProduct[] }
+  | { status: 'offline' }
+  /** Serveur saturé ou limite de recherches atteinte : réessayer dans une minute. */
+  | { status: 'busy' };
+
+/**
+ * Transforme une réponse de recherche en aliments locaux. Les produits sans énergie connue
+ * sont écartés : on ne pourrait rien en noter.
+ */
+export function parseOffSearch(response: unknown, now: string): ParsedProduct[] {
+  const products = (response as { products?: unknown[] } | null)?.products;
+  if (!Array.isArray(products)) return [];
+  const out: ParsedProduct[] = [];
+  const seen = new Set<string>();
+  for (const product of products) {
+    const code = String((product as { code?: unknown }).code ?? '');
+    if (!/^\d{8,14}$/.test(code) || seen.has(code)) continue;
+    const parsed = parseOffProduct(code, { status: 1, product }, now);
+    if (!parsed?.food.per100) continue;
+    seen.add(code);
+    out.push(parsed);
+  }
+  return out;
+}
+
+export async function searchOffByName(
+  query: string,
+  now: string,
+  fetchImpl: typeof fetch = fetch,
+  timeoutMs = 10000,
+): Promise<NameSearchResult> {
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) return { status: 'offline' };
+  const params = new URLSearchParams({
+    search_terms: query.trim(),
+    search_simple: '1',
+    action: 'process',
+    json: '1',
+    page_size: '20',
+    fields: `code,${FIELDS}`,
+  });
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetchImpl(`${SEARCH_API}?${params}`, { signal: controller.signal });
+    if (!res.ok) return { status: 'busy' };
+    // En cas de surcharge, le serveur répond parfois une page HTML : illisible = occupé.
+    const body: unknown = await res.json().catch(() => null);
+    if (!body) return { status: 'busy' };
+    return { status: 'found', products: parseOffSearch(body, now) };
   } catch {
     return { status: 'offline' };
   } finally {

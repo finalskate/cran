@@ -15,10 +15,12 @@ import {
   formatCount,
   handEstimate,
   latestWeight,
+  matchScore,
   mealForTime,
   portionNutrients,
   rankFoods,
   searchFoods,
+  searchWords,
   stepCount,
   sumEntries,
   weighInsLastWeek,
@@ -162,6 +164,18 @@ describe('récents et recherche', () => {
     expect(searchFoods(foods, 'pates').map((f) => f.id)).toEqual(['a']);
     expect(searchFoods(foods, 'MARQUE chips').map((f) => f.id)).toEqual(['b']);
     expect(searchFoods(foods, '  ')).toHaveLength(3);
+  });
+
+  it('découpe la recherche en mots normalisés, sans s final', () => {
+    expect(searchWords('Œufs brouillés, frites')).toEqual(['oeuf', 'brouille', 'frite']);
+    expect(searchWords('riz')).toEqual(['riz']);
+  });
+
+  it('classe un mot trouvé en début de mot avant un morceau de mot', () => {
+    const words = searchWords('riz');
+    expect(matchScore('riz blanc, cuit', words)).toBeGreaterThan(matchScore('chorizo', words));
+    expect(matchScore('chorizo', words)).toBeGreaterThan(0);
+    expect(matchScore('pates', words)).toBe(0);
   });
 });
 

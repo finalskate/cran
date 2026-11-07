@@ -16,8 +16,10 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { finishWorkout } from '../../data/repo';
+import { REST_BREAK } from '../../data/messages';
 import { track } from '../../data/usage';
 import { compareWithLast, type Feel, type SetResult } from '../../domain/history';
+import { nthMessage } from '../../domain/messages';
 import {
   adjustRest,
   blockProgress,
@@ -217,6 +219,8 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
             {formatClock(remaining)}
           </span>
         </div>
+        {/* Une phrase par repos, la même pendant tout le décompte (graine : séance + numéro d'étape). */}
+        <p class="muted rest__tip">{nthMessage(REST_BREAK, state.index, `rest-${state.startedAt}`)}</p>
         <div class="segmented" style={{ width: '100%' }}>
           <button type="button" class="btn btn--big" onClick={() => adjust(-15)}>
             −15 s

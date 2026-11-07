@@ -6,11 +6,16 @@
  * Double progression (J2) : un niveau débloqué est célébré (il est déjà choisi pour la prochaine
  * fois, « Rester encore à ce niveau » annule) ; deux séances sous la fourchette proposent de
  * revenir un cran en arrière, sans parler d'échec.
+ *
+ * Titre et ouvertures des cartes sont tirés des messages d'encouragement (src/data/messages.ts),
+ * numérotés par séance : deux séances qui se suivent n'ont jamais le même.
  */
 import { useEffect, useState } from 'preact/hooks';
+import { LEVEL_UP, SESSION_DONE, STEP_BACK } from '../../data/messages';
 import { setWorkoutFeel } from '../../data/repo';
 import { track } from '../../data/usage';
 import type { SessionFeel } from '../../domain/history';
+import { nthMessage } from '../../domain/messages';
 import type { LevelChange } from '../../domain/progression';
 import { formatClock, SESSION_FEEL_LABEL } from '../format';
 import { movementById } from '../planner';
@@ -43,7 +48,7 @@ export function Summary() {
     <main class="screen screen--calm screen--focus">
       <header class="screen-header">
         <span class="screen-header__kicker">Séance terminée</span>
-        <h1 class="screen-header__title">Bien joué.</h1>
+        <h1 class="screen-header__title">{nthMessage(SESSION_DONE, record.id ?? 0, 'session-done')}</h1>
       </header>
 
       <section class="card">
@@ -58,10 +63,10 @@ export function Summary() {
       </section>
 
       {last.unlocks.map((c) => (
-        <LevelUpCard key={c.movementId} change={c} />
+        <LevelUpCard key={c.movementId} change={c} n={record.id ?? 0} />
       ))}
       {last.stepBacks.map((c) => (
-        <StepBackCard key={c.movementId} change={c} />
+        <StepBackCard key={c.movementId} change={c} n={record.id ?? 0} />
       ))}
 
       <section class="card" aria-label="Carnet de la séance">
@@ -129,7 +134,7 @@ function levelName(movementId: string, level: number): string {
 }
 
 /** Niveau débloqué : célébré, déjà appliqué, annulable. */
-function LevelUpCard({ change }: { change: LevelChange }) {
+function LevelUpCard({ change, n }: { change: LevelChange; n: number }) {
   const [stayed, setStayed] = useState(false);
   const movement = movementById(change.movementId);
 
@@ -152,7 +157,7 @@ function LevelUpCard({ change }: { change: LevelChange }) {
       ) : (
         <>
           <p style={{ margin: 0 }}>
-            Deux séances au haut de la fourchette : place à <strong>{levelName(change.movementId, change.to)}</strong> dès la
+            {nthMessage(LEVEL_UP, n, `level-up-${change.movementId}`)} Deux séances au haut de la fourchette : place à <strong>{levelName(change.movementId, change.to)}</strong> dès la
             prochaine séance.
           </p>
           <button type="button" class="btn btn--small btn--quiet" onClick={() => void stay()}>
@@ -165,7 +170,7 @@ function LevelUpCard({ change }: { change: LevelChange }) {
 }
 
 /** Deux séances sous la fourchette : proposer de consolider un cran plus bas. */
-function StepBackCard({ change }: { change: LevelChange }) {
+function StepBackCard({ change, n }: { change: LevelChange; n: number }) {
   const [done, setDone] = useState(false);
   const movement = movementById(change.movementId);
 
@@ -185,7 +190,7 @@ function StepBackCard({ change }: { change: LevelChange }) {
       ) : (
         <>
           <p style={{ margin: 0 }}>
-            Ce niveau résiste encore. Consolider un moment avec <strong>{levelName(change.movementId, change.to)}</strong> fait
+            {nthMessage(STEP_BACK, n, `step-back-${change.movementId}`)} Consolider un moment avec <strong>{levelName(change.movementId, change.to)}</strong> fait
             souvent progresser plus vite.
           </p>
           <button type="button" class="btn btn--small" onClick={() => void stepBack()}>

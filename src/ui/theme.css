@@ -790,6 +790,13 @@ h3 {
   padding-top: 8px;
 }
 
+/* Phrase d'encouragement sous le chrono : discrète, centrée, sur une ou deux lignes. */
+.rest__tip {
+  margin: 0;
+  text-align: center;
+  font-size: 15px;
+}
+
 .rest__ring {
   position: relative;
   width: 220px;
@@ -1940,6 +1947,10 @@ h3 {
 /* ─── Niveaux et placement ─── */
 .level-test {
   align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-soft);
 }
 
 .placement {

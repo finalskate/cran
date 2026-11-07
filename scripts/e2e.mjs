@@ -171,7 +171,7 @@ try {
     }
   }
 
-  await page.waitForFunction(() => document.body.innerText.includes('Bien joué'), { timeout: 5000 });
+  await page.waitForFunction(() => document.body.textContent.includes('Séance terminée'), { timeout: 5000 });
   await click('Bien dosée');
   await shot('12-bilan', true);
   await click('Terminer');

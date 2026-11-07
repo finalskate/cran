@@ -12,8 +12,10 @@ import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
 import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
+import { REST_DAY } from '../../data/messages';
 import { dayKey } from '../../domain/days';
 import { foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
+import { dailyMessage } from '../../domain/messages';
 import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
 import { progress } from '../../domain/session';
 import { DayMeters } from '../food/common';
@@ -41,6 +43,8 @@ export function Today() {
   const [weighing, setWeighing] = useState(false);
   const [imposing, setImposing] = useState(false);
   const doneToday = sessionDoneToday(workouts.value, now);
+  // Message de récupération : change chaque jour, reste le même toute la journée.
+  const restMessage = dailyMessage(REST_DAY, dayKey(now), 'rest-day');
   const askKnee = ready.value && askMorningKnee(now, workouts.value, activities.value, kneeLogs.value, CATALOG);
 
   async function abandon() {
@@ -84,11 +88,8 @@ export function Today() {
       {doneToday && !active && (
         <section class="card done-today" aria-label="Séance faite">
           <span class="card__label">Séance faite aujourd’hui ✓</span>
-          <span class="card__title">Place à la récupération</span>
-          <span class="muted">
-            Les muscles progressent pendant le repos. Marche, mobilité, un bon repas protéiné et du sommeil : demain, tu
-            seras plus fort.
-          </span>
+          <span class="card__title">{restMessage.title}</span>
+          <span class="muted">{restMessage.body}</span>
         </section>
       )}
 

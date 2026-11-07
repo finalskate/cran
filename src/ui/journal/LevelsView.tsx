@@ -60,7 +60,12 @@ export function LevelsView() {
                 {m.note}
               </p>
             )}
-            <button type="button" class="btn btn--small btn--quiet level-test" onClick={() => setTesting(m)}>
+            {/* Un vrai bouton (bordé, icône) : en simple lien, il passait pour une étiquette. */}
+            <button type="button" class="btn btn--small level-test" onClick={() => setTesting(m)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="13" r="8" />
+                <path d="M12 9v4l2 2M10 2h4" />
+              </svg>
               Tester mon niveau
             </button>
             <ol class="ladder">

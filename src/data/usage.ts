@@ -38,6 +38,14 @@
  *   weigh          pesée notée : matin ou non (pas le poids, qui est déjà dans sa table)
  *   day-count      journée comptée ou mise de côté à la main pour l'ajustement
  *   adjust         ajustement de cible proposé, accepté ou refusé : ancienne et nouvelle cible
+ *   weigh-result   écran après la pesée : sens de la tendance (pas le poids)
+ *   weight-delete  pesée supprimée depuis l'historique
+ *   waist          tour de taille noté ou invitation repoussée (pas la valeur)
+ *   goals          objectifs de poids enregistrés : nombre d'étapes (pas les valeurs)
+ *   photo          photo de progression prise : pose, caméra ou fichier, retardateur
+ *   photo-delete   photos d'un mois supprimées
+ *   photo-reveal   photo dévoilée (floutage)
+ *   chart          période de la courbe changée, point touché
  *   level-up       niveau débloqué par la double progression : mouvement, ancien, nouveau
  *   level-stay     « Rester encore à ce niveau » après un déblocage
  *   step-back      retour en arrière accepté (deux séances sous la fourchette)

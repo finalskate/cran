@@ -10,6 +10,7 @@ import { Food } from './screens/Food';
 import { Journal } from './screens/Journal';
 import { KneeCheck } from './screens/KneeCheck';
 import { Locations } from './screens/Locations';
+import { Photos } from './screens/Photos';
 import { Preview } from './screens/Preview';
 import { Profile } from './screens/Profile';
 import { Session } from './screens/Session';
@@ -22,6 +23,8 @@ const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   settings: Settings,
   journal: Journal,
   levels: Journal,
+  body: Journal,
+  photos: Photos,
   locations: Locations,
   knee: KneeCheck,
   preview: Preview,

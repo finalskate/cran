@@ -81,3 +81,37 @@ export const STEP_BACK: readonly string[] = [
   'Ça arrive à tout le monde.',
   'Rien de grave, c’est le jeu.',
 ];
+
+/**
+ * Après une pesée (J3) : on commente la TENDANCE, jamais le chiffre du jour. Une liste par sens.
+ * Quand la tendance remonte, le ton reste neutre et rassurant : jamais de reproche.
+ */
+export const TREND_DOWN: readonly string[] = [
+  'Ça descend tranquillement, au bon rythme.',
+  'La tendance va dans le bon sens. Continue comme ça.',
+  'Doucement mais sûrement : c’est comme ça que ça tient.',
+  'Les efforts se voient sur la courbe.',
+  'Belle régularité, la tendance suit.',
+  'Un peu moins chaque semaine : exactement ce qu’il faut.',
+];
+
+export const TREND_STABLE: readonly string[] = [
+  'Tendance stable. Le corps fait parfois des paliers avant de repartir.',
+  'Stable pour l’instant : un palier, rien d’inquiétant.',
+  'La courbe se pose. Tes séances, elles, continuent de construire.',
+  'Stable. C’est sur plusieurs semaines que ça se joue.',
+];
+
+export const TREND_UP: readonly string[] = [
+  'Petite remontée : l’eau, le sel et le repas de la veille jouent beaucoup.',
+  'La tendance remonte un peu. Une semaine n’est qu’un point sur la courbe.',
+  'Un léger rebond, ça arrive à tout le monde. La suite compte plus.',
+  'Ça remonte légèrement : rien qu’une bonne semaine ne rattrape.',
+];
+
+/** Tant qu'il n'y a pas assez de pesées pour un rythme. */
+export const TREND_START: readonly string[] = [
+  'Pesée notée. Encore quelques-unes et la tendance se dessinera.',
+  'C’est noté. Chaque pesée affine la courbe.',
+  'Merci ! La tendance prendra forme au fil des pesées.',
+];

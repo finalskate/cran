@@ -38,3 +38,30 @@ export function monthGrid(month: MonthKey): string[][] {
   }
   return weeks;
 }
+
+/** Séances d'une semaine (lundi → dimanche), pour la courbe « séances par semaine ». */
+export interface WeekCount {
+  monday: string;
+  renfo: number;
+  imposed: number;
+}
+
+/**
+ * Nombre de séances par semaine sur les `weeks` dernières semaines (la semaine en cours
+ * comprise, en dernier). On passe les JOURS des séances : renfo d'un côté, séances imposées
+ * de l'autre (course et vélotaf s'y ajouteront au J5).
+ */
+export function weeklyCounts(renfoDays: readonly string[], imposedDays: readonly string[], today: string, weeks: number): WeekCount[] {
+  const first = addDays(mondayOf(today), -7 * (weeks - 1));
+  const out: WeekCount[] = Array.from({ length: weeks }, (_, i) => ({ monday: addDays(first, 7 * i), renfo: 0, imposed: 0 }));
+  const slot = (day: string) => out.find((w) => w.monday === mondayOf(day));
+  for (const d of renfoDays) {
+    const w = slot(d);
+    if (w) w.renfo++;
+  }
+  for (const d of imposedDays) {
+    const w = slot(d);
+    if (w) w.imposed++;
+  }
+  return out;
+}

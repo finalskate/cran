@@ -33,7 +33,7 @@ const ITEMS: Item[] = [
   },
   {
     route: 'journal',
-    also: ['levels'],
+    also: ['levels', 'body', 'photos'],
     label: 'Carnet',
     icon: (
       <>

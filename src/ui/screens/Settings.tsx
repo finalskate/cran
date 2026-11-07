@@ -9,6 +9,7 @@ import { getStorageInfo, type StorageInfo } from '../../data/storage';
 import { track } from '../../data/usage';
 import { offlineReady } from '../../pwa/registerSW';
 import { Toggle } from '../components/Toggle';
+import { photos } from '../bodyState';
 import {
   notify,
   notifyPermission,
@@ -52,6 +53,9 @@ export function Settings() {
   const [notifyState, setNotifyState] = useState(notifyPermission());
   const [lastExport, setLastExport] = useState<string | undefined>(undefined);
   const [exporting, setExporting] = useState(false);
+  // Photos exclues par défaut (SPEC §4.9) : à cocher à chaque export, jamais mémorisé.
+  const [includePhotos, setIncludePhotos] = useState(false);
+  const photoBytes = photos.value.reduce((n, ph) => n + ph.blob.size, 0);
 
   useEffect(() => {
     void getSetting('lastExportAt').then(setLastExport);
@@ -60,8 +64,8 @@ export function Settings() {
   async function runExport() {
     setExporting(true);
     try {
-      const outcome = await exportData();
-      track('export', { outcome });
+      const outcome = await exportData({ includePhotos });
+      track('export', { outcome, photos: includePhotos });
       if (outcome !== 'cancelled') {
         const at = new Date().toISOString();
         await setSetting('lastExportAt', at);
@@ -117,6 +121,18 @@ export function Settings() {
         <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
           « Réduits » retire les halos et le flou : utile si la batterie est faible ou le téléphone lent.
         </p>
+      </section>
+
+      <section class="card" aria-labelledby="photo-title">
+        <span id="photo-title" class="card__label">
+          Photos de progression
+        </span>
+        <Toggle
+          label="Flouter les photos"
+          hint="Floutées jusqu’au toucher, si quelqu’un regarde ton écran"
+          checked={p.photoBlur}
+          onChange={(v) => void setPref('photoBlur', v)}
+        />
       </section>
 
       <section class="card" aria-labelledby="session-title">
@@ -199,11 +215,19 @@ export function Settings() {
             <span class="muted">{formatBytes(info.usage)}</span>
           </div>
         )}
+        {photos.value.length > 0 && (
+          <Toggle
+            label="Inclure les photos"
+            hint={`${photos.value.length} photo${photos.value.length > 1 ? 's' : ''}, environ ${formatBytes(photoBytes * 1.34)} de plus`}
+            checked={includePhotos}
+            onChange={setIncludePhotos}
+          />
+        )}
         <button type="button" class="btn" disabled={exporting} onClick={() => void runExport()}>
           {exporting ? 'Préparation…' : 'Exporter mes données'}
         </button>
         <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
-          Tout dans un fichier : séances, niveaux, réglages et journal d’usage. Partage-le vers OneDrive pour
+          Tout dans un fichier : séances, niveaux, alimentation, pesées, réglages et journal d’usage. Partage-le vers OneDrive pour
           le garder à l’abri (et me le faire lire).
           {lastExport ? ` Dernier export : ${formatLongDate(new Date(lastExport)).toLowerCase()}.` : ' Aucun export pour l’instant.'}
         </p>

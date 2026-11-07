@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatClock, formatInt, formatKg, formatLongDate, formatTarget, parseDecimal, relativeDayLabel } from './format';
+import {
+  formatApproxDate,
+  formatBytes,
+  formatClock,
+  formatCm,
+  formatInt,
+  formatKg,
+  formatLongDate,
+  formatSigned,
+  formatTarget,
+  parseDecimal,
+  relativeDayLabel,
+} from './format';
 
 describe('formatClock', () => {
   it('affiche minutes et secondes', () => {
@@ -52,5 +64,24 @@ describe('saisie et affichage des nombres (alimentation)', () => {
     expect(relativeDayLabel('2026-11-14', '2026-11-14')).toBe('Aujourd’hui');
     expect(relativeDayLabel('2026-11-13', '2026-11-14')).toBe('Hier');
     expect(relativeDayLabel('2026-11-12', '2026-11-14')).toBe('Jeudi 12 novembre');
+  });
+});
+
+describe('poids et mesures (J3)', () => {
+  it('formate un écart signé avec le vrai signe moins', () => {
+    expect(formatSigned(-0.43)).toBe('−0,4');
+    expect(formatSigned(0.2)).toBe('+0,2');
+    expect(formatSigned(-0.04)).toBe('0');
+  });
+
+  it('donne une date approximative, avec l’année seulement si elle change', () => {
+    expect(formatApproxDate('2026-03-05', '2026-01-10')).toBe('début mars');
+    expect(formatApproxDate('2026-03-15', '2026-01-10')).toBe('mi-mars');
+    expect(formatApproxDate('2027-01-28', '2026-11-10')).toBe('fin janvier 2027');
+  });
+
+  it('formate un tour de taille', () => {
+    expect(formatCm(85.5)).toBe('85,5 cm');
+    expect(formatCm(86)).toBe('86 cm');
   });
 });

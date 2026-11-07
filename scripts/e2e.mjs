@@ -6,6 +6,8 @@
  * l'appli et reprise en cours de route → bilan (ressenti) → export depuis Réglages.
  * Puis alimentation : profil, assiette estimée, scan (code tapé, Open Food Facts simulé), produit
  * inconnu recopié depuis l’étiquette, modification d’une entrée, pesée depuis l’accueil.
+ * Puis carnet (J2) et corps (J3) : historique de pesées espacées injecté, objectif, courbes,
+ * tour de taille, photos prises avec la caméra simulée de Chrome (retardateur, calque).
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -26,7 +28,10 @@ const [width, height] = (process.env.E2E_SIZE ?? '390x844').split('x').map(Numbe
 
 await mkdir(OUT, { recursive: true });
 const server = await preview({ preview: { port: PORT, strictPort: true }, logLevel: 'silent' });
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--no-sandbox'] });
+const browser = await puppeteer.launch({ executablePath: CHROME, headless: true,
+  // Caméra simulée (mire animée) et autorisation accordée d'office : pour les photos de progression.
+  args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'],
+});
 const errors = [];
 
 try {
@@ -355,6 +360,11 @@ try {
   await wait(300);
   await shot('30-pesee');
   await clickIn('Noter');
+  // J3 : le panneau montre la tendance, puis propose le tour de taille (première fois).
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Ta tendance'), { timeout: 5000 });
+  await shot('30b-pesee-notee');
+  await clickIn('Noter');
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'), { timeout: 5000 });
   await page.waitForFunction(() => document.body.innerText.includes('80,0 kg'), { timeout: 5000 });
   await shot('31-accueil-pese');
 
@@ -443,9 +453,153 @@ try {
   await clickIn('Valider');
   await wait(200);
   await shot('47-placement-resultat');
-  await page.click('dialog[open] [aria-label="Fermer"]');
+  // On adopte le niveau trouvé (le panneau se ferme) ; sinon on ferme simplement.
+  if ((await page.evaluate(() => document.querySelector('dialog[open]')?.innerText ?? '')).includes('Choisir le niveau')) {
+    await clickIn('Choisir le niveau');
+  } else {
+    await page.click('dialog[open] [aria-label="Fermer"]');
+  }
+  await wait(300);
+
+  // ─── Corps (J3) ───
+  /** Ouvre la base de l'appli directement (données injectées pour simuler des semaines d'usage). */
+  const withDb = (fn) =>
+    page.evaluate(async (src) => {
+      const idb = await new Promise((ok, ko) => {
+        const r = indexedDB.open('cran');
+        r.onsuccess = () => ok(r.result);
+        r.onerror = () => ko(r.error);
+      });
+      const pad = (n) => String(n).padStart(2, '0');
+      const day = (offset) => {
+        const d = new Date();
+        d.setDate(d.getDate() + offset);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      };
+      await new Function('idb', 'day', `return (${src})(idb, day)`)(idb, day);
+      idb.close();
+    }, fn.toString());
+
+  // Historique espacé : pesées tous les 3 jours il y a 75 à 36 jours, puis 3 semaines sans pesée
+  // (éloignement), puis celles du test d'ajustement ; tours de taille hebdomadaires au début.
+  await withDb(async (idb, day) => {
+    const tx = idb.transaction(['weights', 'measures'], 'readwrite');
+    for (let i = -75, k = 0; i <= -36; i += 3, k++) {
+      // Petites variations (eau, sel) autour d'une perte d'environ 0,3 kg par semaine.
+      const noise = [0.4, -0.3, 0.1][k % 3];
+      tx.objectStore('weights').put({ day: day(i), at: new Date().toISOString(), kg: Math.round((83 - k * 0.13 + noise) * 10) / 10 });
+    }
+    for (let i = -70, k = 0; i <= -35; i += 7, k++) {
+      tx.objectStore('measures').put({ id: `waist:${day(i)}`, kind: 'waist', day: day(i), at: new Date().toISOString(), value: 92 - k * 0.5 });
+    }
+    // Un niveau plus bas choisi il y a 30 jours : l'escalier a deux marches.
+    const lvl = idb.transaction('levelHistory', 'readwrite');
+    lvl.objectStore('levelHistory').add({ movementId: 'push-h', level: 3, at: new Date(Date.now() - 30 * 86_400_000).toISOString() });
+    await new Promise((ok) => (lvl.oncomplete = ok));
+  });
+
+  // Courbe en escalier sous l'échelle des pompes.
+  await page.goto(`${BASE}#/niveaux`);
+  await page.reload();
+  await page.waitForSelector('.chart--step', { timeout: 5000 });
+  await page.evaluate(() => document.querySelector('.chart--step').scrollIntoView({ block: 'center' }));
+  await wait(200);
+  await shot('48-niveaux-escalier');
+
+  // Objectifs de poids saisis dans le profil.
+  // Profil ouvert depuis l'appli déjà chargée (le formulaire se remplit à l'ouverture de l'écran).
+  await page.goto(`${BASE}#/profil`);
+  await page.waitForSelector('#pr-goal1');
+  await fill('#pr-goal1', '78');
+  await fill('#pr-goal2', '75');
+  await click('Enregistrer');
+  await wait(300);
+
+  await page.goto(`${BASE}#/corps`);
+  await page.waitForFunction(() => document.body.textContent.includes('Tendance'), { timeout: 5000 });
+  await wait(300);
+  await shot('50-corps', true);
+  const t50 = await text();
+  if (!t50.includes('kg / sem.')) throw new Error('rythme de la tendance absent');
+  if (!t50.includes('À ce rythme, 78,0 kg')) throw new Error('projection vers l’objectif absente');
+  if (!(await page.$('.chart__line--gap'))) throw new Error('interruption de la courbe (trou de 3 semaines) non dessinée');
+  // Toucher la courbe : légende du point le plus proche.
+  const box = await (await page.$('.chart svg')).boundingBox();
+  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height / 2);
+  await wait(200);
+  if (!(await text()).includes('· tendance')) throw new Error('le toucher de la courbe n’affiche pas la valeur');
+  await shot('50b-corps-toucher');
+  await click('Tout');
+  await wait(200);
+  await shot('51-corps-tout', true);
+
+  await page.goto(BASE);
+  await wait(300);
+  await shot('52-accueil-poids', true);
+
+  // Photos : caméra simulée de Chrome, retardateur 3 s, face puis profil.
+  await page.goto(`${BASE}#/photos`);
+  await wait(300);
+  await shot('53-photos-vide');
+  await click('Photos de');
+  await page.waitForFunction(() => document.body.innerText.includes('Lancer le retardateur'), { timeout: 8000 });
+  await wait(500);
+  await shot('54-capture');
+  await click('Retardateur 3 s');
+  await click('Lancer le retardateur');
+  await wait(1200);
+  await shot('54b-capture-decompte');
+  await page.waitForFunction(() => document.body.innerText.includes('Garder'), { timeout: 8000 });
+  await shot('55-capture-revue');
+  await click('Garder, puis profil');
+  await page.waitForFunction(() => document.body.innerText.includes('De profil'), { timeout: 5000 });
+  await click('Lancer le retardateur');
+  await page.waitForFunction(() => document.body.innerText.includes('Garder'), { timeout: 15000 });
+  await click('Garder');
+  await page.waitForFunction(() => !document.querySelector('.capture'), { timeout: 5000 });
+  await wait(300);
+  await shot('56-photos-un-mois', true);
+
+  // Une série du mois précédent (copie des images) pour voir la comparaison.
+  await withDb(async (idb, day) => {
+    const rows = await new Promise((ok) => {
+      const r = idb.transaction('photos').objectStore('photos').getAll();
+      r.onsuccess = () => ok(r.result);
+    });
+    const tx = idb.transaction('photos', 'readwrite');
+    for (const { id, ...row } of rows) tx.objectStore('photos').add({ ...row, day: day(-35), month: day(-35).slice(0, 7) });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.waitForSelector('.compare__item');
+  await wait(300);
+  await shot('57-photos-comparaison', true);
+  await page.click('.photo--hidden');
+  await wait(200);
+  await shot('58-photo-devoilee');
+  // Le calque : la photo précédente de face, en transparence.
+  await click('Reprendre les photos');
+  await page.waitForFunction(() => !!document.querySelector('.capture__ghost'), { timeout: 8000 });
+  await wait(400);
+  await shot('54c-capture-calque');
+  await page.click('.capture [aria-label="Fermer"]');
+  await wait(200);
+
+  await page.goto(`${BASE}#/carnet`);
+  await wait(200);
+  await click('Séances');
+  await wait(300);
+  await shot('59-seances-par-semaine');
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  if (!(await text()).includes('Inclure les photos')) throw new Error('option « Inclure les photos » absente de l’export');
+  await shot('60-reglages-photos', true);
 
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
+} catch (e) {
+  // Échec : les erreurs JavaScript vues jusque-là aident souvent à comprendre pourquoi.
+  if (errors.length) console.error(`Erreurs JavaScript avant l’échec :\n${errors.join('\n')}`);
+  throw e;
 } finally {
   await browser.close();
   await server.close();

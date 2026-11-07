@@ -131,3 +131,42 @@ export function formatMonth(month: string): string {
   const text = monthTitle.format(new Date(y, m - 1, 1));
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** « 85,5 cm ». */
+export function formatCm(cm: number): string {
+  return `${cm.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} cm`;
+}
+
+/** Écart signé : « −0,4 », « +0,2 », « 0 » (le signe moins typographique, plus lisible). */
+export function formatSigned(n: number, digits = 1): string {
+  const rounded = Number(n.toFixed(digits));
+  if (rounded === 0) return '0';
+  const text = Math.abs(rounded).toLocaleString('fr-FR', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  return `${rounded < 0 ? '−' : '+'}${text}`;
+}
+
+const monthName = new Intl.DateTimeFormat('fr-FR', { month: 'long' });
+
+/**
+ * Date approximative d'une projection : « début mars », « mi-mars », « fin mars », avec l'année
+ * si ce n'est pas l'année en cours. Une date au jour près serait une fausse précision.
+ */
+export function formatApproxDate(day: string, today: string): string {
+  const date = dayToDate(day);
+  const d = date.getDate();
+  const name = monthName.format(date);
+  const part = d <= 10 ? `début ${name}` : d <= 20 ? `mi-${name}` : `fin ${name}`;
+  return day.slice(0, 4) === today.slice(0, 4) ? part : `${part} ${day.slice(0, 4)}`;
+}
+
+/** « novembre 2026 » (mois d'une photo ; `month` = « 2026-11 »). */
+export function formatMonthLower(month: string): string {
+  return formatMonth(month).toLowerCase();
+}
+
+const tinyDate = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' });
+
+/** « 8 nov. » (axes des courbes). */
+export function formatTinyDate(day: string): string {
+  return tinyDate.format(dayToDate(day));
+}

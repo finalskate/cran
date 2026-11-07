@@ -42,6 +42,36 @@ describe('buildExport', () => {
     // Le fichier doit survivre à un aller-retour JSON.
     expect(JSON.parse(JSON.stringify(file))).toEqual(file);
   });
+
+  /** Photo fictive : quelques octets suffisent pour tester l'encodage. */
+  async function addPhoto(database: CranDB) {
+    await database.photos.add({
+      day: '2026-11-08',
+      month: '2026-11',
+      pose: 'front',
+      at: '2026-11-08T08:00:00Z',
+      width: 2,
+      height: 2,
+      blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }),
+    });
+  }
+
+  it('laisse les photos de côté par défaut, en le signalant', async () => {
+    const database = freshDb();
+    await addPhoto(database);
+    const file = await buildExport(database, '0.3.0', new Date());
+    expect(file.tables.photos).toEqual([]);
+    expect(file.photosExcluded).toBe(1);
+  });
+
+  it('inclut les photos en base64 sur demande', async () => {
+    const database = freshDb();
+    await addPhoto(database);
+    const file = await buildExport(database, '0.3.0', new Date(), { includePhotos: true });
+    expect(file.photosExcluded).toBeUndefined();
+    expect(file.tables.photos).toEqual([expect.objectContaining({ pose: 'front', dataUrl: 'data:image/jpeg;base64,AQID' })]);
+    expect(JSON.parse(JSON.stringify(file))).toEqual(file);
+  });
 });
 
 describe('exportFileName', () => {

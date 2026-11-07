@@ -3,6 +3,7 @@
  * Fines fonctions au-dessus de Dexie : l'UI ne manipule jamais les tables directement.
  */
 import type { SessionFeel, WorkoutRecord } from '../domain/history';
+import type { LevelHistoryEntry } from '../domain/progression';
 import type { Activity } from '../domain/recovery';
 import type { SessionState } from '../domain/session';
 import type { Location } from '../domain/types';
@@ -33,11 +34,22 @@ export async function getLevels(): Promise<{ levels: Record<string, number>; sin
   };
 }
 
-/** Change le niveau d'un mouvement ; renvoie la date du changement. */
+/**
+ * Change le niveau d'un mouvement et le note dans l'historique (courbe en escalier) ;
+ * renvoie la date du changement.
+ */
 export async function setLevel(movementId: string, level: number): Promise<string> {
   const updatedAt = new Date().toISOString();
-  await db.levels.put({ movementId, level, updatedAt });
+  await db.transaction('rw', db.levels, db.levelHistory, async () => {
+    await db.levels.put({ movementId, level, updatedAt });
+    await db.levelHistory.add({ movementId, level, at: updatedAt });
+  });
   return updatedAt;
+}
+
+/** Tous les changements de niveau, du plus ancien au plus récent. */
+export function listLevelHistory(): Promise<LevelHistoryEntry[]> {
+  return db.levelHistory.orderBy('at').toArray();
 }
 
 // ─── Genou ───

@@ -6,13 +6,13 @@
  *    on partage donc le même contenu en texte (.txt) quand le .json est refusé.
  * 2. Sinon (ordinateur, navigateur sans partage de fichiers) : téléchargement du .json.
  */
-import { buildExport, exportFileName } from '../../data/backup';
+import { buildExport, exportFileName, type ExportOptions } from '../../data/backup';
 import { db } from '../../data/db';
 
 export type ExportOutcome = 'shared' | 'downloaded' | 'cancelled';
 
-export async function exportData(now = new Date()): Promise<ExportOutcome> {
-  const data = await buildExport(db, __APP_VERSION__, now);
+export async function exportData(options: ExportOptions = {}, now = new Date()): Promise<ExportOutcome> {
+  const data = await buildExport(db, __APP_VERSION__, now, options);
   // Indentation légère : lisible à l'œil, sans gonfler le fichier.
   const text = JSON.stringify(data, null, 1);
   const name = exportFileName(now);

@@ -2,6 +2,9 @@
  * Profil et cible du jour (SPEC §4.8) : sexe, année de naissance, taille, poids, activité.
  * Le calcul est affiché en clair, étape par étape : la cible n'est pas une boîte noire.
  * Ces valeurs restent sur le téléphone (jamais dans le code ni dans le dépôt).
+ *
+ * J3 : objectifs de poids par étapes (ex. une première étape, puis un objectif idéal). La
+ * projection de Carnet › Corps vise l'étape suivante.
  */
 import { useState } from 'preact/hooks';
 import { adoptedExpenditure } from '../../domain/adaptive';
@@ -20,6 +23,7 @@ import {
 import { track } from '../../data/usage';
 import { NumberField } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
+import { saveGoals, weightGoals } from '../bodyState';
 import { adjustments, profile, saveProfile, weights } from '../foodState';
 import { formatInt, formatKg, formatLongDate, parseDecimal } from '../format';
 import { go } from '../router';
@@ -40,6 +44,8 @@ export function Profile() {
   const [weight, setWeight] = useState(p ? String(p.weightKg).replace('.', ',') : '');
   const [activity, setActivity] = useState<ActivityLevel>(p?.activity ?? 'active');
   const [weighing, setWeighing] = useState(false);
+  const [goal1, setGoal1] = useState(weightGoals.value[0] ? String(weightGoals.value[0]).replace('.', ',') : '');
+  const [goal2, setGoal2] = useState(weightGoals.value[1] ? String(weightGoals.value[1]).replace('.', ',') : '');
 
   const by = parseDecimal(birthYear);
   const h = parseDecimal(height);
@@ -55,9 +61,16 @@ export function Profile() {
   // Après un ajustement accepté, la dépense mesurée remplace la formule.
   const t = draft && usedWeight ? computeTargets(draft, usedWeight, year, adoptedExpenditure(adjustments.value)) : null;
 
+  // Objectifs valides seulement (un champ vide ou hors bornes est ignoré).
+  const goals = [goal1, goal2]
+    .map(parseDecimal)
+    .filter((g): g is number => g !== undefined && g >= WEIGHT_MIN && g <= WEIGHT_MAX)
+    .map((g) => Math.round(g * 10) / 10);
+
   async function save() {
     if (!draft || !t) return;
     await saveProfile(draft);
+    if (goals.join() !== weightGoals.value.join()) await saveGoals(goals);
     track('profile', { kcal: t.kcal, floored: t.floored, activity: draft.activity });
     go('food', true);
   }
@@ -101,6 +114,19 @@ export function Profile() {
             hint="Une estimation suffit pour commencer. Pèse-toi demain matin : la cible se recalera."
           />
         )}
+      </section>
+
+      <section class="card" aria-labelledby="goals-title">
+        <span id="goals-title" class="card__label">
+          Objectif de poids
+        </span>
+        <div class="field-pair">
+          <NumberField id="pr-goal1" label="Première étape" suffix="kg" value={goal1} onInput={setGoal1} />
+          <NumberField id="pr-goal2" label="Puis (facultatif)" suffix="kg" value={goal2} onInput={setGoal2} />
+        </div>
+        <p class="muted calc__note">
+          Le Carnet affiche la date d’arrivée estimée à l’étape suivante, d’après la tendance (seulement quand elle est stable).
+        </p>
       </section>
 
       <section class="card" aria-labelledby="act-title">

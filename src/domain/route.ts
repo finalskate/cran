@@ -12,6 +12,8 @@ export type RouteName =
   | 'settings'
   | 'journal' // carnet : calendrier et séances
   | 'levels' // carnet, vue Niveaux
+  | 'body' // carnet, vue Corps (poids, tour de taille, photos)
+  | 'photos' // photos de progression : comparaison et prise de vue
   | 'locations'
   | 'knee' // score genou avant la séance
   | 'preview' // aperçu de la séance proposée
@@ -30,6 +32,8 @@ const PATHS: Record<string, RouteName> = {
   reglages: 'settings',
   carnet: 'journal',
   niveaux: 'levels',
+  corps: 'body',
+  photos: 'photos',
   lieux: 'locations',
   genou: 'knee',
   apercu: 'preview',

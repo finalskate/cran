@@ -8,10 +8,17 @@
  *
  * L'échelle se lit sans la couleur : ✓ = niveau acquis, badge « Ton niveau » = niveau actuel,
  * numéro gris = niveaux à venir.
+ *
+ * J3 : sous l'échelle, la courbe en escalier du niveau dans le temps (dès qu'il y a eu au moins
+ * un changement après le premier choix).
  */
-import { useState } from 'preact/hooks';
+import { useEffect, useState } from 'preact/hooks';
 import { CATALOG } from '../../data/catalog';
+import { listLevelHistory } from '../../data/repo';
 import { track } from '../../data/usage';
+import { dayKey } from '../../domain/days';
+import { levelSteps, type LevelHistoryEntry } from '../../domain/progression';
+import { StepChart } from '../components/SmallCharts';
 import type { Movement } from '../../domain/types';
 import { ExerciseSheet } from '../components/ExerciseSheet';
 import { PlacementSheet } from './PlacementSheet';
@@ -24,6 +31,13 @@ export function LevelsView() {
   // Fiche ouverte : mouvement et index du niveau.
   const [open, setOpen] = useState<{ movement: Movement; level: number } | null>(null);
   const [testing, setTesting] = useState<Movement | null>(null);
+  // Historique relu à chaque changement de niveau (choix, test, déblocage).
+  const [history, setHistory] = useState<LevelHistoryEntry[]>([]);
+  useEffect(() => {
+    void listLevelHistory().then(setHistory);
+  }, [levels.value]);
+  const today = dayKey(new Date());
+  const isoDay = (iso: string) => dayKey(new Date(iso));
 
   async function choose(m: Movement, i: number) {
     const heavy = m.levels[i]!.variants.some((v) => v.wristHeavy);
@@ -100,6 +114,17 @@ export function LevelsView() {
                 );
               })}
             </ol>
+            {(() => {
+              const steps = levelSteps(history, m.id, isoDay);
+              return steps.length > 1 ? (
+                <StepChart
+                  steps={steps}
+                  today={today}
+                  levelCount={m.levels.length}
+                  label={`${m.name} : du niveau ${steps[0]!.level + 1} au niveau ${steps.at(-1)!.level + 1}`}
+                />
+              ) : null;
+            })()}
           </section>
         );
       })}

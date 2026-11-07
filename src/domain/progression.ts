@@ -170,3 +170,37 @@ export function placementStep(level: number, maxResult: number, target: Target, 
   }
   return { kind: 'placed', level };
 }
+
+// ─── Historique des niveaux (courbe en escalier, J3) ───
+
+/** Un changement de niveau, tel qu'il est enregistré (table `levelHistory`). */
+export interface LevelHistoryEntry {
+  id?: number;
+  movementId: string;
+  level: number;
+  /** Date ISO du changement. */
+  at: string;
+}
+
+/** Une marche de l'escalier : niveau tenu à partir de `day`. */
+export interface LevelStep {
+  day: string;
+  level: number;
+}
+
+/**
+ * Marches de l'escalier d'un mouvement, de la plus ancienne à la plus récente. Plusieurs
+ * changements le même jour (un test de placement suivi d'un choix) ne gardent que le dernier ;
+ * deux marches de suite au même niveau sont fusionnées.
+ */
+export function levelSteps(history: readonly LevelHistoryEntry[], movementId: string, dayOf: (iso: string) => string): LevelStep[] {
+  const byDay = new Map<string, number>();
+  for (const h of [...history].filter((h) => h.movementId === movementId).sort((a, b) => a.at.localeCompare(b.at))) {
+    byDay.set(dayOf(h.at), h.level);
+  }
+  const steps: LevelStep[] = [];
+  for (const [day, level] of [...byDay.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (steps.at(-1)?.level !== level) steps.push({ day, level });
+  }
+  return steps;
+}

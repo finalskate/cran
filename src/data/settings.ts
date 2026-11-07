@@ -38,6 +38,12 @@ export interface SettingsMap {
   dayOverrides: Record<string, DayOverride>;
   /** Décisions d'ajustement de la cible, de la plus ancienne à la plus récente. */
   adjustments: AdjustmentRecord[];
+  /** Objectifs de poids par étapes (J3), saisis dans l'appli : la projection vise l'étape suivante. */
+  weightGoals: number[];
+  /** Invitation au tour de taille repoussée jusqu'à ce jour (« 2026-11-21 »). */
+  waistSnoozedUntil: string;
+  /** Photos de progression floutées jusqu'au toucher (quelqu'un peut regarder l'écran). */
+  photoBlur: boolean;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -53,6 +59,7 @@ export const SETTING_DEFAULTS = {
   voice: false,
   watchNotify: false,
   watchReminder: true,
+  photoBlur: true,
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

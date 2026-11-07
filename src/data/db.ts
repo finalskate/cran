@@ -16,9 +16,13 @@
  *  - v3 (retouches J1) : events (journal d'usage local, cf. src/data/usage.ts).
  *  - v4 (J4 phase A) : foods (aliments connus), foodLog (journal alimentaire), weights (pesées).
  *  - v5 (J2) : activities (séances imposées ; course et vélotaf au J5).
+ *  - v6 (J3) : measures (tour de taille), photos (photos de progression), levelHistory
+ *    (changements de niveau, reconstitués depuis le journal d'usage pour le passé).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
+import type { MeasureEntry, PhotoMeta } from '../domain/body';
+import type { LevelHistoryEntry } from '../domain/progression';
 import type { Activity, KneeLog } from '../domain/recovery';
 import type { Food, FoodEntry, WeightEntry } from '../domain/nutrition';
 import type { SessionState } from '../domain/session';
@@ -29,7 +33,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 5;
+export const SCHEMA_VERSION = 6;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -65,6 +69,17 @@ export interface EventRow {
   data?: Record<string, unknown>;
 }
 
+/**
+ * Photo de progression : l'image (JPEG réduit, ~200 Ko) est un Blob stocké tel quel par
+ * IndexedDB. Elle ne quitte jamais le téléphone, sauf dans un export qui l'inclut exprès.
+ */
+export interface PhotoRow extends PhotoMeta {
+  at: string;
+  blob: Blob;
+  width: number;
+  height: number;
+}
+
 /** Séance en cours (une seule ligne, clé « current »). */
 export interface ActiveSessionRow {
   key: 'current';
@@ -83,6 +98,9 @@ export class CranDB extends Dexie {
   foodLog!: Table<FoodEntry, number>;
   weights!: Table<WeightEntry, string>;
   activities!: Table<Activity, number>;
+  measures!: Table<MeasureEntry, string>;
+  photos!: Table<PhotoRow, number>;
+  levelHistory!: Table<LevelHistoryEntry, number>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -126,6 +144,18 @@ export class CranDB extends Dexie {
       activities: '++id, day, type',
     });
 
+    // v6 — J3 : mensurations, photos, historique des niveaux (courbe en escalier).
+    //  - measures : clé « waist:2026-11-14 » (une mesure par type et par jour), index type et jour ;
+    //  - photos : index mois (une série par mois) et pose ;
+    //  - levelHistory : un enregistrement par changement de niveau, index mouvement et date.
+    this.version(6)
+      .stores({
+        measures: '&id, kind, day',
+        photos: '++id, month, pose',
+        levelHistory: '++id, movementId, at',
+      })
+      .upgrade((tx) => seedLevelHistory(tx));
+
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.
     this.on('populate', (tx) => seedLocations(tx));
   }
@@ -133,6 +163,28 @@ export class CranDB extends Dexie {
 
 async function seedLocations(tx: Transaction): Promise<void> {
   await tx.table('locations').bulkPut(DEFAULT_LOCATIONS);
+}
+
+/**
+ * Reconstitue l'historique des niveaux d'une base existante : les changements notés dans le
+ * journal d'usage (« level », « level-up », « level-stay »), puis le niveau actuel de chaque
+ * mouvement s'il diffère du dernier changement retrouvé (ou si rien n'a été retrouvé).
+ */
+async function seedLevelHistory(tx: Transaction): Promise<void> {
+  const entries: LevelHistoryEntry[] = [];
+  const events = (await tx.table('events').toArray()) as EventRow[];
+  for (const e of events.sort((a, b) => a.at - b.at)) {
+    const movementId = e.data?.movementId;
+    const level = e.type === 'level-stay' ? e.data?.level : e.type === 'level' || e.type === 'level-up' ? e.data?.to : undefined;
+    if (typeof movementId === 'string' && typeof level === 'number') {
+      entries.push({ movementId, level, at: new Date(e.at).toISOString() });
+    }
+  }
+  for (const row of (await tx.table('levels').toArray()) as LevelRow[]) {
+    const last = entries.filter((h) => h.movementId === row.movementId).at(-1);
+    if (last?.level !== row.level) entries.push({ movementId: row.movementId, level: row.level, at: row.updatedAt });
+  }
+  await tx.table('levelHistory').bulkAdd(entries);
 }
 
 /** Instance partagée par toute l'appli. */

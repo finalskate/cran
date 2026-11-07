@@ -2000,3 +2000,426 @@ h3 {
   padding-inline: 6px;
   white-space: nowrap;
 }
+
+/* ─── Corps : courbes, tendance, tour de taille, photos (J3) ─── */
+.chart {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Le toucher sert à lire une valeur : pas de défilement horizontal parasite. */
+  touch-action: pan-y;
+  overflow: visible;
+}
+
+.chart__grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+
+.chart__tick {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-family: var(--font-body);
+}
+
+.chart__gap {
+  fill: rgba(255, 255, 255, 0.03);
+}
+
+.chart__dot {
+  fill: rgba(246, 234, 238, 0.45);
+}
+
+.chart__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.chart__line--gap {
+  stroke-width: 2;
+  stroke-dasharray: 3 6;
+  opacity: 0.7;
+}
+
+.chart__last,
+.chart__picked {
+  fill: var(--bg);
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.chart__picked {
+  fill: var(--accent);
+}
+
+.chart__cursor {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.chart--accent-2 .chart__line,
+.chart--accent-2 .chart__last,
+.chart--accent-2 .chart__picked {
+  stroke: var(--accent-2);
+}
+
+.chart--accent-2 .chart__picked {
+  fill: var(--accent-2);
+}
+
+.chart__bar {
+  fill: var(--accent);
+}
+
+.chart__bar--alt {
+  fill: var(--accent-2);
+}
+
+.chart--step .chart__line {
+  stroke-width: 2.5;
+}
+
+.chart__caption {
+  font-size: 13px;
+  min-height: 1.45em;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(246, 234, 238, 0.45);
+}
+
+.chart-legend__line {
+  width: 16px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.chart-legend__box {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.chart-legend__box--alt {
+  background: var(--accent-2);
+}
+
+.sparkline {
+  width: 120px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.sparkline .chart__line {
+  stroke-width: 2.5;
+}
+
+.sparkline .chart__last {
+  stroke-width: 2.5;
+}
+
+/* Tendance : le chiffre principal de la vue Corps. */
+.trend-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.trend-head__value {
+  font-family: var(--font-display);
+  font-size: 40px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.trend-head__rate {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.trend-text {
+  margin: 0;
+}
+
+/* Une perte de poids s'écrit en vert ; une hausse reste en gris, jamais en rouge (SPEC §2.3). */
+.trend-good {
+  color: var(--ok);
+}
+
+.trend-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.trend-box__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trend-box__value {
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.waist-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+/* Carte « Poids » de l'accueil : texte à gauche, petite courbe à droite. */
+.body-card {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.body-card__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.body-card__value {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.body-card__rate {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* Historique repliable (pesées, mesures, photos). */
+.history__summary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+}
+
+.history__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.history__row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tap);
+  border-top: 1px solid var(--border);
+}
+
+/* Photos : floutées jusqu'au toucher (réglage). */
+.photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000000;
+  aspect-ratio: 3 / 4;
+  color: var(--text);
+  font: inherit;
+}
+
+.photo__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo__img--blur {
+  filter: blur(18px);
+  transform: scale(1.1);
+}
+
+.photo__veil {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.photo--thumb {
+  border-radius: 10px;
+}
+
+.photo-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.compare__item {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.compare__caption {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.screen-header--back {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+/* Prise de vue : plein écran noir, au-dessus de la navigation. */
+.capture {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px var(--gutter) 16px;
+  background: #000000;
+}
+
+.capture__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.capture__title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.capture__view {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0c0a0c;
+}
+
+.capture__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.capture__media--mirror {
+  transform: scaleX(-1);
+}
+
+/* Calque : la photo précédente en transparence, pour reprendre la même pose. */
+.capture__ghost {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.capture__status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.capture__count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 120px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.6);
+}
+
+.capture__bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.capture__hint {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Photo prise : posée sur la vidéo (qui continue de tourner dessous). */
+.capture__shot {
+  background: #0c0a0c;
+}

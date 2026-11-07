@@ -33,7 +33,22 @@ describe('CranDB', () => {
     const database = freshDb();
     await database.open();
     expect(database.tables.map((t) => t.name).sort()).toEqual(
-      ['activeSession', 'activities', 'events', 'foodLog', 'foods', 'kneeLogs', 'levels', 'locations', 'settings', 'weights', 'workouts'].sort(),
+      [
+        'activeSession',
+        'activities',
+        'events',
+        'foodLog',
+        'foods',
+        'kneeLogs',
+        'levelHistory',
+        'levels',
+        'locations',
+        'measures',
+        'photos',
+        'settings',
+        'weights',
+        'workouts',
+      ].sort(),
     );
   });
 
@@ -165,6 +180,59 @@ describe('migration v4 → v5', () => {
       intensity: 'hard',
     });
     expect(await v5.activities.where('day').equals('2026-11-09').count()).toBe(1);
+  });
+});
+
+describe('migration v5 → v6', () => {
+  it('conserve les données, ajoute mesures et photos, et reconstitue l’historique des niveaux', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée au J2 (schéma v5).
+    const v5 = new Dexie(name);
+    v5.version(1).stores({ settings: '&key' });
+    v5.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v5.version(3).stores({ events: '++id, at' });
+    v5.version(4).stores({ foods: '&id, barcode', foodLog: '++id, day', weights: '&day' });
+    v5.version(5).stores({ activities: '++id, day, type' });
+    const t0 = Date.parse('2026-11-07T10:00:00Z');
+    await v5.table('events').bulkAdd([
+      { at: t0, type: 'level', data: { movementId: 'push', from: 0, to: 3 } },
+      { at: t0 + 1000, type: 'screen', data: { name: 'today' } },
+      { at: t0 + 86_400_000, type: 'level-up', data: { movementId: 'push', from: 3, to: 4 } },
+      { at: t0 + 2000, type: 'level', data: { movementId: 'pull', from: 0, to: 2, via: 'placement' } },
+    ]);
+    // « push » : niveau actuel = dernier changement retrouvé ; « squat » : choisi avant le journal.
+    await v5.table('levels').bulkPut([
+      { movementId: 'push', level: 4, updatedAt: '2026-11-08T10:00:00.000Z' },
+      { movementId: 'pull', level: 2, updatedAt: '2026-11-07T10:00:02.000Z' },
+      { movementId: 'squat', level: 1, updatedAt: '2026-11-06T09:00:00.000Z' },
+    ]);
+    await v5.table('weights').put({ day: '2026-11-08', kg: 80 });
+    await v5.table('activities').add({ type: 'imposed', day: '2026-11-09' });
+    v5.close();
+
+    const v6 = new CranDB(name);
+    opened.push(v6);
+    await v6.open();
+    expect(v6.verno).toBe(SCHEMA_VERSION);
+    expect(await v6.weights.count()).toBe(1);
+    expect(await v6.activities.count()).toBe(1);
+    expect(await v6.measures.count()).toBe(0);
+    expect(await v6.photos.count()).toBe(0);
+
+    const history = await v6.levelHistory.orderBy('at').toArray();
+    expect(history.map((h) => [h.movementId, h.level])).toEqual([
+      ['squat', 1],
+      ['push', 3],
+      ['pull', 2],
+      ['push', 4],
+    ]);
   });
 });
 

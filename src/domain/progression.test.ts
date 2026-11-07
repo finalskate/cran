@@ -12,6 +12,7 @@ import {
   nextPrefill,
   placementStep,
   volumeDelta,
+  levelSteps,
 } from './progression';
 import type { Target } from './types';
 
@@ -143,5 +144,22 @@ describe('test de placement', () => {
     expect(placementStep(0, 2, REPS, 6)).toEqual({ kind: 'placed', level: 0 });
     // Monté de 1 à 2, trop dur à 2 : le bon niveau est 1.
     expect(placementStep(2, 3, REPS, 6, 1)).toEqual({ kind: 'placed', level: 1 });
+  });
+});
+
+describe('levelSteps', () => {
+  const day = (iso: string) => iso.slice(0, 10);
+  it('garde le dernier changement du jour et fusionne les marches identiques', () => {
+    const history = [
+      { movementId: 'push', level: 2, at: '2026-01-01T10:00:00Z' },
+      { movementId: 'push', level: 4, at: '2026-01-01T10:05:00Z' },
+      { movementId: 'pull', level: 1, at: '2026-01-02T10:00:00Z' },
+      { movementId: 'push', level: 4, at: '2026-01-05T10:00:00Z' },
+      { movementId: 'push', level: 5, at: '2026-01-12T10:00:00Z' },
+    ];
+    expect(levelSteps(history, 'push', day)).toEqual([
+      { day: '2026-01-01', level: 4 },
+      { day: '2026-01-12', level: 5 },
+    ]);
   });
 });

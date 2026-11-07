@@ -6,6 +6,8 @@
  * J2 : séance déjà faite aujourd'hui → récupération conseillée, une 2e séance reste possible
  * (bouton secondaire) ; « genou ce matin » après une journée qui a chargé les jambes ;
  * raccourci « Imposée » pour noter une séance de sport au travail.
+ * J3 : carte « Poids » (tendance, rythme, projection, petite courbe) vers Carnet › Corps,
+ * avec un rappel discret des photos du mois.
  * L'anneau de la semaine arrive avec le J6.
  */
 import { useState } from 'preact/hooks';
@@ -16,13 +18,16 @@ import { REST_DAY } from '../../data/messages';
 import { dayKey } from '../../domain/days';
 import { foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
 import { dailyMessage } from '../../domain/messages';
+import { photoDue } from '../../domain/body';
 import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
 import { progress } from '../../domain/session';
+import { Sparkline } from '../components/SmallCharts';
 import { DayMeters } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
 import { ImposedSheet } from '../journal/ImposedSheet';
 import { profile, targets, useDayEntries, weights } from '../foodState';
-import { formatKg, formatLongDate } from '../format';
+import { photos, summary, trend } from '../bodyState';
+import { formatApproxDate, formatKg, formatLongDate, formatSigned } from '../format';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
 import { activities, answerMorningKnee, kneeLogs, workouts } from '../training';
@@ -128,6 +133,8 @@ export function Today() {
         <DayMeters totals={sumEntries(entries ?? [])} targets={targets.value} />
       </a>
 
+      {last && <BodyCard />}
+
       <section class="card" aria-label="Raccourcis">
         <div class="segmented shortcuts">
           <a class="btn btn--link" href="#/lieux">
@@ -185,5 +192,34 @@ export function Today() {
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
       {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
     </main>
+  );
+}
+
+/** Nombre de pesées montrées dans la petite courbe de l'accueil. */
+const SPARK_POINTS = 14;
+
+/** Résumé du poids : la tendance (jamais la pesée du jour), le rythme et la projection. */
+function BodyCard() {
+  const s = summary.value;
+  const today = dayKey(new Date());
+  if (s.trend === null) return null;
+  const line = s.projection
+    ? `${formatKg(s.projection.goal)} vers ${formatApproxDate(s.projection.day, today)}`
+    : s.missing && s.missing.weighIns > 0
+      ? 'Le rythme se dessine au fil des pesées'
+      : null;
+  return (
+    <a class="card card--link card--quiet body-card" href="#/corps">
+      <div class="body-card__text">
+        <span class="card__label">Poids · tendance</span>
+        <span class="body-card__value num">
+          {formatKg(s.trend)}
+          {s.rate !== null && <span class={`body-card__rate ${s.direction === 'down' ? 'trend-good' : 'muted'}`}> {formatSigned(s.rate)} kg/sem.</span>}
+        </span>
+        {line && <span class="muted">{line}</span>}
+        {photoDue(photos.value, today) && photos.value.length > 0 && <span class="notice-line">Photos du mois à faire</span>}
+      </div>
+      <Sparkline values={trend.value.slice(-SPARK_POINTS).map((p) => p.trend)} />
+    </a>
   );
 }

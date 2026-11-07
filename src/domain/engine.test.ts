@@ -18,7 +18,7 @@ function input(over: Partial<EngineInput> & { location?: Location; kneeScore?: n
     duration: 20,
     levels: {},
     lastDone: {},
-    lastBest: {},
+    lastSession: {},
     now: NOW,
     ...rest,
   };
@@ -113,10 +113,18 @@ describe('priorités et niveaux', () => {
     expect(push?.handSupport).toBe('handles');
   });
 
-  it('pré-remplit avec la meilleure série de la dernière fois, bornée à la fourchette', () => {
-    const plan = buildPlan(input({ duration: 10, levels: { 'push-h': 1 }, lastBest: { pushup: 40 } }));
-    const push = plan.blocks.flatMap((b) => b.items).find((i) => i.variantId === 'pushup');
-    expect(push?.prefill).toBe(25); // haut de la fourchette 12–25
+  it('fixe l’objectif par double progression, borné à la fourchette', () => {
+    const last = (values: number[], days = 2, feel?: 'hard') => ({
+      pushup: { at: daysAgo(days), sets: values.map((value) => ({ value, ...(feel ? { feel } : {}) })) },
+    });
+    const prefill = (lastSession: EngineInput['lastSession']) =>
+      buildPlan(input({ duration: 10, levels: { 'push-h': 1 }, lastSession }))
+        .blocks.flatMap((b) => b.items)
+        .find((i) => i.variantId === 'pushup')?.prefill;
+    expect(prefill(last([15, 14, 13]))).toBe(14); // série la plus faible + 1
+    expect(prefill(last([15, 14, 13], 2, 'hard'))).toBe(13); // « Dur » : on consolide
+    expect(prefill(last([40, 40]))).toBe(25); // haut de la fourchette 12–25
+    expect(prefill(last([15, 14, 13], 12))).toBe(12); // reprise après pause : 2 crans en dessous, borné
   });
 
   it('ajoute la série longue de pompes une fois par semaine', () => {
@@ -135,5 +143,32 @@ describe('lieux pauvres', () => {
   it('Petit espace : propose quand même une séance de 20 min', () => {
     const plan = buildPlan(input({ location: loc('small'), duration: 20 as Duration }));
     expect(mainItems(plan).length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('récupération et charge (J2)', () => {
+  it('écarte les mouvements déjà travaillés et le dit', () => {
+    const first = buildPlan(input({ duration: 20 }));
+    const done = mainItems(first).map((i) => i.movementId);
+    const second = buildPlan(input({ duration: 20, exclude: done }));
+    expect(mainItems(second).some((i) => done.includes(i.movementId))).toBe(false);
+    expect(second.notes?.[0]).toMatch(/2e séance/);
+    // La prévention genou reste.
+    expect(second.blocks[0]!.kind).toBe('knee');
+  });
+
+  it('met les jambes au repos après une séance imposée « jambes »', () => {
+    const plan = buildPlan(input({ duration: 20, restLegs: true }));
+    expect(mainItems(plan).some((i) => categoryOf(i.movementId) === 'legs')).toBe(false);
+    expect(plan.blocks.some((b) => b.kind === 'knee')).toBe(true);
+    expect(plan.notes).toContain('Jambes au repos : elles ont travaillé il y a moins de 24 h.');
+  });
+
+  it('module le volume selon le ressenti, entre 2 et 4 séries', () => {
+    const sets = (volume: -1 | 0 | 1) =>
+      buildPlan(input({ duration: 20, volume })).blocks.find((b) => b.kind === 'superset')!.items[0]!.sets;
+    expect(sets(-1)).toBe(sets(0) - 1);
+    expect(sets(1)).toBeLessThanOrEqual(4);
+    expect(sets(-1)).toBeGreaterThanOrEqual(2);
   });
 });

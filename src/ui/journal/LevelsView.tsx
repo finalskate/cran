@@ -1,6 +1,7 @@
 /**
- * Niveaux par mouvement, visualisés en échelle (SPEC §4.10) ; choix manuel au J1,
- * en attendant le test de placement (J2).
+ * Niveaux par mouvement, visualisés en échelle (SPEC §4.10) : vue « Niveaux » du Carnet.
+ * Le niveau se choisit à la main, se teste (« Tester mon niveau », facultatif, J2), et monte
+ * tout seul quand la double progression débloque la variante suivante.
  *
  * Toucher un niveau ouvre sa FICHE (consignes, vidéo, bientôt l'animation) : on peut regarder
  * n'importe quel exercice sans rien changer. Le niveau ne change qu'avec « Choisir ce niveau ».
@@ -13,14 +14,16 @@ import { CATALOG } from '../../data/catalog';
 import { track } from '../../data/usage';
 import type { Movement } from '../../domain/types';
 import { ExerciseSheet } from '../components/ExerciseSheet';
+import { PlacementSheet } from './PlacementSheet';
 import { chooseLevel, levels, prefs } from '../state';
 
 /** Mouvements à échelle (les exercices tournants de prévention n'ont qu'un niveau). */
 const LADDERS = CATALOG.filter((m) => m.levels.length > 1);
 
-export function Levels() {
+export function LevelsView() {
   // Fiche ouverte : mouvement et index du niveau.
   const [open, setOpen] = useState<{ movement: Movement; level: number } | null>(null);
+  const [testing, setTesting] = useState<Movement | null>(null);
 
   async function choose(m: Movement, i: number) {
     const heavy = m.levels[i]!.variants.some((v) => v.wristHeavy);
@@ -34,15 +37,10 @@ export function Levels() {
   }
 
   return (
-    <main class="screen screen--calm">
-      <header class="screen-header">
-        <span class="screen-header__kicker">Où j’en suis</span>
-        <h1 class="screen-header__title">Niveaux</h1>
-      </header>
-
+    <>
       <p class="muted" style={{ margin: 0 }}>
-        Touche un exercice pour voir sa fiche. Choisis le niveau où tu fais confortablement le bas de la
-        fourchette ; selon le lieu, l’appli propose la variante équivalente.
+        Touche un exercice pour voir sa fiche. Deux séances au haut de la fourchette débloquent le niveau suivant ;
+        en cas de doute, « Tester » te place en une série.
       </p>
 
       {LADDERS.map((m) => {
@@ -62,6 +60,9 @@ export function Levels() {
                 {m.note}
               </p>
             )}
+            <button type="button" class="btn btn--small btn--quiet level-test" onClick={() => setTesting(m)}>
+              Tester mon niveau
+            </button>
             <ol class="ladder">
               {m.levels.map((level, i) => {
                 const heavy = level.variants.some((v) => v.wristHeavy);
@@ -118,6 +119,7 @@ export function Levels() {
           }
         />
       )}
-    </main>
+      {testing && <PlacementSheet movement={testing} onClose={() => setTesting(null)} />}
+    </>
   );
 }

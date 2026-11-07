@@ -174,6 +174,8 @@ export interface Plan {
   blocks: PlanBlock[];
   /** Estimation en minutes. */
   estimatedMinutes: number;
+  /** Adaptations du jour expliquées en clair (2e séance, jambes au repos, volume, reprise). */
+  notes?: string[];
   /** Ressenti global de la séance précédente, rappelé dans l'aperçu (« la dernière fois, c'était dur »). */
   recall?: { feel: SessionFeel; startedAt: string; locationId: string };
 }

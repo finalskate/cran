@@ -15,9 +15,11 @@
  *  - v2 (J1) : locations, levels, kneeLogs, workouts, activeSession ; lieux par défaut créés.
  *  - v3 (retouches J1) : events (journal d'usage local, cf. src/data/usage.ts).
  *  - v4 (J4 phase A) : foods (aliments connus), foodLog (journal alimentaire), weights (pesées).
+ *  - v5 (J2) : activities (séances imposées ; course et vélotaf au J5).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
+import type { Activity, KneeLog } from '../domain/recovery';
 import type { Food, FoodEntry, WeightEntry } from '../domain/nutrition';
 import type { SessionState } from '../domain/session';
 import type { Location } from '../domain/types';
@@ -27,7 +29,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -42,13 +44,13 @@ export interface LevelRow {
   updatedAt: string;
 }
 
-/** Score de douleur au genou (SPEC §4.6). */
-export interface KneeLogRow {
+/**
+ * Score de douleur au genou (SPEC §4.6). « morning » = genou du lendemain (J2), avec `worse`
+ * (champ non indexé : pas de migration).
+ */
+export interface KneeLogRow extends KneeLog {
   id?: number;
-  date: string;
-  score: number;
   side?: 'left' | 'right' | 'both';
-  context: 'session' | 'run' | 'morning';
 }
 
 /**
@@ -80,6 +82,7 @@ export class CranDB extends Dexie {
   foods!: Table<Food, string>;
   foodLog!: Table<FoodEntry, number>;
   weights!: Table<WeightEntry, string>;
+  activities!: Table<Activity, number>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -115,6 +118,12 @@ export class CranDB extends Dexie {
       foods: '&id, barcode',
       foodLog: '++id, day',
       weights: '&day',
+    });
+
+    // v5 — activités hors renfo (séances imposées ; course et vélotaf au J5). Table vide.
+    //  index sur le jour (calendrier, charge) et le type.
+    this.version(5).stores({
+      activities: '++id, day, type',
     });
 
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.

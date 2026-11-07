@@ -33,7 +33,7 @@ describe('CranDB', () => {
     const database = freshDb();
     await database.open();
     expect(database.tables.map((t) => t.name).sort()).toEqual(
-      ['activeSession', 'events', 'foodLog', 'foods', 'kneeLogs', 'levels', 'locations', 'settings', 'weights', 'workouts'].sort(),
+      ['activeSession', 'activities', 'events', 'foodLog', 'foods', 'kneeLogs', 'levels', 'locations', 'settings', 'weights', 'workouts'].sort(),
     );
   });
 
@@ -114,13 +114,57 @@ describe('migration v3 → v4', () => {
     const v4 = new CranDB(name);
     opened.push(v4);
     await v4.open();
-    expect(v4.verno).toBe(4);
+    expect(v4.verno).toBeGreaterThanOrEqual(4);
     expect(await v4.workouts.count()).toBe(1);
     expect(await v4.events.count()).toBe(1);
     expect(await getSetting('lastDuration', v4)).toBe(10);
     expect(await v4.foods.count()).toBe(0);
     expect(await v4.foodLog.count()).toBe(0);
     expect(await v4.weights.count()).toBe(0);
+  });
+});
+
+describe('migration v4 → v5', () => {
+  it('conserve séances, genou et alimentation, et ajoute les activités', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée au J4 phase A (schéma v4).
+    const v4 = new Dexie(name);
+    v4.version(1).stores({ settings: '&key' });
+    v4.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v4.version(3).stores({ events: '++id, at' });
+    v4.version(4).stores({ foods: '&id, barcode', foodLog: '++id, day', weights: '&day' });
+    await v4.table('workouts').add({ startedAt: '2026-11-07T18:00:00Z', entries: [] });
+    await v4.table('kneeLogs').add({ date: '2026-11-07T17:55:00Z', score: 1, context: 'session' });
+    await v4.table('foodLog').add({ day: '2026-11-07', label: 'Test' });
+    await v4.table('weights').put({ day: '2026-11-08', kg: 80 });
+    v4.close();
+
+    const v5 = new CranDB(name);
+    opened.push(v5);
+    await v5.open();
+    expect(v5.verno).toBeGreaterThanOrEqual(5);
+    expect(await v5.workouts.count()).toBe(1);
+    expect(await v5.kneeLogs.count()).toBe(1);
+    expect(await v5.foodLog.count()).toBe(1);
+    expect(await v5.weights.count()).toBe(1);
+    expect(await v5.activities.count()).toBe(0);
+    await v5.activities.add({
+      type: 'imposed',
+      day: '2026-11-09',
+      at: '2026-11-09T17:00:00Z',
+      minutes: 45,
+      kind: 'circuit',
+      legs: true,
+      intensity: 'hard',
+    });
+    expect(await v5.activities.where('day').equals('2026-11-09').count()).toBe(1);
   });
 });
 

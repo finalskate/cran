@@ -14,8 +14,18 @@
  * Choix des mouvements : un de chaque famille (pousser, tirer, jambes) d'abord, puis compléments,
  * en priorisant le mouvement le moins récent (jamais fait = prioritaire), 2 par famille au plus.
  * Genou ≥ 5 : pas de jambes (haut du corps et prévention seulement, SPEC §4.6).
+ *
+ * J2 :
+ *  - objectif de chaque série par double progression (progression.ts), reprise allégée après
+ *    une pause ;
+ *  - mouvements écartés (2e séance du jour : ceux travaillés dans les 48 h) et jambes écartées
+ *    (charge : séance imposée « jambes » dans les 24 h) ; la prévention genou reste ;
+ *  - volume modulé par le ressenti global de la séance précédente (±1 série, jamais le niveau) ;
+ *  - chaque adaptation est expliquée dans `plan.notes` (affichées dans l'aperçu).
  */
 import { handSupport, resolveVariant, type Context } from './availability';
+import type { LastSession } from './history';
+import { nextPrefill, PAUSE_DAYS } from './progression';
 import type { Category, Duration, Movement, Plan, PlanBlock, PlanItem, Variant } from './types';
 
 export interface EngineInput {
@@ -28,10 +38,20 @@ export interface EngineInput {
   levels: Readonly<Record<string, number>>;
   /** Dernière date (ISO) où chaque mouvement a été fait. */
   lastDone: Readonly<Record<string, string>>;
-  /** Meilleure série de la dernière fois, par variante (pré-remplissage). */
-  lastBest: Readonly<Record<string, number>>;
+  /** Dernière séance faite avec chaque variante (objectif du jour). */
+  lastSession: Readonly<Record<string, LastSession>>;
   now: Date;
+  /** Mouvements à écarter des blocs principaux (déjà travaillés : 2e séance du jour). */
+  exclude?: readonly string[];
+  /** Jambes à ménager (charge) : pas de mouvement de jambes dans les blocs principaux. */
+  restLegs?: boolean;
+  /** Séries en plus ou en moins sur les blocs principaux (ressenti de la séance précédente). */
+  volume?: -1 | 0 | 1;
 }
+
+/** Séries des blocs principaux : jamais moins de 2, jamais plus de 4. */
+const MIN_SETS = 2;
+const MAX_SETS = 4;
 
 /** Paramètres de chaque format. */
 interface Format {
@@ -99,6 +119,16 @@ export function buildPlan(input: EngineInput): Plan {
 
   fitToDuration(blocks, input.duration);
 
+  const notes: string[] = [];
+  if (input.exclude?.length) notes.push('2e séance du jour : les mouvements des dernières 48 h sont laissés de côté.');
+  if (input.restLegs && input.ctx.kneeScore < 5) notes.push('Jambes au repos : elles ont travaillé il y a moins de 24 h.');
+  if (input.volume === -1) notes.push('Une série de moins : la dernière séance était trop dure.');
+  if (input.volume === 1) notes.push('Une série de plus : la dernière séance était trop facile.');
+  const items = blocks.flatMap((b) => b.items).filter((i) => !i.guided);
+  if (items.some((i) => isAfterPause(i.variantId, input))) {
+    notes.push('Reprise après une pause : objectifs un peu plus bas, tu retrouveras ton niveau en deux semaines.');
+  }
+
   return {
     createdAt: input.now.toISOString(),
     locationId: input.ctx.location.id,
@@ -106,7 +136,19 @@ export function buildPlan(input: EngineInput): Plan {
     kneeScore: input.ctx.kneeScore,
     blocks,
     estimatedMinutes: Math.round(estimateSeconds(blocks) / 60),
+    ...(notes.length ? { notes } : {}),
   };
+}
+
+/** Jours depuis la dernière séance faite avec une variante (undefined : jamais faite). */
+function daysSinceVariant(variantId: string, input: EngineInput): number | undefined {
+  const last = input.lastSession[variantId];
+  return last ? (input.now.getTime() - new Date(last.at).getTime()) / 86_400_000 : undefined;
+}
+
+function isAfterPause(variantId: string, input: EngineInput): boolean {
+  const days = daysSinceVariant(variantId, input);
+  return days !== undefined && days >= PAUSE_DAYS;
 }
 
 // ─── Sélection ───
@@ -134,10 +176,8 @@ function byPriority(a: Candidate, b: Candidate): number {
 
 /** Transforme une variante résolue en élément de plan (séries, pré-remplissage, support des mains). */
 function makeItem(movement: Movement, variant: Variant, level: number, adapted: boolean, sets: number, input: EngineInput): PlanItem {
-  const last = input.lastBest[variant.id];
-  const { min, max } = variant.target;
-  // Pré-remplissage : la meilleure série de la dernière fois, bornée à la fourchette ; sinon le bas de la fourchette.
-  const prefill = last !== undefined ? Math.min(Math.max(last, min), max) : min;
+  // Objectif du jour : double progression à partir de la dernière séance avec cette variante.
+  const prefill = nextPrefill(input.lastSession[variant.id]?.sets, variant.target, daysSinceVariant(variant.id, input));
   const support = handSupport(variant, input.ctx);
   return {
     movementId: movement.id,
@@ -171,8 +211,10 @@ function candidates(input: EngineInput, categories: Category[]): Candidate[] {
 
 /** Choisit les mouvements principaux du jour. */
 export function pickMains(input: EngineInput, count: number): Candidate[] {
-  const allowed = input.ctx.kneeScore >= 5 ? MAIN_CATEGORIES.filter((c) => c !== 'legs') : MAIN_CATEGORIES;
-  const pool = candidates(input, allowed);
+  const noLegs = input.ctx.kneeScore >= 5 || input.restLegs;
+  const allowed = noLegs ? MAIN_CATEGORIES.filter((c) => c !== 'legs') : MAIN_CATEGORIES;
+  const excluded = new Set(input.exclude ?? []);
+  const pool = candidates(input, allowed).filter((c) => !excluded.has(c.movement.id));
   const picked: Candidate[] = [];
   const perCategory = (c: Category) => picked.filter((p) => p.movement.category === c).length;
 
@@ -222,8 +264,10 @@ function mainBlocks(input: EngineInput, format: Format): PlanBlock[] {
     ];
   }
 
+  const volume = input.volume ?? 0;
   return pairUp(picked).map((group, i) => {
-    const sets = i === 0 ? format.firstBlockSets : format.sets;
+    const base = i === 0 ? format.firstBlockSets : format.sets;
+    const sets = Math.min(MAX_SETS, Math.max(MIN_SETS, base + volume));
     return {
       kind: group.length > 1 ? 'superset' : 'single',
       title: group.length > 1 ? `Superset ${String.fromCharCode(65 + i)}` : group[0]!.movement.name,

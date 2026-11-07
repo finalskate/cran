@@ -1,16 +1,21 @@
 /**
  * Bilan de la séance terminée : durée et séries faites, dans l'esprit du carnet (SPEC §4.5),
  * puis le ressenti global de la séance, facultatif (« trop facile / bien dosée / trop dure »).
- * Ce ressenti est rappelé dans l'aperçu de la séance suivante ; il pourra moduler le volume au J2.
- * Les records et les déblocages de niveau arrivent avec la progression (J2).
+ * Ce ressenti est rappelé dans l'aperçu de la séance suivante et règle son volume (±1 série).
+ *
+ * Double progression (J2) : un niveau débloqué est célébré (il est déjà choisi pour la prochaine
+ * fois, « Rester encore à ce niveau » annule) ; deux séances sous la fourchette proposent de
+ * revenir un cran en arrière, sans parler d'échec.
  */
 import { useEffect, useState } from 'preact/hooks';
 import { setWorkoutFeel } from '../../data/repo';
 import { track } from '../../data/usage';
 import type { SessionFeel } from '../../domain/history';
+import type { LevelChange } from '../../domain/progression';
 import { formatClock, SESSION_FEEL_LABEL } from '../format';
 import { movementById } from '../planner';
 import { go } from '../router';
+import { chooseLevel } from '../state';
 import { lastRecord } from '../summary';
 
 const FEELS = Object.entries(SESSION_FEEL_LABEL) as [SessionFeel, string][];
@@ -51,6 +56,13 @@ export function Summary() {
           <span class="num" style={{ fontWeight: 700 }}>{totalSets}</span>
         </div>
       </section>
+
+      {last.unlocks.map((c) => (
+        <LevelUpCard key={c.movementId} change={c} />
+      ))}
+      {last.stepBacks.map((c) => (
+        <StepBackCard key={c.movementId} change={c} />
+      ))}
 
       <section class="card" aria-label="Carnet de la séance">
         <span class="card__label">Carnet</span>
@@ -108,5 +120,79 @@ export function Summary() {
         </button>
       </div>
     </main>
+  );
+}
+
+/** Nom d'un niveau : ses variantes équivalentes. */
+function levelName(movementId: string, level: number): string {
+  return movementById(movementId)?.levels[level]?.variants.map((v) => v.name).join(' · ') ?? '';
+}
+
+/** Niveau débloqué : célébré, déjà appliqué, annulable. */
+function LevelUpCard({ change }: { change: LevelChange }) {
+  const [stayed, setStayed] = useState(false);
+  const movement = movementById(change.movementId);
+
+  async function stay() {
+    await chooseLevel(change.movementId, change.from);
+    track('level-stay', { movementId: change.movementId, level: change.from });
+    setStayed(true);
+  }
+
+  return (
+    <section class="card level-up" aria-label="Niveau débloqué">
+      <span class="card__label">Niveau débloqué</span>
+      <h2 class="card__title">
+        {movement?.name} · niveau {change.to + 1}
+      </h2>
+      {stayed ? (
+        <p class="muted" style={{ margin: 0 }}>
+          Tu restes au niveau {change.from + 1}. Il se débloquera de nouveau après deux séances au haut de la fourchette.
+        </p>
+      ) : (
+        <>
+          <p style={{ margin: 0 }}>
+            Deux séances au haut de la fourchette : place à <strong>{levelName(change.movementId, change.to)}</strong> dès la
+            prochaine séance.
+          </p>
+          <button type="button" class="btn btn--small btn--quiet" onClick={() => void stay()}>
+            Rester encore à ce niveau
+          </button>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Deux séances sous la fourchette : proposer de consolider un cran plus bas. */
+function StepBackCard({ change }: { change: LevelChange }) {
+  const [done, setDone] = useState(false);
+  const movement = movementById(change.movementId);
+
+  async function stepBack() {
+    await chooseLevel(change.movementId, change.to);
+    track('step-back', { movementId: change.movementId, from: change.from, to: change.to });
+    setDone(true);
+  }
+
+  return (
+    <section class="card" aria-label="Consolider">
+      <span class="card__label">{movement?.name}</span>
+      {done ? (
+        <p class="muted" style={{ margin: 0 }}>
+          C’est noté : niveau {change.to + 1} la prochaine fois. La force construite là servira pour remonter.
+        </p>
+      ) : (
+        <>
+          <p style={{ margin: 0 }}>
+            Ce niveau résiste encore. Consolider un moment avec <strong>{levelName(change.movementId, change.to)}</strong> fait
+            souvent progresser plus vite.
+          </p>
+          <button type="button" class="btn btn--small" onClick={() => void stepBack()}>
+            Passer au niveau {change.to + 1} pour l’instant
+          </button>
+        </>
+      )}
+    </section>
   );
 }

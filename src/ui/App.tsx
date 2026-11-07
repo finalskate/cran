@@ -7,8 +7,8 @@ import { Nav } from './components/Nav';
 import { UpdateBanner } from './components/UpdateBanner';
 import { currentRoute } from './router';
 import { Food } from './screens/Food';
+import { Journal } from './screens/Journal';
 import { KneeCheck } from './screens/KneeCheck';
-import { Levels } from './screens/Levels';
 import { Locations } from './screens/Locations';
 import { Preview } from './screens/Preview';
 import { Profile } from './screens/Profile';
@@ -20,7 +20,8 @@ import { Today } from './screens/Today';
 const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   today: Today,
   settings: Settings,
-  levels: Levels,
+  journal: Journal,
+  levels: Journal,
   locations: Locations,
   knee: KneeCheck,
   preview: Preview,

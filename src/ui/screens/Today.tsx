@@ -2,6 +2,10 @@
  * Écran « Aujourd'hui » (SPEC §4.1) : lieu et durée pré-remplis, gros bouton Démarrer en bas.
  * Une séance en cours se reprend d'ici. Carte Alimentation (J4) : total du jour et cible ;
  * invitation à la pesée le matin, sans insistance (une fois pesé, elle laisse place à un ✓).
+ *
+ * J2 : séance déjà faite aujourd'hui → récupération conseillée, une 2e séance reste possible
+ * (bouton secondaire) ; « genou ce matin » après une journée qui a chargé les jambes ;
+ * raccourci « Imposée » pour noter une séance de sport au travail.
  * L'anneau de la semaine arrive avec le J6.
  */
 import { useState } from 'preact/hooks';
@@ -10,13 +14,16 @@ import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
 import { dayKey } from '../../domain/days';
 import { foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
+import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
 import { progress } from '../../domain/session';
 import { DayMeters } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
+import { ImposedSheet } from '../journal/ImposedSheet';
 import { profile, targets, useDayEntries, weights } from '../foodState';
 import { formatKg, formatLongDate } from '../format';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
+import { activities, answerMorningKnee, kneeLogs, workouts } from '../training';
 
 const DURATION_LABEL: Record<Duration, string> = { 10: '10 min', 20: '20 min', 30: '30 min', 40: '40 min et +' };
 
@@ -32,6 +39,9 @@ export function Today() {
   const last = latestWeight(weights.value);
   const weighedToday = last?.day === dayKey(now);
   const [weighing, setWeighing] = useState(false);
+  const [imposing, setImposing] = useState(false);
+  const doneToday = sessionDoneToday(workouts.value, now);
+  const askKnee = ready.value && askMorningKnee(now, workouts.value, activities.value, kneeLogs.value, CATALOG);
 
   async function abandon() {
     if (!confirm('Abandonner la séance en cours ? Les séries faites ne seront pas enregistrées.')) return;
@@ -67,8 +77,37 @@ export function Today() {
         <a class="card card--link" href="#/niveaux">
           <span class="card__label">Première fois</span>
           <span class="card__title">Choisis ton niveau pour chaque mouvement</span>
-          <span class="muted">Le test de placement automatique arrive au prochain jalon. →</span>
+          <span class="muted">À la main, ou avec « Tester mon niveau » : une série max suffit. →</span>
         </a>
+      )}
+
+      {doneToday && !active && (
+        <section class="card done-today" aria-label="Séance faite">
+          <span class="card__label">Séance faite aujourd’hui ✓</span>
+          <span class="card__title">Place à la récupération</span>
+          <span class="muted">
+            Les muscles progressent pendant le repos. Marche, mobilité, un bon repas protéiné et du sommeil : demain, tu
+            seras plus fort.
+          </span>
+        </section>
+      )}
+
+      {askKnee && (
+        <section class="card" aria-labelledby="morning-knee">
+          <span class="card__label">Genou du lendemain</span>
+          <span id="morning-knee" class="card__title">
+            Ton genou ce matin ?
+          </span>
+          <span class="muted">Hier, tes jambes ont travaillé. C’est souvent le matin qu’on sent le mieux une tendinite.</span>
+          <div class="segmented">
+            <button type="button" class="btn" onClick={() => void answerMorningKnee(false)}>
+              Pareil
+            </button>
+            <button type="button" class="btn" onClick={() => void answerMorningKnee(true)}>
+              Plus mal
+            </button>
+          </div>
+        </section>
       )}
 
       {/* Le matin, tant que la pesée du jour n'est pas faite : une invitation, pas un rappel. */}
@@ -89,10 +128,13 @@ export function Today() {
       </a>
 
       <section class="card" aria-label="Raccourcis">
-        <div class="segmented">
+        <div class="segmented shortcuts">
           <a class="btn btn--link" href="#/lieux">
             Lieux
           </a>
+          <button type="button" class="btn" onClick={() => setImposing(true)}>
+            Imposée
+          </button>
           <button type="button" class="btn" onClick={() => setWeighing(true)}>
             {weighedToday && last ? `✓ ${formatKg(last.kg)}` : 'Se peser'}
           </button>
@@ -125,13 +167,22 @@ export function Today() {
             </select>
           </label>
         </div>
-        <button class="cta" type="button" disabled={!ready.value || locations.value.length === 0} onClick={() => go('knee')}>
-          <span class="cta__title">Démarrer la séance</span>
-          <span class="cta__sub">Prévention genou incluse</span>
-        </button>
+        {doneToday ? (
+          // Déjà une séance aujourd'hui : la 2e reste possible, mais n'est plus le geste principal.
+          <button class="btn btn--big" type="button" disabled={!ready.value || locations.value.length === 0} onClick={() => go('knee')}>
+            Une 2e séance quand même
+            <span class="muted btn__sub">Sans les mouvements des dernières 48 h</span>
+          </button>
+        ) : (
+          <button class="cta" type="button" disabled={!ready.value || locations.value.length === 0} onClick={() => go('knee')}>
+            <span class="cta__title">Démarrer la séance</span>
+            <span class="cta__sub">Prévention genou incluse</span>
+          </button>
+        )}
       </div>
 
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
+      {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
     </main>
   );
 }

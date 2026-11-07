@@ -100,3 +100,34 @@ export function formatBytes(bytes: number): string {
   const digits = unit === 0 || value >= 10 ? 0 : 1;
   return `${value.toLocaleString('fr-FR', { maximumFractionDigits: digits })} ${units[unit]}`;
 }
+
+/** Type de séance imposée (saisie et carnet). */
+export const IMPOSED_KIND_LABEL = {
+  run: 'Course',
+  circuit: 'Circuit',
+  strength: 'Musculation',
+  other: 'Autre',
+} as const;
+
+/** Intensité ressentie d'une séance imposée. */
+export const INTENSITY_LABEL = {
+  easy: 'Facile',
+  medium: 'Moyenne',
+  hard: 'Dure',
+} as const;
+
+const shortDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+
+/** « sam. 14 nov. » (carnet). */
+export function formatShortDate(date: Date): string {
+  return shortDate.format(date);
+}
+
+const monthTitle = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
+
+/** « Novembre 2026 » (calendrier ; `month` = « 2026-11 »). */
+export function formatMonth(month: string): string {
+  const [y, m] = month.split('-').map(Number) as [number, number];
+  const text = monthTitle.format(new Date(y, m - 1, 1));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}

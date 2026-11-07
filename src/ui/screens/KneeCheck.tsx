@@ -1,12 +1,15 @@
 /**
  * Score genou avant la séance (SPEC §4.6) : un geste, 0 pré-sélectionné. Le côté est facultatif.
  * Le score module la séance : 3–4 sans exercices à fort impact, ≥ 5 haut du corps et prévention.
+ * Genou « plus mal » ce matin (J2) : la séance ménage les jambes quel que soit le score.
+ * Règle kiné (SPEC §4.6) : après 3 scores ≥ 3 en 7 jours, un message sobre, sans diagnostic.
  */
 import { useState } from 'preact/hooks';
-import { addKneeLog } from '../../data/repo';
+import { kineAlert, morningWorseToday } from '../../domain/recovery';
 import { go } from '../router';
 import { draftPlan, locations, prefs } from '../state';
 import { makePlan } from '../planner';
+import { kneeLogs, logKnee } from '../training';
 
 type Side = 'left' | 'right' | 'both';
 
@@ -31,7 +34,7 @@ export function KneeCheck() {
   async function next() {
     setBusy(true);
     const location = locations.value.find((l) => l.id === prefs.value.lastLocationId) ?? locations.value[0]!;
-    await addKneeLog({ date: new Date().toISOString(), score, context: 'session', ...(side ? { side } : {}) });
+    await logKnee({ date: new Date().toISOString(), score, context: 'session', ...(side ? { side } : {}) });
     draftPlan.value = await makePlan(location, prefs.value.lastDuration, score);
     go('preview', true);
   }
@@ -65,6 +68,20 @@ export function KneeCheck() {
           {explain(score)}
         </p>
       </section>
+
+      {morningWorseToday(kneeLogs.value, new Date()) && (
+        <p class="muted empty-note">Ce matin, ton genou allait moins bien : la séance ménagera les jambes.</p>
+      )}
+
+      {kineAlert(kneeLogs.value, new Date()) && (
+        <section class="card" aria-label="Conseil">
+          <span class="card__label">Ton genou cette semaine</span>
+          <p style={{ margin: 0 }}>
+            Plusieurs scores de 3 ou plus ces 7 derniers jours. Un avis de kiné aiderait à adapter la reprise : ce n’est
+            pas une alerte, juste le bon moment pour en parler.
+          </p>
+        </section>
+      )}
 
       {score > 0 && (
         <section class="card" aria-labelledby="side-label">

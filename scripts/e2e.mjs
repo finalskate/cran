@@ -184,14 +184,17 @@ try {
   await page.waitForFunction(() => document.body.innerText.includes('Dernier export'), { timeout: 5000 });
   await shot('13-reglages-export', true);
 
-  // Nouvelle séance : l'aperçu rappelle le ressenti de la précédente.
+  // Séance déjà faite aujourd'hui : l'accueil conseille la récupération, la 2e séance reste
+  // possible (sans les mouvements des 48 h) et l'aperçu rappelle le ressenti de la précédente.
   await page.goto(BASE);
   await wait(300);
-  await click('Démarrer la séance');
+  await shot('14a-accueil-seance-faite', true);
+  await click('2e séance');
   await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
   await click('Voir la séance');
   await page.waitForFunction(() => document.body.innerText.includes('Séance jugée'), { timeout: 5000 });
-  await shot('14-apercu-rappel');
+  if (!(await text()).includes('2e séance du jour')) throw new Error('aperçu : la 2e séance du jour n’est pas signalée');
+  await shot('14-apercu-rappel', true);
 
   // ─── Alimentation (J4 phase A) ───
   // Open Food Facts est simulé : un produit connu, un code inconnu (404). Aucune requête réelle.
@@ -396,6 +399,51 @@ try {
   await click('La compter');
   await wait(200);
   if (!(await text()).includes('Compte pour le calcul')) throw new Error('journée non comptée après « La compter »');
+
+  // ─── Carnet (J2) ───
+  // Séance imposée d'hier, jambes sollicitées : le moteur ménagera les jambes.
+  await page.goto(BASE);
+  await wait(300);
+  await click('Imposée');
+  await clickIn('Hier');
+  await clickIn('Circuit');
+  await clickIn('Dure');
+  await wait(200);
+  await shot('40-imposee');
+  await clickIn('Noter');
+  await wait(300);
+  if ((await text()).includes('Ton genou ce matin')) {
+    await shot('41-genou-du-matin');
+    await click('Pareil');
+  }
+
+  await page.click('a[href="#/carnet"]');
+  await page.waitForFunction(() => document.body.innerText.includes('Carnet'));
+  await wait(300);
+  await shot('42-carnet-calendrier', true);
+  await page.evaluate(() => document.querySelector('.cal__day--today').click());
+  await wait(300);
+  await shot('43-carnet-jour', true);
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
+  await click('Séances');
+  await wait(300);
+  await shot('44-carnet-seances', true);
+
+  // Test de placement : 30 répétitions au niveau actuel des pompes → on monte d'un niveau.
+  await click('Niveaux');
+  await wait(300);
+  await page.evaluate(() => document.getElementById('lvl-push-h').closest('section').querySelector('.level-test').click());
+  await wait(300);
+  for (let i = 0; i < 30; i++) await page.click('dialog[open] [aria-label="Plus"]');
+  await shot('45-placement');
+  await clickIn('Valider');
+  await wait(200);
+  await shot('46-placement-suite');
+  await clickIn('Valider');
+  await wait(200);
+  await shot('47-placement-resultat');
+  await page.click('dialog[open] [aria-label="Fermer"]');
 
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } finally {

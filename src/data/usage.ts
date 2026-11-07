@@ -38,6 +38,14 @@
  *   weigh          pesée notée : matin ou non (pas le poids, qui est déjà dans sa table)
  *   day-count      journée comptée ou mise de côté à la main pour l'ajustement
  *   adjust         ajustement de cible proposé, accepté ou refusé : ancienne et nouvelle cible
+ *   level-up       niveau débloqué par la double progression : mouvement, ancien, nouveau
+ *   level-stay     « Rester encore à ce niveau » après un déblocage
+ *   step-back      retour en arrière accepté (deux séances sous la fourchette)
+ *   placement      série du test de placement : niveau testé, valeur, suite (monter, descendre, placé)
+ *   imposed        séance imposée notée : type, jambes, intensité, durée
+ *   knee-morning   genou du lendemain : plus mal ou non
+ *   workout-delete séance supprimée du carnet
+ *   activity-delete séance imposée supprimée
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

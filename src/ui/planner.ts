@@ -1,14 +1,16 @@
 /**
  * Relie le moteur pur (src/domain/engine.ts) aux données de l'appli : lit l'historique,
- * les niveaux et le lieu, puis construit le plan du jour.
+ * les niveaux, le lieu, la charge et le genou, puis construit le plan du jour.
  */
 import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
-import { listWorkouts } from '../data/repo';
 import { alternatives, handSupport, resolveVariant, type Context, type Resolved } from '../domain/availability';
 import { buildPlan } from '../domain/engine';
-import { lastBestByVariant, lastDoneByMovement, lastSessionFeel, lastSetsByVariant } from '../domain/history';
+import { lastDoneByMovement, lastSessionByVariant, lastSessionFeel, lastSetsByVariant, type LastSession } from '../domain/history';
+import { nextPrefill, volumeDelta } from '../domain/progression';
+import { legsLoaded, MORNING_WORSE_SCORE, morningWorseToday, sessionDoneToday, workedRecently } from '../domain/recovery';
 import type { Duration, Location, Movement, Plan, PlanItem } from '../domain/types';
 import { levels, prefs } from './state';
+import { activities, kneeLogs, loadTraining, workouts as allWorkouts } from './training';
 
 const ALL: Movement[] = [...CATALOG, WARMUP, COOLDOWN];
 
@@ -34,6 +36,8 @@ export function contextFor(location: Location, kneeScore: number): Context {
  * qu'un exercice remplacé (aperçu ou séance) ait lui aussi son rappel du carnet.
  */
 let lastSets: Record<string, number[]> = {};
+/** Dernière séance par variante (objectif d'un exercice remplacé). */
+let lastSessions: Record<string, LastSession> = {};
 
 /** Ajoute à un élément de plan le rappel de sa dernière séance, s'il y en a une. */
 function withLast(item: PlanItem): PlanItem {
@@ -42,20 +46,29 @@ function withLast(item: PlanItem): PlanItem {
 }
 
 export async function makePlan(location: Location, duration: Duration, kneeScore: number): Promise<Plan> {
-  const workouts = await listWorkouts();
+  await loadTraining();
+  const workouts = allWorkouts.value;
+  const now = new Date();
   lastSets = lastSetsByVariant(workouts);
+  lastSessions = lastSessionByVariant(workouts);
+  const recall = lastSessionFeel(workouts);
+  // Genou « plus mal » ce matin : la séance ménage les jambes comme pour un score de 3.
+  const knee = morningWorseToday(kneeLogs.value, now) ? Math.max(kneeScore, MORNING_WORSE_SCORE) : kneeScore;
   const plan = buildPlan({
     catalog: CATALOG,
     warmup: WARMUP,
     cooldown: COOLDOWN,
-    ctx: contextFor(location, kneeScore),
+    ctx: contextFor(location, knee),
     duration,
     levels: levels.value,
     lastDone: lastDoneByMovement(workouts),
-    lastBest: lastBestByVariant(workouts),
-    now: new Date(),
+    lastSession: lastSessions,
+    now,
+    // 2e séance du jour : les mouvements des 48 dernières heures sont écartés.
+    exclude: sessionDoneToday(workouts, now) ? workedRecently(workouts, CATALOG, now) : [],
+    restLegs: legsLoaded(activities.value, now),
+    volume: volumeDelta(recall?.feel),
   });
-  const recall = lastSessionFeel(workouts);
   return {
     ...plan,
     blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map(withLast) })),
@@ -101,7 +114,11 @@ export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): 
     adapted,
     sets: base.sets,
     target: variant.target,
-    prefill: variant.target.min,
+    prefill: nextPrefill(
+      lastSessions[variant.id]?.sets,
+      variant.target,
+      lastSessions[variant.id] ? (Date.now() - new Date(lastSessions[variant.id]!.at).getTime()) / 86_400_000 : undefined,
+    ),
     ...(variant.perSide ? { perSide: true } : {}),
     ...(support ? { handSupport: support } : {}),
   });

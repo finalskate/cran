@@ -53,21 +53,26 @@ export function lastDoneByMovement(workouts: readonly WorkoutRecord[]): Record<s
   return out;
 }
 
+/** Séries de la dernière séance faite avec une variante, et sa date. */
+export interface LastSession {
+  sets: SetResult[];
+  at: string;
+}
+
 /**
- * Pour chaque variante : la meilleure série de la séance la plus récente où elle a été faite.
- * Sert à pré-remplir l'objectif du jour (la progression fine arrive au J2).
+ * Pour chaque variante : les séries (avec ressenti) de la séance la plus récente où elle a été
+ * faite. Sert à fixer l'objectif du jour (double progression, progression.ts).
  */
-export function lastBestByVariant(workouts: readonly WorkoutRecord[]): Record<string, number> {
-  const latest: Record<string, { at: string; best: number }> = {};
+export function lastSessionByVariant(workouts: readonly WorkoutRecord[]): Record<string, LastSession> {
+  const latest: Record<string, LastSession> = {};
   for (const w of workouts) {
     for (const e of w.entries) {
       if (e.sets.length === 0) continue;
-      const best = Math.max(...e.sets.map((s) => s.value));
       const prev = latest[e.variantId];
-      if (!prev || w.startedAt > prev.at) latest[e.variantId] = { at: w.startedAt, best };
+      if (!prev || w.startedAt > prev.at) latest[e.variantId] = { at: w.startedAt, sets: e.sets };
     }
   }
-  return Object.fromEntries(Object.entries(latest).map(([id, { best }]) => [id, best]));
+  return latest;
 }
 
 /**

@@ -1763,3 +1763,229 @@ h3 {
   flex-shrink: 0;
   white-space: nowrap;
 }
+
+/* ═══ J2 : carnet, calendrier, progression ═══ */
+
+/* Onglets du Carnet (role="tab") : même rendu que les choix. */
+.btn[aria-selected='true'] {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.14);
+  color: #fed7aa;
+}
+
+/* ─── Calendrier ─── */
+.cal__title {
+  margin: 0;
+  text-align: center;
+  flex: 1;
+}
+
+.cal .icon-btn {
+  font-size: 24px;
+  line-height: 1;
+}
+
+/* 7 jours + une colonne étroite pour le nombre de séances de la semaine. */
+.cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)) 28px;
+  gap: 4px;
+  align-items: center;
+}
+
+.cal__head {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.cal__head--week {
+  font-size: 10px;
+}
+
+.cal__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 46px;
+  padding: 4px 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.cal__day:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.cal__day--out {
+  opacity: 0.4;
+}
+
+.cal__day--today {
+  border-color: var(--accent);
+}
+
+.cal__marks {
+  display: flex;
+  gap: 3px;
+  min-height: 7px;
+}
+
+.cal__mark {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.cal__mark--renfo {
+  background: var(--accent);
+}
+
+/* Séance imposée : un anneau (orange, ou rose quand c'était de la course). */
+.cal__mark--imposed {
+  border: 2px solid var(--accent);
+}
+
+.cal__mark--imposed.cal__mark--cardio {
+  border-color: var(--accent-2);
+}
+
+.cal__mark--food {
+  width: 5px;
+  height: 5px;
+  margin-top: 1px;
+  background: var(--text-muted);
+}
+
+.cal__week {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent-soft);
+}
+
+.cal__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  font-size: 12px;
+}
+
+.cal__legend .cal__mark {
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+/* ─── Carnet (séances) ─── */
+.log-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.log-entry__meta {
+  font-size: 13px;
+}
+
+.log-line {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.log-line__name {
+  min-width: 0;
+}
+
+.sets-line {
+  flex-shrink: 0;
+  font-weight: 600;
+  text-align: right;
+}
+
+.sets-line__hard {
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.log-card__feel {
+  font-size: 13px;
+}
+
+.day-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.day-item .btn {
+  align-self: flex-start;
+}
+
+/* ─── Niveaux et placement ─── */
+.level-test {
+  align-self: flex-start;
+}
+
+.placement {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.placement__name {
+  font-family: var(--font-display);
+  font-size: 20px;
+}
+
+.notice-line {
+  margin: 0;
+  color: var(--accent-soft);
+  font-size: 14px;
+}
+
+/* ─── Accueil, aperçu, bilan ─── */
+.btn__sub {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.done-today {
+  border-color: rgba(134, 239, 172, 0.35);
+}
+
+.plan-notes p {
+  margin: 0;
+  font-size: 14px;
+}
+
+.level-up {
+  border: 2px solid var(--accent);
+  background: linear-gradient(135deg, rgba(194, 65, 12, 0.22), rgba(190, 24, 93, 0.18)), var(--surface);
+}
+
+.level-up .btn {
+  align-self: flex-start;
+}
+
+/* Trois raccourcis sur 360 px : une ligne chacun. */
+.shortcuts .btn {
+  padding-inline: 6px;
+  white-space: nowrap;
+}

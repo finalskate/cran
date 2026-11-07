@@ -8,6 +8,7 @@ import { getSetting, setSetting, SETTING_DEFAULTS, type FxLevel, type SettingsMa
 import { ensurePersistence, type PersistState } from '../data/storage';
 import { toRecord, type SessionState } from '../domain/session';
 import { loadFoodState } from './foodState';
+import { loadTraining } from './training';
 import type { Location, Plan } from '../domain/types';
 
 // ─── Préférences ───
@@ -38,6 +39,9 @@ export const locations = signal<Location[]>([]);
 /** Niveau choisi par mouvement. */
 export const levels = signal<Record<string, number>>({});
 
+/** Date du dernier changement de niveau, par mouvement (la progression compte depuis). */
+export const levelSince = signal<Record<string, string>>({});
+
 /** Séance en cours (null = aucune). Enregistrée à chaque changement pour pouvoir la reprendre. */
 export const session = signal<SessionState | null>(null);
 
@@ -53,7 +57,8 @@ export async function reloadLocations(): Promise<void> {
 
 export async function chooseLevel(movementId: string, level: number): Promise<void> {
   levels.value = { ...levels.value, [movementId]: level };
-  await setLevel(movementId, level);
+  const at = await setLevel(movementId, level);
+  levelSince.value = { ...levelSince.value, [movementId]: at };
 }
 
 /** Met à jour la séance en cours et l'enregistre (sans attendre l'écriture : l'UI reste fluide). */
@@ -69,7 +74,7 @@ export function updateSession(next: SessionState | null): void {
  * (base indisponible, navigateur restrictif), les autres se font quand même.
  */
 export async function initState(): Promise<void> {
-  await Promise.allSettled([loadData(), loadFoodState(), refreshPersistence()]);
+  await Promise.allSettled([loadData(), loadFoodState(), loadTraining(), refreshPersistence()]);
   ready.value = true;
 }
 
@@ -88,7 +93,8 @@ async function loadData(): Promise<void> {
 
   const [locs, lvls, active] = await Promise.all([listLocations(), getLevels(), loadActiveSession()]);
   locations.value = locs;
-  levels.value = lvls;
+  levels.value = lvls.levels;
+  levelSince.value = lvls.since;
 
   // Séance terminée mais pas encore archivée (appli fermée pile à la fin) : on l'archive maintenant.
   if (active?.phase === 'done') {

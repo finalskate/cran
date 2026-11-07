@@ -10,7 +10,8 @@
 export type RouteName =
   | 'today'
   | 'settings'
-  | 'levels'
+  | 'journal' // carnet : calendrier et séances
+  | 'levels' // carnet, vue Niveaux
   | 'locations'
   | 'knee' // score genou avant la séance
   | 'preview' // aperçu de la séance proposée
@@ -27,6 +28,7 @@ export interface Route {
 const PATHS: Record<string, RouteName> = {
   '': 'today',
   reglages: 'settings',
+  carnet: 'journal',
   niveaux: 'levels',
   lieux: 'locations',
   genou: 'knee',

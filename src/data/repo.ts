@@ -3,6 +3,7 @@
  * Fines fonctions au-dessus de Dexie : l'UI ne manipule jamais les tables directement.
  */
 import type { SessionFeel, WorkoutRecord } from '../domain/history';
+import type { Activity } from '../domain/recovery';
 import type { SessionState } from '../domain/session';
 import type { Location } from '../domain/types';
 import { db, type KneeLogRow } from './db';
@@ -23,14 +24,20 @@ export async function deleteLocation(id: string): Promise<void> {
 
 // ─── Niveaux ───
 
-/** Niveau choisi par mouvement. */
-export async function getLevels(): Promise<Record<string, number>> {
+/** Niveau choisi par mouvement, et date du dernier changement (la progression compte depuis). */
+export async function getLevels(): Promise<{ levels: Record<string, number>; since: Record<string, string> }> {
   const rows = await db.levels.toArray();
-  return Object.fromEntries(rows.map((r) => [r.movementId, r.level]));
+  return {
+    levels: Object.fromEntries(rows.map((r) => [r.movementId, r.level])),
+    since: Object.fromEntries(rows.map((r) => [r.movementId, r.updatedAt])),
+  };
 }
 
-export async function setLevel(movementId: string, level: number): Promise<void> {
-  await db.levels.put({ movementId, level, updatedAt: new Date().toISOString() });
+/** Change le niveau d'un mouvement ; renvoie la date du changement. */
+export async function setLevel(movementId: string, level: number): Promise<string> {
+  const updatedAt = new Date().toISOString();
+  await db.levels.put({ movementId, level, updatedAt });
+  return updatedAt;
 }
 
 // ─── Genou ───
@@ -39,10 +46,35 @@ export async function addKneeLog(row: Omit<KneeLogRow, 'id'>): Promise<void> {
   await db.kneeLogs.add(row);
 }
 
+/** Scores des `days` derniers jours (règle kiné, genou du lendemain). */
+export function listRecentKneeLogs(days = 14): Promise<KneeLogRow[]> {
+  const since = new Date(Date.now() - days * 86_400_000).toISOString();
+  return db.kneeLogs.where('date').aboveOrEqual(since).toArray();
+}
+
+// ─── Activités (séances imposées) ───
+
+export function listActivities(): Promise<Activity[]> {
+  return db.activities.orderBy('day').toArray();
+}
+
+export async function addActivity(activity: Activity): Promise<number> {
+  return db.activities.add(activity);
+}
+
+export async function deleteActivity(id: number): Promise<void> {
+  await db.activities.delete(id);
+}
+
 // ─── Historique ───
 
 export function listWorkouts(): Promise<WorkoutRecord[]> {
   return db.workouts.orderBy('startedAt').toArray();
+}
+
+/** Supprime une séance du carnet (saisie par erreur). */
+export async function deleteWorkout(id: number): Promise<void> {
+  await db.workouts.delete(id);
 }
 
 export async function addWorkout(record: WorkoutRecord): Promise<void> {

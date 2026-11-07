@@ -1,5 +1,6 @@
 /**
- * Barre de navigation du bas. Progrès arrive avec le J3.
+ * Barre de navigation du bas. « Carnet » regroupe calendrier, séances et niveaux (J2) ;
+ * Progrès arrive avec le J3.
  */
 import type { ComponentChildren } from 'preact';
 import { routeHref, type RouteName } from '../../domain/route';
@@ -7,6 +8,8 @@ import { currentRoute } from '../router';
 
 interface Item {
   route: RouteName;
+  /** Autres écrans sous le même onglet (onglet allumé aussi). */
+  also?: RouteName[];
   label: string;
   icon: ComponentChildren;
 }
@@ -29,9 +32,15 @@ const ITEMS: Item[] = [
     ),
   },
   {
-    route: 'levels',
-    label: 'Niveaux',
-    icon: <path d="M4 20h4v-5h4v-5h4V5h4" />,
+    route: 'journal',
+    also: ['levels'],
+    label: 'Carnet',
+    icon: (
+      <>
+        <rect x="5" y="4" width="14" height="16" rx="2" />
+        <path d="M9 9h6M9 13h6M9 17h3" />
+      </>
+    ),
   },
   {
     route: 'settings',
@@ -55,7 +64,7 @@ export function Nav() {
           key={item.route}
           class="nav__item"
           href={routeHref(item.route)}
-          aria-current={currentRoute.value.name === item.route ? 'page' : undefined}
+          aria-current={currentRoute.value.name === item.route || item.also?.includes(currentRoute.value.name) ? 'page' : undefined}
         >
           <svg
             width="22"

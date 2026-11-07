@@ -44,6 +44,7 @@ import { CATEGORY_LABEL, formatClock, formatTarget, HAND_LABEL } from '../format
 import { contextFor, describeItem } from '../planner';
 import { go } from '../router';
 import { lastRecord } from '../summary';
+import { afterWorkout } from '../training';
 import { locations, prefs, session, updateSession } from '../state';
 
 /** Horloge partagée de l'écran : rafraîchie 4 fois par seconde. */
@@ -98,8 +99,10 @@ export function Session() {
       sets: record.entries.reduce((n, e) => n + e.sets.length, 0),
       planned: state.steps.length,
     });
-    void finishWorkout(record).then((id) => {
-      lastRecord.value = { record: { ...record, id }, plan: state.plan };
+    void finishWorkout(record).then(async (id) => {
+      // Double progression : déblocages appliqués tout de suite, affichés au bilan.
+      const changes = await afterWorkout(record).catch(() => ({ unlocks: [], stepBacks: [] }));
+      lastRecord.value = { record: { ...record, id }, plan: state.plan, ...changes };
       session.value = null;
       go('summary', true);
     });

@@ -18,9 +18,9 @@ import { draftPlan, locations, prefs, updateSession } from '../state';
 
 /** Conseil associé au ressenti de la séance précédente. Le niveau ne change pas pour autant. */
 const RECALL_TIP = {
-  'too-hard': 'Le niveau ne bouge pas : prends ton temps et rallonge les repos si besoin (+15 s).',
+  'too-hard': 'Le niveau ne bouge pas, une série de moins sur les blocs principaux. Rallonge les repos si besoin (+15 s).',
   right: 'Même recette aujourd’hui.',
-  'too-easy': 'Vise le haut de la fourchette à chaque série : c’est ce qui fait monter d’un cran.',
+  'too-easy': 'Une série de plus sur les blocs principaux. Vise le haut de la fourchette : c’est ce qui débloque le niveau suivant.',
 } as const;
 
 export function Preview() {
@@ -86,6 +86,17 @@ export function Preview() {
           <span class="muted" style={{ fontSize: '14px' }}>
             {RECALL_TIP[plan.recall.feel]}
           </span>
+        </section>
+      )}
+
+      {plan.notes && plan.notes.length > 0 && (
+        <section class="card plan-notes" aria-label="Adaptations du jour">
+          <span class="card__label">Aujourd’hui</span>
+          {plan.notes.map((n) => (
+            <p key={n} class="muted">
+              {n}
+            </p>
+          ))}
         </section>
       )}
 

@@ -1314,3 +1314,414 @@ h3 {
     height: 50px;
   }
 }
+
+/* ════════════════════════ J4 phase A : alimentation et pesée ════════════════════════ */
+
+/* ─── En-tête avec navigation par jour (Assiette) ─── */
+.screen-header--row {
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.screen-header__titles {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.daynav {
+  display: flex;
+  gap: 8px;
+}
+
+.daynav .icon-btn {
+  font-size: 24px;
+  line-height: 1;
+  background: var(--surface-solid);
+}
+
+.icon-btn:disabled,
+.btn:disabled,
+.stepper__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ─── Jauges kcal / protéines ─── */
+.meter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.meter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.meter__label {
+  font-weight: 600;
+}
+
+.meter__value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.meter__track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+/* Orange pour l'énergie, rose pour les protéines : les deux accents du thème. */
+.meter__fill--kcal {
+  background: var(--accent);
+}
+
+.meter__fill--protein {
+  background: var(--accent-2);
+}
+
+.meter__note {
+  font-size: 13px;
+}
+
+.nutrients-line {
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* ─── Cartes de l'accueil ─── */
+.card--button {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+/* Carte cliquable discrète (pas l'accent d'une invitation). */
+.card--quiet {
+  border-color: var(--border);
+}
+
+.calib-why {
+  font-size: 13px;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.empty-note {
+  margin: 4px 4px 0;
+}
+
+/* ─── Lignes d'aliments (journal, liste « Ajouter ») ─── */
+.food-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.food-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 8px 0;
+  border: none;
+  border-top: 1px solid var(--border);
+  background: none;
+  text-align: left;
+}
+
+.card .food-row:first-of-type,
+.food-list .food-row:first-child {
+  border-top: none;
+}
+
+.food-row__main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.food-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.food-row__meta {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─── Boutons supplémentaires ─── */
+.btn--quiet {
+  align-self: flex-start;
+  border-color: transparent;
+  color: var(--accent-soft);
+  padding: 0 4px;
+}
+
+/* Bouton plein (lisible au-dessus du contenu qui défile dans la zone du pouce). */
+.btn--solid {
+  background: var(--surface-solid);
+}
+
+/* Bouton principal moins haut (panneaux, demi-largeur). */
+.cta--compact {
+  min-height: 56px;
+}
+
+.cta--compact .cta__title {
+  font-size: 18px;
+}
+
+/* Quatre choix (repas) sur une ligne, même à 360 px de large. */
+.segmented--tight {
+  gap: 6px;
+}
+
+.segmented--tight .btn {
+  padding: 0 4px;
+}
+
+/* ─── Choix dans une liste (portions, niveau d'activité) ─── */
+.choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: var(--tap);
+  padding: 8px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: transparent;
+  text-align: left;
+}
+
+.choice[aria-checked='true'] {
+  border: 2px solid var(--accent);
+  background: rgba(251, 146, 60, 0.14);
+}
+
+.choice--stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.choice__title {
+  font-weight: 600;
+}
+
+.choice__hint {
+  font-size: 13px;
+}
+
+/* ─── Champs ─── */
+.field label {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.field input[type='search'] {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  color: var(--text);
+  font: inherit;
+}
+
+.field__with-suffix {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.field__with-suffix input {
+  flex: 1;
+  min-width: 0;
+}
+
+.field__hint {
+  font-size: 13px;
+}
+
+/* Deux champs côte à côte (kcal / protéines). */
+.field-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.notice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.notice p,
+.sheet__lead {
+  margin: 0;
+  font-size: 14px;
+}
+
+.prose p {
+  margin: 0 0 10px;
+}
+
+/* ─── Sélecteur − valeur + ─── */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper__btn {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-session);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.stepper__btn:active {
+  background: rgba(251, 146, 60, 0.2);
+}
+
+.stepper__value {
+  min-width: 36px;
+  text-align: center;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.stepper--big {
+  justify-content: space-between;
+}
+
+.stepper--big .stepper__btn {
+  width: 72px;
+  height: 72px;
+  font-size: 32px;
+}
+
+.stepper--big .stepper__value {
+  font-size: 56px;
+  line-height: 1;
+}
+
+/* ─── Estimation à la main ─── */
+.hand-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.hand-row__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hand-row__name {
+  font-weight: 600;
+}
+
+.hand-row__hint {
+  font-size: 13px;
+}
+
+/* ─── Scanner ─── */
+.scan {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000000;
+}
+
+.scan__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Cadre de visée : une bande horizontale, la forme d'un code-barres. */
+.scan__frame {
+  position: absolute;
+  inset: 32% 12%;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  box-shadow: 0 0 0 999px rgba(0, 0, 0, 0.35);
+}
+
+.scan__status {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  font-weight: 600;
+  text-shadow: 0 1px 3px #000000;
+}
+
+/* ─── Détail du calcul de la cible ─── */
+.calc {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 12px;
+  align-items: baseline;
+}
+
+.calc .num {
+  text-align: right;
+}
+
+.calc__note {
+  margin: 0;
+  font-size: 14px;
+}
+
+.stepper__unit {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-muted);
+}

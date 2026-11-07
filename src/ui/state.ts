@@ -7,6 +7,7 @@ import { finishWorkout, getLevels, listLocations, loadActiveSession, saveActiveS
 import { getSetting, setSetting, SETTING_DEFAULTS, type FxLevel, type SettingsMap } from '../data/settings';
 import { ensurePersistence, type PersistState } from '../data/storage';
 import { toRecord, type SessionState } from '../domain/session';
+import { loadFoodState } from './foodState';
 import type { Location, Plan } from '../domain/types';
 
 // ─── Préférences ───
@@ -68,7 +69,7 @@ export function updateSession(next: SessionState | null): void {
  * (base indisponible, navigateur restrictif), les autres se font quand même.
  */
 export async function initState(): Promise<void> {
-  await Promise.allSettled([loadData(), refreshPersistence()]);
+  await Promise.allSettled([loadData(), loadFoodState(), refreshPersistence()]);
   ready.value = true;
 }
 

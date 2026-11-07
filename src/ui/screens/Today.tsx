@@ -1,13 +1,20 @@
 /**
  * Écran « Aujourd'hui » (SPEC §4.1) : lieu et durée pré-remplis, gros bouton Démarrer en bas.
- * Une séance en cours se reprend d'ici. L'anneau de la semaine et la carte Alimentation arrivent
- * avec les jalons J4 et J6.
+ * Une séance en cours se reprend d'ici. Carte Alimentation (J4) : total du jour et cible ;
+ * invitation à la pesée le matin, sans insistance (une fois pesé, elle laisse place à un ✓).
+ * L'anneau de la semaine arrive avec le J6.
  */
+import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
 import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
+import { dayKey } from '../../domain/days';
+import { foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
 import { progress } from '../../domain/session';
-import { formatLongDate } from '../format';
+import { DayMeters } from '../food/common';
+import { WeighSheet } from '../food/WeighSheet';
+import { profile, targets, useDayEntries, weights } from '../foodState';
+import { formatKg, formatLongDate } from '../format';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
 
@@ -20,6 +27,11 @@ export function Today() {
   const p = prefs.value;
   const active = session.value;
   const levelsChosen = LEVELED.some((m) => levels.value[m.id] !== undefined);
+  const now = new Date();
+  const entries = useDayEntries(foodDay(now));
+  const last = latestWeight(weights.value);
+  const weighedToday = last?.day === dayKey(now);
+  const [weighing, setWeighing] = useState(false);
 
   async function abandon() {
     if (!confirm('Abandonner la séance en cours ? Les séries faites ne seront pas enregistrées.')) return;
@@ -59,14 +71,31 @@ export function Today() {
         </a>
       )}
 
+      {/* Le matin, tant que la pesée du jour n'est pas faite : une invitation, pas un rappel. */}
+      {ready.value && !weighedToday && now.getHours() >= 5 && now.getHours() < 11 && (
+        <button type="button" class="card card--link card--button" onClick={() => setWeighing(true)}>
+          <span class="card__label">Pesée du matin</span>
+          <span class="card__title">20 secondes sur la balance ?</span>
+          <span class="muted">Au réveil, avant de manger. C’est la tendance qui compte, pas le chiffre du jour.</span>
+        </button>
+      )}
+
+      <a class="card card--link card--quiet" href="#/assiette">
+        <div class="row" style={{ minHeight: 0 }}>
+          <span class="card__label">Alimentation</span>
+          <span class="muted">{profile.value ? 'Noter →' : 'Calculer ma cible →'}</span>
+        </div>
+        <DayMeters totals={sumEntries(entries ?? [])} targets={targets.value} />
+      </a>
+
       <section class="card" aria-label="Raccourcis">
         <div class="segmented">
-          <a class="btn btn--link" href="#/niveaux">
-            Niveaux
-          </a>
           <a class="btn btn--link" href="#/lieux">
             Lieux
           </a>
+          <button type="button" class="btn" onClick={() => setWeighing(true)}>
+            {weighedToday && last ? `✓ ${formatKg(last.kg)}` : 'Se peser'}
+          </button>
         </div>
       </section>
 
@@ -101,6 +130,8 @@ export function Today() {
           <span class="cta__sub">Prévention genou incluse</span>
         </button>
       </div>
+
+      {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
     </main>
   );
 }

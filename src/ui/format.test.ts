@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatBytes, formatClock, formatLongDate, formatTarget } from './format';
+import { formatBytes, formatClock, formatInt, formatKg, formatLongDate, formatTarget, parseDecimal, relativeDayLabel } from './format';
 
 describe('formatClock', () => {
   it('affiche minutes et secondes', () => {
@@ -30,5 +30,27 @@ describe('formatBytes', () => {
     expect(formatBytes(512)).toBe('512 o');
     expect(formatBytes(1536)).toBe('1,5 Ko');
     expect(formatBytes(25 * 1024 * 1024)).toBe('25 Mo');
+  });
+});
+
+describe('saisie et affichage des nombres (alimentation)', () => {
+  it('lit virgule, point et espaces de milliers', () => {
+    expect(parseDecimal('80,4')).toBe(80.4);
+    expect(parseDecimal(' 80.4 ')).toBe(80.4);
+    expect(parseDecimal('1 200')).toBe(1200);
+    expect(parseDecimal('')).toBeUndefined();
+    expect(parseDecimal('abc')).toBeUndefined();
+    expect(parseDecimal('-3')).toBeUndefined();
+  });
+
+  it('formate kilos et kilocalories à la française', () => {
+    expect(formatKg(80)).toBe('80,0 kg');
+    expect(formatInt(2250).replace(/\s/g, ' ')).toBe('2 250');
+  });
+
+  it('nomme aujourd’hui et hier, sinon la date', () => {
+    expect(relativeDayLabel('2026-11-14', '2026-11-14')).toBe('Aujourd’hui');
+    expect(relativeDayLabel('2026-11-13', '2026-11-14')).toBe('Hier');
+    expect(relativeDayLabel('2026-11-12', '2026-11-14')).toBe('Jeudi 12 novembre');
   });
 });

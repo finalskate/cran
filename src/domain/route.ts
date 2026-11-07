@@ -15,7 +15,9 @@ export type RouteName =
   | 'knee' // score genou avant la séance
   | 'preview' // aperçu de la séance proposée
   | 'session' // séance en cours
-  | 'summary'; // séance terminée
+  | 'summary' // séance terminée
+  | 'food' // journal alimentaire du jour
+  | 'profile'; // profil et cible calorique
 
 export interface Route {
   name: RouteName;
@@ -31,6 +33,8 @@ const PATHS: Record<string, RouteName> = {
   apercu: 'preview',
   seance: 'session',
   bravo: 'summary',
+  assiette: 'food',
+  profil: 'profile',
 };
 
 /**

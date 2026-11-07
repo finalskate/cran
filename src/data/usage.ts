@@ -28,6 +28,12 @@
  *   session-feel   ressenti global donné au bilan
  *   update         mise à jour de l'appli acceptée ou reportée
  *   export         export des données
+ *   profile        profil enregistré : cible calculée, plancher appliqué ou non (pas les mensurations)
+ *   food-add       aliment noté : méthode (scan, liste, main, libre), repas, jour passé ou non
+ *   food-edit      entrée modifiée ou supprimée
+ *   scan           code-barres lu : caméra ou saisie, résultat (connu, trouvé, inconnu, hors ligne)
+ *   combo          repas type enregistré : nombre d'entrées
+ *   weigh          pesée notée : matin ou non (pas le poids, qui est déjà dans sa table)
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

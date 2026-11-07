@@ -4,6 +4,8 @@
  * Parcours : niveaux (fiche, choix) → accueil (Parc, 20 min) → score genou 3 → aperçu (fiche,
  * un remplacement) → séance complète (menu « ⋯ », chrono d'exercice), avec « fermeture » de
  * l'appli et reprise en cours de route → bilan (ressenti) → export depuis Réglages.
+ * Puis alimentation : profil, assiette estimée, scan (code tapé, Open Food Facts simulé), produit
+ * inconnu recopié depuis l’étiquette, modification d’une entrée, pesée depuis l’accueil.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -31,7 +33,10 @@ try {
   const page = await browser.newPage();
   await page.setViewport({ width, height, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
-  page.on('console', (m) => m.type() === 'error' && errors.push(`console: ${m.text()}`));
+  // Le 404 simulé d'Open Food Facts (produit inconnu) est attendu : Chrome le journalise quand même.
+  page.on('console', (m) => {
+    if (m.type() === 'error' && !m.location()?.url?.includes('openfoodfacts.org')) errors.push(`console: ${m.text()}`);
+  });
   page.on('dialog', (d) => d.accept()); // confirmations (poignet, abandon…)
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -187,6 +192,126 @@ try {
   await click('Voir la séance');
   await page.waitForFunction(() => document.body.innerText.includes('Séance jugée'), { timeout: 5000 });
   await shot('14-apercu-rappel');
+
+  // ─── Alimentation (J4 phase A) ───
+  // Open Food Facts est simulé : un produit connu, un code inconnu (404). Aucune requête réelle.
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    if (!req.url().includes('openfoodfacts.org')) return req.continue();
+    if (req.url().includes('3017620422003')) {
+      return req.respond({
+        status: 200,
+        contentType: 'application/json',
+        headers: { 'Access-Control-Allow-Origin': '*' },
+        body: JSON.stringify({
+          status: 1,
+          product: {
+            product_name_fr: 'Pâte à tartiner (test)',
+            brands: 'Marque test',
+            nutriments: { 'energy-kcal_100g': 539, proteins_100g: 6.3 },
+            serving_size: '15 g',
+            serving_quantity: 15,
+            product_quantity: 400,
+          },
+        }),
+      });
+    }
+    return req.respond({ status: 404, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: '{"status":0}' });
+  });
+
+  /** Clique un bouton du panneau ouvert (le fond, inerte, a parfois un bouton du même nom). */
+  async function clickIn(t) {
+    const ok = await page.evaluate((t) => {
+      const el = [...document.querySelectorAll('dialog[open] button')].find((b) => b.innerText.includes(t) && !b.disabled);
+      el?.click();
+      return !!el;
+    }, t);
+    if (!ok) throw new Error(`bouton du panneau introuvable : ${t}`);
+    await wait(200);
+  }
+  /** Remplit un champ (déclenche onInput comme une vraie saisie). */
+  const fill = async (sel, value) => {
+    await page.click(sel, { clickCount: 3 });
+    await page.type(sel, value);
+  };
+
+  await page.goto(`${BASE}#/assiette`);
+  await wait(300);
+  await shot('20-assiette-vierge');
+  await click('Calcule ta cible');
+  await page.waitForFunction(() => document.body.innerText.includes('Ta cible'));
+  await fill('#pr-year', '1990');
+  await fill('#pr-height', '180');
+  await fill('#pr-weight', '80');
+  await wait(200);
+  await shot('21-profil', true);
+  await click('Commencer la calibration');
+  await page.waitForFunction(() => document.body.innerText.includes('Calibration'));
+
+  // Assiette de cantine estimée à la main : une paume de plus, un dessert.
+  await click('Ajouter');
+  await clickIn('Estimer une assiette');
+  await page.evaluate(() => {
+    const rows = [...document.querySelectorAll('dialog[open] .hand-row')];
+    rows[0].querySelector('[aria-label="Plus"]').click();
+    rows.find((r) => r.innerText.includes('Dessert')).querySelector('[aria-label="Plus"]').click();
+  });
+  await wait(200);
+  await shot('22-estimer-assiette');
+  await clickIn('Ajouter');
+
+  // Scan (pas de caméra dans le navigateur de test) : code tapé, produit trouvé en ligne.
+  await click('Scanner');
+  await wait(300);
+  await shot('23-scanner');
+  await fill('#scan-code', '3017620422003');
+  await clickIn('Chercher');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Pâte à tartiner'), { timeout: 5000 });
+  await clickIn('½ paquet');
+  await shot('24-portion');
+  await clickIn('Ajouter');
+
+  // Code inconnu : saisie depuis l'étiquette, puis la portion.
+  await click('Scanner');
+  await fill('#scan-code', '96385074');
+  await clickIn('Chercher');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Recopier'), { timeout: 5000 });
+  await fill('#pf-name', 'Chips (test)');
+  await fill('#pf-kcal', '530');
+  await fill('#pf-prot', '6,5');
+  await fill('#pf-pack', '150');
+  await wait(200);
+  await shot('25-etiquette');
+  await clickIn('Enregistrer le produit');
+  await clickIn('1 paquet');
+  await clickIn('Collation');
+  await clickIn('Ajouter');
+
+  // Le produit est désormais dans « Ajouter » (favori ou récent), sans réseau.
+  await click('Ajouter');
+  await wait(300);
+  await shot('26-ajouter-liste');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
+  await shot('27-assiette-jour', true);
+
+  // Modifier une entrée.
+  await page.evaluate(() => document.querySelector('.food-row').click());
+  await wait(300);
+  await shot('28-entree');
+  await clickIn('Enregistrer');
+
+  // Accueil : carte Alimentation et pesée.
+  await page.goto(BASE);
+  await wait(400);
+  await shot('29-accueil-alimentation', true);
+  await click('Se peser');
+  await wait(300);
+  await shot('30-pesee');
+  await clickIn('Noter');
+  await page.waitForFunction(() => document.body.innerText.includes('80,0 kg'), { timeout: 5000 });
+  await shot('31-accueil-pese');
+
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } finally {
   await browser.close();

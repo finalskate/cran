@@ -6,10 +6,12 @@ import type { RouteName } from '../domain/route';
 import { Nav } from './components/Nav';
 import { UpdateBanner } from './components/UpdateBanner';
 import { currentRoute } from './router';
+import { Food } from './screens/Food';
 import { KneeCheck } from './screens/KneeCheck';
 import { Levels } from './screens/Levels';
 import { Locations } from './screens/Locations';
 import { Preview } from './screens/Preview';
+import { Profile } from './screens/Profile';
 import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
 import { Summary } from './screens/Summary';
@@ -24,6 +26,8 @@ const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   preview: Preview,
   session: Session,
   summary: Summary,
+  food: Food,
+  profile: Profile,
 };
 
 /** Écrans « de passage » de la séance : plein écran, sans navigation. */

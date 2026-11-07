@@ -33,7 +33,7 @@ describe('CranDB', () => {
     const database = freshDb();
     await database.open();
     expect(database.tables.map((t) => t.name).sort()).toEqual(
-      ['activeSession', 'events', 'kneeLogs', 'levels', 'locations', 'settings', 'workouts'].sort(),
+      ['activeSession', 'events', 'foodLog', 'foods', 'kneeLogs', 'levels', 'locations', 'settings', 'weights', 'workouts'].sort(),
     );
   });
 
@@ -84,10 +84,43 @@ describe('migration v2 → v3', () => {
     const v3 = new CranDB(name);
     opened.push(v3);
     await v3.open();
-    expect(v3.verno).toBe(3);
+    expect(v3.verno).toBe(SCHEMA_VERSION);
     expect(await v3.workouts.count()).toBe(1);
     expect((await v3.levels.get('push-h'))?.level).toBe(5);
     expect(await v3.events.count()).toBe(0);
+  });
+});
+
+describe('migration v3 → v4', () => {
+  it('conserve séances, journal et réglages, et ajoute alimentation et pesées', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée aux retouches J1 (schéma v3).
+    const v3 = new Dexie(name);
+    v3.version(1).stores({ settings: '&key' });
+    v3.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v3.version(3).stores({ events: '++id, at' });
+    await v3.table('workouts').add({ startedAt: '2026-11-07T18:00:00Z', entries: [] });
+    await v3.table('events').add({ at: 1, type: 'app-open' });
+    await v3.table('settings').put({ key: 'lastDuration', value: 10 });
+    v3.close();
+
+    const v4 = new CranDB(name);
+    opened.push(v4);
+    await v4.open();
+    expect(v4.verno).toBe(4);
+    expect(await v4.workouts.count()).toBe(1);
+    expect(await v4.events.count()).toBe(1);
+    expect(await getSetting('lastDuration', v4)).toBe(10);
+    expect(await v4.foods.count()).toBe(0);
+    expect(await v4.foodLog.count()).toBe(0);
+    expect(await v4.weights.count()).toBe(0);
   });
 });
 

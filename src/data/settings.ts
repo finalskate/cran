@@ -2,6 +2,7 @@
  * Accès typé aux réglages stockés dans la table `settings`.
  * Chaque nouvelle clé se déclare dans SettingsMap : le compilateur vérifie alors le type des valeurs.
  */
+import type { Profile } from '../domain/nutrition';
 import type { Duration } from '../domain/types';
 import { db, type CranDB } from './db';
 
@@ -28,6 +29,10 @@ export interface SettingsMap {
   watchReminder: boolean;
   /** Date ISO du dernier export (pour le rappel hebdomadaire du J6). */
   lastExportAt: string;
+  /** Profil pour la cible calorique (J4) : saisi dans l'appli, jamais dans le code. */
+  profile: Profile;
+  /** Premier jour de la calibration alimentaire (« 2026-11-14 »), fixé à la création du profil. */
+  calibrationStart: string;
 }
 
 export type SettingKey = keyof SettingsMap;

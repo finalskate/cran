@@ -1,5 +1,5 @@
 /**
- * Barre de navigation du bas. Progrès et Assiette arrivent avec leurs jalons.
+ * Barre de navigation du bas. Progrès arrive avec le J3.
  */
 import type { ComponentChildren } from 'preact';
 import { routeHref, type RouteName } from '../../domain/route';
@@ -17,6 +17,16 @@ const ITEMS: Item[] = [
     route: 'today',
     label: "Aujourd'hui",
     icon: <path d="M4 11l8-7 8 7v9H4z" />,
+  },
+  {
+    route: 'food',
+    label: 'Assiette',
+    icon: (
+      <>
+        <circle cx="12" cy="12" r="8" />
+        <circle cx="12" cy="12" r="4" />
+      </>
+    ),
   },
   {
     route: 'levels',

@@ -14,9 +14,11 @@
  *  - v1 (J0) : settings.
  *  - v2 (J1) : locations, levels, kneeLogs, workouts, activeSession ; lieux par défaut créés.
  *  - v3 (retouches J1) : events (journal d'usage local, cf. src/data/usage.ts).
+ *  - v4 (J4 phase A) : foods (aliments connus), foodLog (journal alimentaire), weights (pesées).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
+import type { Food, FoodEntry, WeightEntry } from '../domain/nutrition';
 import type { SessionState } from '../domain/session';
 import type { Location } from '../domain/types';
 import { DEFAULT_LOCATIONS } from './equipment';
@@ -25,7 +27,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 3;
+export const SCHEMA_VERSION = 4;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -75,6 +77,9 @@ export class CranDB extends Dexie {
   workouts!: Table<WorkoutRecord, number>;
   activeSession!: Table<ActiveSessionRow, string>;
   events!: Table<EventRow, number>;
+  foods!: Table<Food, string>;
+  foodLog!: Table<FoodEntry, number>;
+  weights!: Table<WeightEntry, string>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -100,6 +105,16 @@ export class CranDB extends Dexie {
     // v3 — journal d'usage. Nouvelle table vide : rien à transformer.
     this.version(3).stores({
       events: '++id, at',
+    });
+
+    // v4 — alimentation et pesée. Nouvelles tables vides : rien à transformer.
+    //  - foods : clé « ean:<code> » ou « perso:<id> », index sur le code-barres (scan) ;
+    //  - foodLog : une ligne par aliment noté, index sur le jour alimentaire ;
+    //  - weights : une pesée par jour (clé = jour).
+    this.version(4).stores({
+      foods: '&id, barcode',
+      foodLog: '++id, day',
+      weights: '&day',
     });
 
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.

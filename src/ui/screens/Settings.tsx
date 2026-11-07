@@ -168,6 +168,12 @@ export function Settings() {
         />
       </section>
 
+      <a class="card card--link" href="#/profil">
+        <span class="card__label">Alimentation</span>
+        <span class="card__title">Profil et cible du jour</span>
+        <span class="muted">Taille, poids, activité, et le détail du calcul. →</span>
+      </a>
+
       <section class="card" aria-labelledby="storage-title">
         <span id="storage-title" class="card__label">
           Données

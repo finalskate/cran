@@ -1,25 +1,39 @@
 /**
- * Vue « Calendrier » du Carnet : un mois, semaine par semaine (lundi → dimanche).
- * Par jour, des repères discrets : séance de renfo (point plein), séance imposée (anneau),
- * journée notée dans l'Assiette (petit point). En bout de ligne, le nombre de séances de la
- * semaine. Jamais de série de jours, jamais de jour « manqué » (SPEC §4.10).
+ * Vue « Calendrier » du Carnet.
  *
- * Toucher un jour ouvre son détail : séances, séance imposée, total de l'Assiette, et la
- * possibilité de noter après coup une séance imposée oubliée.
+ * En tête (J5a) : la semaine, avec ‹ › pour remonter le temps, l'objectif renfo / cardio, les
+ * minutes de course et de vélo et les trajets de vélotaf ; chaque jour se touche.
+ *
+ * Puis le mois, semaine par semaine (lundi → dimanche). Par jour, des repères discrets : renfo
+ * (point orange), cardio (point rose : course, vélo), séance imposée (anneau), vélotaf (petit
+ * trait), journée notée dans l'Assiette (petit point). En bout de ligne, le nombre de séances de
+ * la semaine (le vélotaf n'en est pas une). Jamais de série de jours, jamais de jour « manqué »
+ * (SPEC §4.10).
+ *
+ * Toucher un jour ouvre son détail : séances, activités, total de l'Assiette, et de quoi noter
+ * après coup une course, un vélotaf ou une séance imposée oubliés.
  */
 import { useEffect, useState } from 'preact/hooks';
-import { monthGrid, monthOf, shiftMonth } from '../../domain/calendar';
-import { dayKey, dayToDate } from '../../domain/days';
+import { mondayOf, monthGrid, monthOf, shiftMonth } from '../../domain/calendar';
+import { addDays, dayKey, dayToDate } from '../../domain/days';
+import { trainingWeek } from '../../domain/week';
 import { sumEntries, type FoodEntry } from '../../domain/nutrition';
 import type { WorkoutRecord } from '../../domain/history';
 import type { Activity } from '../../domain/recovery';
 import { listFoodEntriesBetween } from '../../data/foodRepo';
 import { Sheet } from '../components/Sheet';
 import { foodTick } from '../foodState';
-import { formatInt, formatLongDate, formatMonth } from '../format';
-import { activities, removeActivity, removeWorkout, workouts } from '../training';
+import { GoalLine, WeekStrip } from '../components/WeekStrip';
+import { formatInt, formatLongDate, formatMonth, formatShortDate } from '../format';
+import { prefs } from '../state';
+import { activities, removeActivity, removeWorkout, renfoDays, workouts } from '../training';
+import { CardioSheet } from './CardioSheet';
 import { ActivityLine, WorkoutLines } from './common';
+import { CommuteSheet } from './CommuteSheet';
 import { ImposedSheet } from './ImposedSheet';
+
+/** Saisie après coup depuis le détail d'un jour. */
+type LogKind = 'cardio' | 'commute' | 'imposed';
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -32,7 +46,7 @@ export function CalendarView() {
   const today = dayKey(new Date());
   const [month, setMonth] = useState(monthOf(today));
   const [open, setOpen] = useState<string | null>(null);
-  const [imposedDay, setImposedDay] = useState<string | null>(null);
+  const [logging, setLogging] = useState<{ day: string; kind: LogKind } | null>(null);
   const [food, setFood] = useState<Record<string, FoodEntry[]>>({});
   const weeks = monthGrid(month);
   const first = weeks[0]![0]!;
@@ -57,6 +71,8 @@ export function CalendarView() {
 
   return (
     <>
+      <WeekCard today={today} onDay={setOpen} />
+
       <section class="card cal" aria-label="Calendrier">
         <div class="row">
           <button type="button" class="icon-btn icon-btn--round" aria-label="Mois précédent" onClick={() => setMonth(shiftMonth(month, -1))}>
@@ -84,17 +100,25 @@ export function CalendarView() {
             Sem.
           </span>
           {weeks.map((week) => {
-            const count = week.reduce((n, d) => n + workoutsOn(w, d).length + activitiesOn(a, d).length, 0);
+            const count = week.reduce(
+              (n, d) => n + workoutsOn(w, d).length + activitiesOn(a, d).filter((x) => x.type !== 'commute').length,
+              0,
+            );
             return [
               ...week.map((d) => {
                 const renfo = workoutsOn(w, d).length > 0;
-                const imposed = activitiesOn(a, d);
+                const acts = activitiesOn(a, d);
+                const imposed = acts.filter((x) => x.type === 'imposed');
+                const cardio = acts.some((x) => x.type === 'run' || x.type === 'bike');
+                const commute = acts.reduce((n, x) => n + (x.type === 'commute' ? x.trips : 0), 0);
                 const noted = (food[d]?.length ?? 0) > 0;
                 const future = d > today;
                 const label = [
                   formatLongDate(dayToDate(d)),
                   renfo && 'séance',
+                  cardio && 'cardio',
                   imposed.length > 0 && 'séance imposée',
+                  commute > 0 && 'vélotaf',
                   noted && 'journée notée',
                 ]
                   .filter(Boolean)
@@ -111,8 +135,14 @@ export function CalendarView() {
                     <span class="num">{Number(d.slice(8))}</span>
                     <span class="cal__marks" aria-hidden="true">
                       {renfo && <span class="cal__mark cal__mark--renfo" />}
-                      {imposed.length > 0 && <span class={`cal__mark cal__mark--imposed${imposed.some((x) => x.kind === 'run') ? ' cal__mark--cardio' : ''}`} />}
+                      {cardio && <span class="cal__mark cal__mark--cardio" />}
+                      {imposed.length > 0 && (
+                        <span class={`cal__mark cal__mark--imposed${imposed.some((x) => x.kind === 'run') ? ' cal__mark--imposed-run' : ''}`} />
+                      )}
                       {noted && <span class="cal__mark cal__mark--food" />}
+                    </span>
+                    <span class="cal__commute" aria-hidden="true">
+                      {commute > 0 && <span class={`cal__dash${commute > 1 ? ' cal__dash--double' : ''}`} />}
                     </span>
                   </button>
                 );
@@ -129,7 +159,13 @@ export function CalendarView() {
             <span class="cal__mark cal__mark--renfo" /> renfo
           </span>
           <span>
+            <span class="cal__mark cal__mark--cardio" /> cardio
+          </span>
+          <span>
             <span class="cal__mark cal__mark--imposed" /> imposée
+          </span>
+          <span>
+            <span class="cal__dash" /> vélotaf
           </span>
           <span>
             <span class="cal__mark cal__mark--food" /> assiette notée
@@ -144,13 +180,15 @@ export function CalendarView() {
           activities={activitiesOn(a, open)}
           food={food[open] ?? []}
           onClose={() => setOpen(null)}
-          onAddImposed={() => {
-            setImposedDay(open);
+          onLog={(kind) => {
+            setLogging({ day: open, kind });
             setOpen(null);
           }}
         />
       )}
-      {imposedDay && <ImposedSheet day={imposedDay} onClose={() => setImposedDay(null)} />}
+      {logging?.kind === 'cardio' && <CardioSheet day={logging.day} onClose={() => setLogging(null)} />}
+      {logging?.kind === 'commute' && <CommuteSheet day={logging.day} onClose={() => setLogging(null)} />}
+      {logging?.kind === 'imposed' && <ImposedSheet day={logging.day} onClose={() => setLogging(null)} />}
     </>
   );
 }
@@ -161,11 +199,11 @@ interface DayProps {
   activities: Activity[];
   food: FoodEntry[];
   onClose: () => void;
-  onAddImposed: () => void;
+  onLog: (kind: LogKind) => void;
 }
 
 /** Détail d'un jour du calendrier. */
-function DaySheet({ day, workouts: ws, activities: as, food, onClose, onAddImposed }: DayProps) {
+function DaySheet({ day, workouts: ws, activities: as, food, onClose, onLog }: DayProps) {
   const totals = sumEntries(food);
   const empty = ws.length === 0 && as.length === 0;
 
@@ -175,7 +213,7 @@ function DaySheet({ day, workouts: ws, activities: as, food, onClose, onAddImpos
   }
 
   async function deleteActivity(x: Activity) {
-    if (x.id === undefined || !confirm('Supprimer cette séance imposée ?')) return;
+    if (x.id === undefined || !confirm(`Supprimer ${ACTIVITY_NAME[x.type]} ?`)) return;
     await removeActivity(x.id);
   }
 
@@ -213,9 +251,63 @@ function DaySheet({ day, workouts: ws, activities: as, food, onClose, onAddImpos
         </span>
       </div>
 
-      <button type="button" class="btn" onClick={onAddImposed}>
-        Noter une séance imposée ce jour-là
-      </button>
+      <span class="card__label">Noter ce jour-là</span>
+      <div class="segmented segmented--tight">
+        <button type="button" class="btn btn--small" onClick={() => onLog('cardio')}>
+          Course · vélo
+        </button>
+        <button type="button" class="btn btn--small" onClick={() => onLog('commute')}>
+          Vélotaf
+        </button>
+        <button type="button" class="btn btn--small" onClick={() => onLog('imposed')}>
+          Imposée
+        </button>
+      </div>
     </Sheet>
+  );
+}
+
+/** Pour la confirmation de suppression. */
+const ACTIVITY_NAME: Record<Activity['type'], string> = {
+  imposed: 'cette séance imposée',
+  run: 'cette course',
+  bike: 'cette séance de vélo',
+  commute: 'ce vélotaf',
+};
+
+/**
+ * La semaine en tête du calendrier (J5a) : les 7 jours (touchables), l'objectif, les minutes de
+ * course et de vélo, les trajets de vélotaf. ‹ › remonte les semaines.
+ */
+function WeekCard({ today, onDay }: { today: string; onDay: (day: string) => void }) {
+  const [monday, setMonday] = useState(mondayOf(today));
+  const current = monday === mondayOf(today);
+  const week = trainingWeek(monday, renfoDays.value, activities.value);
+  const totals = [
+    week.runMinutes > 0 && `course ${week.runMinutes} min`,
+    week.bikeMinutes > 0 && `vélo ${week.bikeMinutes} min`,
+    week.commuteTrips > 0 && `vélotaf ${week.commuteTrips} trajet${week.commuteTrips > 1 ? 's' : ''}`,
+  ].filter(Boolean);
+  return (
+    <section class="card week-detail" aria-label="Semaine">
+      <div class="row">
+        <button type="button" class="icon-btn icon-btn--round" aria-label="Semaine précédente" onClick={() => setMonday(addDays(monday, -7))}>
+          ‹
+        </button>
+        <h2 class="card__title cal__title">{current ? 'Cette semaine' : `Semaine du ${formatShortDate(dayToDate(monday))}`}</h2>
+        <button
+          type="button"
+          class="icon-btn icon-btn--round"
+          aria-label="Semaine suivante"
+          disabled={current}
+          onClick={() => setMonday(addDays(monday, 7))}
+        >
+          ›
+        </button>
+      </div>
+      <WeekStrip week={week} today={today} onDay={onDay} />
+      <GoalLine week={week} goal={prefs.value.weekGoal} />
+      {totals.length > 0 && <span class="muted week-detail__totals">{totals.join(' · ')}</span>}
+    </section>
   );
 }

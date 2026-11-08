@@ -3,12 +3,12 @@
  *  - séance déjà faite aujourd'hui → récupération conseillée ; une 2e séance reste possible,
  *    sans les mouvements travaillés dans les 48 dernières heures ;
  *  - charge sur les jambes : pas de jambes lourdes dans les 24 h qui suivent une séance imposée
- *    qui a sollicité les jambes (plus tard : une sortie longue, J5) ;
+ *    qui a sollicité les jambes ou une course (J5a) ; le vélo et le vélotaf n'en font pas partie ;
  *  - genou du lendemain : une question le matin après une activité qui a chargé les jambes ;
  *  - règle kiné : un score ≥ 3 sur 3 entrées en 7 jours → message sobre.
  */
 import { addDays, dayKey, dayToDate } from './days';
-import type { WorkoutRecord } from './history';
+import type { Feel, WorkoutRecord } from './history';
 import type { Category, Movement } from './types';
 
 // ─── Activités hors séance de renfo ───
@@ -18,10 +18,7 @@ export type ImposedKind = 'run' | 'circuit' | 'strength' | 'other';
 
 export type Intensity = 'easy' | 'medium' | 'hard';
 
-/**
- * Activité notée à part des séances de renfo (table `activities`). Pour l'instant, les séances
- * imposées ; la course et le vélotaf (J5) s'ajouteront à cette union.
- */
+/** Séance imposée (sport obligatoire au travail), notée après coup. */
 export interface ImposedActivity {
   id?: number;
   type: 'imposed';
@@ -36,7 +33,59 @@ export interface ImposedActivity {
   intensity: Intensity;
 }
 
-export type Activity = ImposedActivity;
+/** Sortie de course : en aisance, ou « jeu » (accélérations libres, SPEC §4.7). */
+export type RunKind = 'easy' | 'play';
+
+/** Course notée (J5a) : saisie en moins de 15 s, la Garmin garde le détail. */
+export interface RunActivity {
+  id?: number;
+  type: 'run';
+  day: string;
+  at: string;
+  minutes: number;
+  /** Distance en km, facultative. */
+  km?: number;
+  kind: RunKind;
+  feel: Feel;
+  /** Score de genou noté juste après (0–10), aussi écrit dans `kneeLogs` (contexte « run »). */
+  kneeAfter: number;
+}
+
+/** Séance de vélo (d'appartement surtout) : en aisance ou fractionnée. */
+export type BikeKind = 'easy' | 'intervals';
+
+export interface BikeActivity {
+  id?: number;
+  type: 'bike';
+  day: string;
+  at: string;
+  minutes: number;
+  kind: BikeKind;
+  feel: Feel;
+}
+
+/** Vélotaf : un aller, un retour (trips = 1) ou les deux (trips = 2). Juste noté. */
+export interface CommuteActivity {
+  id?: number;
+  type: 'commute';
+  day: string;
+  at: string;
+  trips: 1 | 2;
+}
+
+/**
+ * Activité notée à part des séances de renfo (table `activities`, indexée par jour et type).
+ * Ajouter un type ici ne demande pas de migration : les champs non indexés sont libres.
+ */
+export type Activity = ImposedActivity | RunActivity | BikeActivity | CommuteActivity;
+
+/**
+ * Une activité charge-t-elle les jambes (genou) ? Une course toujours ; une séance imposée si
+ * elle les a sollicitées. Le vélo (doux pour le genou) et le vélotaf (trop court) non.
+ */
+export function loadsLegs(a: Activity): boolean {
+  return a.type === 'run' || (a.type === 'imposed' && a.legs);
+}
 
 /** Une activité imposée compte-t-elle comme du renfo (sinon : cardio) dans l'objectif hebdo (J6) ? */
 export function imposedCountsAsStrength(kind: ImposedKind): boolean {
@@ -48,7 +97,7 @@ export function imposedCountsAsStrength(kind: ImposedKind): boolean {
 /** Délai pendant lequel un mouvement déjà travaillé est écarté d'une 2e séance. */
 export const RECOVERY_HOURS = 48;
 
-/** Charge sur les jambes : délai sans jambes lourdes après une séance imposée « jambes ». */
+/** Charge sur les jambes : délai sans jambes lourdes après une course ou une séance imposée « jambes ». */
 export const LEGS_LOAD_HOURS = 24;
 
 /** Familles écartées d'une 2e séance si travaillées récemment (les bras aussi, J3b). */
@@ -80,14 +129,14 @@ export function workedRecently(
 }
 
 /**
- * Jambes à ménager ? Vrai si une séance imposée a sollicité les jambes dans les 24 dernières
- * heures. Une activité saisie le jour même est datée de sa saisie (on la note juste après) ;
+ * Jambes à ménager ? Vrai si une course ou une séance imposée « jambes » date de moins de
+ * 24 heures. Une activité saisie le jour même est datée de sa saisie (on la note juste après) ;
  * saisie après coup, elle est placée à midi de son jour.
  */
 export function legsLoaded(activities: readonly Activity[], now: Date): boolean {
   const since = now.getTime() - LEGS_LOAD_HOURS * 3600_000;
   return activities.some((a) => {
-    if (!a.legs) return false;
+    if (!loadsLegs(a)) return false;
     const at = new Date(a.at);
     const end = dayKey(at) === a.day ? at.getTime() : dayToDate(a.day).getTime() + 12 * 3600_000;
     return end >= since;
@@ -113,7 +162,7 @@ export const KINE_SCORE = 3;
 export const KINE_COUNT = 3;
 export const KINE_DAYS = 7;
 
-/** Une activité de la veille a-t-elle chargé les jambes (renfo avec jambes, imposée « jambes ») ? */
+/** Une activité de ce jour a-t-elle chargé les jambes (renfo avec jambes, course, imposée « jambes ») ? */
 export function legsLoadedOn(
   day: string,
   workouts: readonly WorkoutRecord[],
@@ -125,7 +174,7 @@ export function legsLoadedOn(
       dayKey(new Date(w.endedAt)) === day &&
       w.entries.some((e) => e.sets.length > 0 && catalog.find((m) => m.id === e.movementId)?.category === 'legs'),
   );
-  return legsSession || activities.some((a) => a.day === day && a.legs);
+  return legsSession || activities.some((a) => a.day === day && loadsLegs(a));
 }
 
 /**

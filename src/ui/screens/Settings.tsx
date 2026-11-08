@@ -1,6 +1,7 @@
 /**
  * Écran « Réglages ». Au J0 : effets visuels, état du stockage persistant (SPEC §3.1), version.
  * Retouches J1 : export complet des données (sauvegarde et journal d'usage, SPEC §4.11).
+ * J5a : objectif de la semaine (renfos et cardio) ; lien vers les lieux (sorti de l'accueil).
  */
 import { useEffect, useState } from 'preact/hooks';
 import { SCHEMA_VERSION } from '../../data/db';
@@ -8,7 +9,9 @@ import { getSetting, setSetting, type FxLevel } from '../../data/settings';
 import { getStorageInfo, type StorageInfo } from '../../data/storage';
 import { track } from '../../data/usage';
 import { offlineReady } from '../../pwa/registerSW';
+import { Stepper } from '../components/Stepper';
 import { Toggle } from '../components/Toggle';
+import { WEEK_GOAL_MAX, type WeekGoal } from '../../domain/week';
 import { photos } from '../bodyState';
 import {
   notify,
@@ -79,6 +82,11 @@ export function Settings() {
   }
 
   /** Activer la notification demande l'autorisation Android dans la foulée. */
+  async function setWeekGoal(goal: WeekGoal) {
+    await setPref('weekGoal', goal);
+    track('week-goal', { ...goal });
+  }
+
   async function toggleNotify(on: boolean) {
     if (on) setNotifyState(await requestNotifyPermission());
     await setPref('watchNotify', on);
@@ -183,6 +191,45 @@ export function Settings() {
           onChange={(v) => void setPref('watchReminder', v)}
         />
       </section>
+
+      <section class="card" aria-labelledby="goal-title">
+        <span id="goal-title" class="card__label">
+          Objectif de la semaine
+        </span>
+        <div class="row">
+          <span>Renfo</span>
+          <Stepper
+            label="Séances de renfo par semaine"
+            value={p.weekGoal.strength}
+            onChange={(v) => void setWeekGoal({ ...p.weekGoal, strength: v })}
+            step={1}
+            min={0}
+            max={WEEK_GOAL_MAX}
+            format={(v) => `${v} / sem.`}
+          />
+        </div>
+        <div class="row">
+          <span>Cardio</span>
+          <Stepper
+            label="Séances de cardio par semaine"
+            value={p.weekGoal.cardio}
+            onChange={(v) => void setWeekGoal({ ...p.weekGoal, cardio: v })}
+            step={1}
+            min={0}
+            max={WEEK_GOAL_MAX}
+            format={(v) => `${v} / sem.`}
+          />
+        </div>
+        <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
+          Une séance de 10 min compte. Cardio : course, vélo, séance imposée de course. Le vélotaf est noté à part.
+        </p>
+      </section>
+
+      <a class="card card--link" href="#/lieux">
+        <span class="card__label">Lieux</span>
+        <span class="card__title">Lieux, matériel et élastiques</span>
+        <span class="muted">Ce que la séance peut utiliser à chaque endroit. →</span>
+      </a>
 
       <a class="card card--link" href="#/profil">
         <span class="card__label">Profil</span>

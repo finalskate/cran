@@ -1858,13 +1858,44 @@ h3 {
   background: var(--accent);
 }
 
+/* Cardio (course, vélo, J5a) : point rose. */
+.cal__mark--cardio {
+  background: var(--accent-2);
+}
+
 /* Séance imposée : un anneau (orange, ou rose quand c'était de la course). */
 .cal__mark--imposed {
   border: 2px solid var(--accent);
 }
 
-.cal__mark--imposed.cal__mark--cardio {
+.cal__mark--imposed-run {
   border-color: var(--accent-2);
+}
+
+/* Vélotaf (J5a) : un petit trait sous les points, plus long pour un aller-retour. */
+.cal__commute,
+.week-strip__commute {
+  display: flex;
+  justify-content: center;
+  min-height: 3px;
+}
+
+.cal__dash {
+  display: inline-block;
+  width: 10px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--accent-soft);
+}
+
+/* Aller-retour : un trait plus long. */
+.cal__dash--double {
+  width: 18px;
+}
+
+.cal__legend .cal__dash {
+  margin-right: 4px;
+  vertical-align: middle;
 }
 
 .cal__mark--food {
@@ -2641,4 +2672,114 @@ h3 {
 .cue-card__figure {
   flex-shrink: 0;
   width: 92px;
+}
+
+/* ─── La semaine (J5a) : 7 pastilles, objectif, carte « Prochaine sortie » ─── */
+.week-strip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.week-strip__day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 52px;
+  padding: 6px 0;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+}
+
+button.week-strip__day {
+  cursor: pointer;
+}
+
+.week-strip__day--today {
+  border-color: var(--accent);
+}
+
+.week-strip__day--future {
+  opacity: 0.45;
+}
+
+.week-strip__letter {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.week-strip__dots {
+  display: flex;
+  gap: 3px;
+  min-height: 7px;
+}
+
+.goal-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.goal-part--done {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+.week-card {
+  gap: 10px;
+}
+
+.week-detail__totals {
+  font-size: 14px;
+}
+
+.cardio-card {
+  gap: 6px;
+}
+
+.cardio-card__log {
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* Genou à 5 ou plus : la carte reste sobre (pas de couleur d'alerte). */
+.cardio-card--rest .card__title {
+  color: var(--text);
+}
+
+/* Raccourcis de l'accueil : 2 × 2, de gros boutons au pouce. */
+.shortcuts--grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Vélotaf : Aller | Retour, puis « Aller et retour » sur toute la largeur. */
+.commute-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.commute-choices__both {
+  grid-column: 1 / -1;
+}
+
+/* Genou après la course : 11 cases plus basses que sur l'écran genou (feuille). */
+.score-grid--compact .score {
+  min-height: 44px;
+  font-size: 18px;
+}
+
+.cardio-knee {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

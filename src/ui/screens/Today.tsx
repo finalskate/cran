@@ -10,7 +10,9 @@
  * avec un rappel discret des photos du mois.
  * J4B : bilan du soir proposé dès 19 h, rattrapable le lendemain jusqu'à 11 h (« Et hier ? »),
  * une fois la calibration terminée (pendant la calibration, il reste accessible dans l'Assiette).
- * L'anneau de la semaine arrive avec le J6.
+ * J5a : la semaine (7 pastilles + objectif renfo / cardio, vers le Carnet), la carte « Prochaine
+ * sortie » (suggestion de course, ou de vélo sur un lieu équipé d'un vélo), raccourcis
+ * « Course · vélo » et « Vélotaf ». Le raccourci « Lieux » est passé dans Réglages.
  */
 import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
@@ -28,6 +30,13 @@ import { Sparkline } from '../components/SmallCharts';
 import { DayMeters } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
 import { ImposedSheet } from '../journal/ImposedSheet';
+import { CardioSheet } from '../journal/CardioSheet';
+import { CommuteSheet } from '../journal/CommuteSheet';
+import { CardioCard } from '../components/CardioCard';
+import { GoalLine, WeekStrip } from '../components/WeekStrip';
+import { weekOf } from '../../domain/week';
+import { track } from '../../data/usage';
+import { openCalendar } from './Journal';
 import { ReviewSheet } from '../food/ReviewSheet';
 import { calibrationStart, profile, targets, useDayEntries, weights } from '../foodState';
 import { reviewedDays } from '../habitsState';
@@ -35,7 +44,7 @@ import { photos, summary, trend } from '../bodyState';
 import { formatApproxDate, formatKg, formatLongDate, formatSigned } from '../format';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
-import { activities, answerMorningKnee, kneeLogs, workouts } from '../training';
+import { activities, answerMorningKnee, kneeLogs, renfoDays, workouts } from '../training';
 
 const DURATION_LABEL: Record<Duration, string> = { 10: '10 min', 20: '20 min', 30: '30 min', 40: '40 min et +' };
 
@@ -52,6 +61,16 @@ export function Today() {
   const weighedToday = last?.day === dayKey(now);
   const [weighing, setWeighing] = useState(false);
   const [imposing, setImposing] = useState(false);
+  const [cardio, setCardio] = useState<{ type?: 'run' | 'bike' } | null>(null);
+  const [commuting, setCommuting] = useState(false);
+  const location = locations.value.find((l) => l.id === p.lastLocationId);
+  const hasBike = location?.equipment.includes('bike') ?? false;
+  const week = weekOf(dayKey(now), renfoDays.value, activities.value);
+
+  function openCardio(type: 'run' | 'bike' | undefined, from: 'shortcut' | 'card') {
+    track('cardio-sheet', { from, type });
+    setCardio(type ? { type } : {});
+  }
   const [reviewing, setReviewing] = useState<{ day: string; via: 'evening' | 'catch-up' } | null>(null);
   // Bilan du soir : après la calibration seulement (elle demande déjà de tout noter).
   const calibrating = !!calibrationStart.value && calibrationDay(calibrationStart.value, foodDay(now)) !== null;
@@ -146,6 +165,18 @@ export function Today() {
         </button>
       )}
 
+      {ready.value && (
+        <button type="button" class="card card--link card--button card--quiet week-card" onClick={() => openCalendar()}>
+          <div class="row" style={{ minHeight: 0 }}>
+            <span class="card__label">Cette semaine</span>
+            <GoalLine week={week} goal={p.weekGoal} />
+          </div>
+          <WeekStrip week={week} today={dayKey(now)} />
+        </button>
+      )}
+
+      {ready.value && <CardioCard bike={hasBike} onLog={(type) => openCardio(type, 'card')} />}
+
       <a class="card card--link card--quiet" href="#/assiette">
         <div class="row" style={{ minHeight: 0 }}>
           <span class="card__label">Alimentation</span>
@@ -157,10 +188,13 @@ export function Today() {
       {last && <BodyCard />}
 
       <section class="card" aria-label="Raccourcis">
-        <div class="segmented shortcuts">
-          <a class="btn btn--link" href="#/lieux">
-            Lieux
-          </a>
+        <div class="shortcuts shortcuts--grid">
+          <button type="button" class="btn" onClick={() => openCardio(undefined, 'shortcut')}>
+            Course · vélo
+          </button>
+          <button type="button" class="btn" onClick={() => setCommuting(true)}>
+            Vélotaf
+          </button>
           <button type="button" class="btn" onClick={() => setImposing(true)}>
             Imposée
           </button>
@@ -212,6 +246,8 @@ export function Today() {
 
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
       {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
+      {cardio && <CardioSheet {...(cardio.type ? { type: cardio.type } : {})} onClose={() => setCardio(null)} />}
+      {commuting && <CommuteSheet onClose={() => setCommuting(false)} />}
       {reviewing && <ReviewSheet day={reviewing.day} via={reviewing.via} onClose={() => setReviewing(null)} />}
     </main>
   );

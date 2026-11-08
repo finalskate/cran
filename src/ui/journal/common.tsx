@@ -1,11 +1,21 @@
 /**
  * Éléments partagés par les vues du Carnet : lignes « à la Lafay » d'une séance
- * (exercice, séries × répétitions, ressenti) et d'une séance imposée.
+ * (exercice, séries × répétitions, ressenti) et d'une activité (séance imposée, course, vélo,
+ * vélotaf).
  */
 import type { WorkoutEntry, WorkoutRecord } from '../../domain/history';
 import type { Activity } from '../../domain/recovery';
 import type { Variant } from '../../domain/types';
-import { formatClock, IMPOSED_KIND_LABEL, INTENSITY_LABEL } from '../format';
+import {
+  BIKE_KIND_LABEL,
+  COMMUTE_LABEL,
+  FEEL_LABEL,
+  formatClock,
+  formatKm,
+  IMPOSED_KIND_LABEL,
+  INTENSITY_LABEL,
+  RUN_KIND_LABEL,
+} from '../format';
 import { movementById } from '../planner';
 import { locations } from '../state';
 
@@ -53,20 +63,38 @@ export function WorkoutLines({ workout }: { workout: WorkoutRecord }) {
   );
 }
 
-/** Une séance imposée dans le carnet. */
-export function ActivityLine({ activity }: { activity: Activity }) {
+/** Une activité hors renfo dans le carnet : séance imposée, course, vélo ou vélotaf. */
+export function ActivityLine({ activity: a }: { activity: Activity }) {
+  const [meta, name, detail] = describeActivity(a);
   return (
     <div class="log-entry">
-      <span class="muted log-entry__meta">Séance imposée</span>
+      <span class="muted log-entry__meta">{meta}</span>
       <div class="log-line">
-        <span class="log-line__name">
-          {IMPOSED_KIND_LABEL[activity.kind]} · {activity.minutes} min
-        </span>
-        <span class="muted">
-          {INTENSITY_LABEL[activity.intensity].toLowerCase()}
-          {activity.legs ? ' · jambes' : ''}
-        </span>
+        <span class="log-line__name">{name}</span>
+        <span class="muted">{detail}</span>
       </div>
     </div>
   );
+}
+
+/** Trois morceaux de texte : le genre, l'essentiel, les détails. */
+function describeActivity(a: Activity): [string, string, string] {
+  switch (a.type) {
+    case 'imposed':
+      return [
+        'Séance imposée',
+        `${IMPOSED_KIND_LABEL[a.kind]} · ${a.minutes} min`,
+        `${INTENSITY_LABEL[a.intensity].toLowerCase()}${a.legs ? ' · jambes' : ''}`,
+      ];
+    case 'run':
+      return [
+        'Course',
+        `${a.minutes} min${a.km !== undefined ? ` · ${formatKm(a.km)}` : ''}`,
+        `${RUN_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()} · genou ${a.kneeAfter}`,
+      ];
+    case 'bike':
+      return ['Vélo', `${a.minutes} min`, `${BIKE_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()}`];
+    case 'commute':
+      return ['Vélotaf', COMMUTE_LABEL[a.trips], ''];
+  }
 }

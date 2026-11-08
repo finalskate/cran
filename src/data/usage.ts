@@ -59,9 +59,14 @@
  *   review         bilan du soir noté : d'où (soir, rattrapage, Assiette), écart, déclencheur, protéines (auto ?), légumes
  *   plan           plan « si… alors… » ajouté, modifié ou supprimé : nombre de plans (pas le texte)
  *   imposed        séance imposée notée : type, jambes, intensité, durée
+ *   run            course notée : durée, distance saisie ou non (pas la valeur), type, ressenti, genou après, jour
+ *   bike           séance de vélo notée : durée, type (aisance, fractionné), ressenti, jour
+ *   commute        vélotaf noté : nombre de trajets, jour
+ *   cardio-sheet   feuille « course · vélo » ouverte : d'où (accueil, carte, calendrier), suggestion affichée
+ *   week-goal      objectif de la semaine changé : renfos, cardio
  *   knee-morning   genou du lendemain : plus mal ou non
  *   workout-delete séance supprimée du carnet
- *   activity-delete séance imposée supprimée
+ *   activity-delete activité supprimée (séance imposée, course, vélo, vélotaf) : type
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

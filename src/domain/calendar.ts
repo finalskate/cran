@@ -43,25 +43,26 @@ export function monthGrid(month: MonthKey): string[][] {
 export interface WeekCount {
   monday: string;
   renfo: number;
-  imposed: number;
+  /** Les autres séances : course, vélo et séances imposées (J5a ; le vélotaf n'en fait pas partie). */
+  other: number;
 }
 
 /**
  * Nombre de séances par semaine sur les `weeks` dernières semaines (la semaine en cours
- * comprise, en dernier). On passe les JOURS des séances : renfo d'un côté, séances imposées
- * de l'autre (course et vélotaf s'y ajouteront au J5).
+ * comprise, en dernier). On passe les JOURS des séances : renfo d'un côté, les autres (course,
+ * vélo, séances imposées) de l'autre.
  */
-export function weeklyCounts(renfoDays: readonly string[], imposedDays: readonly string[], today: string, weeks: number): WeekCount[] {
+export function weeklyCounts(renfoDays: readonly string[], otherDays: readonly string[], today: string, weeks: number): WeekCount[] {
   const first = addDays(mondayOf(today), -7 * (weeks - 1));
-  const out: WeekCount[] = Array.from({ length: weeks }, (_, i) => ({ monday: addDays(first, 7 * i), renfo: 0, imposed: 0 }));
+  const out: WeekCount[] = Array.from({ length: weeks }, (_, i) => ({ monday: addDays(first, 7 * i), renfo: 0, other: 0 }));
   const slot = (day: string) => out.find((w) => w.monday === mondayOf(day));
   for (const d of renfoDays) {
     const w = slot(d);
     if (w) w.renfo++;
   }
-  for (const d of imposedDays) {
+  for (const d of otherDays) {
     const w = slot(d);
-    if (w) w.imposed++;
+    if (w) w.other++;
   }
   return out;
 }

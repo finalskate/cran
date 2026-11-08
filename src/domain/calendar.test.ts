@@ -33,9 +33,9 @@ describe('weeklyCounts', () => {
     // 2026-01-14 est un mercredi ; semaines du 29/12, du 5/01 et du 12/01.
     const counts = weeklyCounts(['2026-01-05', '2026-01-07', '2026-01-13', '2025-12-01'], ['2026-01-04'], '2026-01-14', 3);
     expect(counts).toEqual([
-      { monday: '2025-12-29', renfo: 0, imposed: 1 },
-      { monday: '2026-01-05', renfo: 2, imposed: 0 },
-      { monday: '2026-01-12', renfo: 1, imposed: 0 },
+      { monday: '2025-12-29', renfo: 0, other: 1 },
+      { monday: '2026-01-05', renfo: 2, other: 0 },
+      { monday: '2026-01-12', renfo: 1, other: 0 },
     ]);
   });
 });

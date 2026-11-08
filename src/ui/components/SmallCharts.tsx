@@ -1,9 +1,9 @@
 /**
- * Petites courbes SVG (SPEC §4.10) : tendance miniature, séances par semaine, niveau en escalier.
+ * Petites courbes SVG (SPEC §4.10) : tendance miniature, barres par semaine (séances, minutes de
+ * cardio), niveau en escalier.
  * Purement visuelles : la valeur utile est toujours écrite à côté en clair.
  */
 import { daysBetween } from '../../domain/days';
-import type { WeekCount } from '../../domain/calendar';
 import type { LevelStep } from '../../domain/progression';
 import { formatTinyDate } from '../format';
 
@@ -27,20 +27,30 @@ export function Sparkline({ values, tone = 'accent' }: { values: readonly number
   );
 }
 
-/** Séances par semaine : barres empilées renfo (orange) + imposées (rose). */
-export function WeeksChart({ weeks }: { weeks: readonly WeekCount[] }) {
+/** Une barre de semaine : la partie basse (orange) et la partie haute empilée (rose). */
+export interface WeekBar {
+  monday: string;
+  low: number;
+  high: number;
+}
+
+/**
+ * Barres empilées par semaine : séances (renfo + cardio et imposées), minutes de cardio
+ * (course + vélo). `floor` = hauteur minimale de l'échelle (3 séances, 60 min).
+ */
+export function WeeksChart({ weeks, floor = 3, label }: { weeks: readonly WeekBar[]; floor?: number; label: (total: number) => string }) {
   const W = 340;
   const H = 120;
-  const PAD = { left: 18, right: 4, top: 8, bottom: 20 };
-  const max = Math.max(3, ...weeks.map((w) => w.renfo + w.imposed));
+  const PAD = { left: 24, right: 4, top: 8, bottom: 20 };
+  const max = Math.max(floor, ...weeks.map((w) => w.low + w.high));
   const slot = (W - PAD.left - PAD.right) / weeks.length;
   const barW = Math.min(18, slot * 0.6);
   const plotH = H - PAD.top - PAD.bottom;
   const y = (n: number) => PAD.top + plotH - (n / max) * plotH;
-  const total = weeks.reduce((s, w) => s + w.renfo + w.imposed, 0);
+  const total = weeks.reduce((s, w) => s + w.low + w.high, 0);
   return (
     <figure class="chart">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Séances par semaine sur ${weeks.length} semaines : ${total} au total`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label(total)}>
         {[0, max].map((t) => (
           <g key={t}>
             <line class="chart__grid" x1={PAD.left} x2={W - PAD.right} y1={y(t)} y2={y(t)} />
@@ -53,14 +63,14 @@ export function WeeksChart({ weeks }: { weeks: readonly WeekCount[] }) {
           const cx = PAD.left + slot * i + slot / 2;
           return (
             <g key={w.monday}>
-              {w.renfo > 0 && <rect class="chart__bar" x={cx - barW / 2} y={y(w.renfo)} width={barW} height={y(0) - y(w.renfo)} rx="3" />}
-              {w.imposed > 0 && (
+              {w.low > 0 && <rect class="chart__bar" x={cx - barW / 2} y={y(w.low)} width={barW} height={y(0) - y(w.low)} rx="3" />}
+              {w.high > 0 && (
                 <rect
                   class="chart__bar chart__bar--alt"
                   x={cx - barW / 2}
-                  y={y(w.renfo + w.imposed)}
+                  y={y(w.low + w.high)}
                   width={barW}
-                  height={y(w.renfo) - y(w.renfo + w.imposed)}
+                  height={y(w.low) - y(w.low + w.high)}
                   rx="3"
                 />
               )}

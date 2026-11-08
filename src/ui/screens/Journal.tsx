@@ -1,6 +1,7 @@
 /**
  * Onglet « Carnet » (J2) : quatre vues en haut de l'écran.
- *  - Calendrier : le mois, séances, séances imposées et journées notées ;
+ *  - Calendrier : la semaine (J5a), puis le mois : séances, cardio, vélotaf, séances imposées
+ *    et journées notées ;
  *  - Séances : l'historique façon carnet Lafay, et les séances par semaine ;
  *  - Niveaux : les échelles par mouvement, le test de placement, la courbe en escalier ;
  *  - Corps (J3) : tendance de poids, tour de taille, photos.
@@ -28,6 +29,12 @@ const ROUTED: Partial<Record<Tab, 'levels' | 'body'>> = { levels: 'levels', body
 
 /** Dernière vue choisie parmi Calendrier et Séances (on y revient en rouvrant le Carnet). */
 const lastTab = signal<'calendar' | 'sessions'>('calendar');
+
+/** Ouvre le Carnet sur le calendrier (carte « Cette semaine » de l'accueil). */
+export function openCalendar(): void {
+  lastTab.value = 'calendar';
+  go('journal');
+}
 
 export function Journal() {
   const route = currentRoute.value.name;

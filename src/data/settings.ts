@@ -6,6 +6,7 @@ import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { IfThenPlan } from '../domain/habits';
 import type { Profile } from '../domain/nutrition';
 import type { Duration, TrainingFocus } from '../domain/types';
+import { DEFAULT_WEEK_GOAL, type WeekGoal } from '../domain/week';
 import { db, type CranDB } from './db';
 
 /** Niveau d'effets visuels (SPEC §4.1) : halos et flou, ou version sobre. */
@@ -53,6 +54,10 @@ export interface SettingsMap {
   variantChoice: Readonly<Record<string, string>>;
   /** Forces des élastiques longs possédés, en kg (saisies dans Lieux). Vide : léger / moyen / fort. */
   bands: readonly number[];
+  /** Objectif de la semaine (J5a) : jours de renfo et de cardio. */
+  weekGoal: WeekGoal;
+  /** Dernier cardio noté (la feuille « course · vélo » s'ouvre dessus). */
+  lastCardio: 'run' | 'bike';
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -72,6 +77,8 @@ export const SETTING_DEFAULTS = {
   focus: 'balanced',
   variantChoice: {},
   bands: [],
+  weekGoal: DEFAULT_WEEK_GOAL,
+  lastCardio: 'run',
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

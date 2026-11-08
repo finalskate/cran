@@ -449,6 +449,56 @@ try {
   await wait(300);
   await shot('44-carnet-seances', true);
 
+  // ─── Course, vélo, vélotaf, semaine (J5a) ───
+  await page.goto(BASE);
+  await wait(300);
+  const content = () => page.evaluate(() => document.body.textContent);
+  if (!(await content()).includes('Prochaine sortie')) throw new Error('accueil : carte « Prochaine sortie » absente');
+  await shot('80-accueil-semaine', true);
+  await click('Noter une course');
+  await wait(200);
+  await fill('#run-km', '5,2');
+  await page.click('dialog[open] .score-grid button:nth-child(2)'); // genou après : 1
+  await wait(100);
+  await shot('81-course');
+  await clickIn('Noter');
+  await wait(300);
+  if (!(await content()).includes('Course notée aujourd’hui')) throw new Error('course non notée');
+  await click('Vélotaf');
+  await wait(200);
+  await shot('82-velotaf');
+  await clickIn('Aller et retour');
+  await wait(300);
+  await click('Course · vélo');
+  await clickIn('Vélo');
+  await clickIn('Fractionné');
+  await wait(100);
+  await shot('83-velo');
+  await clickIn('Noter');
+  await wait(300);
+  const marks = await page.evaluate(() => ({
+    cardio: document.querySelectorAll('.week-card .cal__mark--cardio').length,
+    commute: document.querySelectorAll('.week-card .cal__dash').length,
+  }));
+  if (marks.cardio !== 1 || marks.commute !== 1) throw new Error(`semaine de l’accueil : ${JSON.stringify(marks)}`);
+  await shot('84-accueil-apres-course', true);
+  await page.evaluate(() => document.querySelector('.week-card').click());
+  await page.waitForFunction(() => document.body.textContent.includes('Ce que j’ai fait'));
+  await wait(300);
+  if (!/course \d+ min/.test(await content())) throw new Error('carnet : minutes de course absentes de la semaine');
+  await shot('85-carnet-semaine', true);
+  await page.evaluate(() => document.querySelector('.week-strip__day--today').click());
+  await wait(300);
+  await shot('86-jour-cardio', true);
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  if (!(await content()).includes('Objectif de la semaine')) throw new Error('réglages : objectif de la semaine absent');
+  await shot('87-reglages-objectif', true);
+  await page.goto(`${BASE}#/carnet`);
+  await wait(300);
+
   // Test de placement : compteur vide (« Valider » impossible), puis 30 répétitions au niveau
   // actuel des pompes → écran « Trop facile » → on teste le niveau au-dessus, dans la fourchette.
   await click('Niveaux');

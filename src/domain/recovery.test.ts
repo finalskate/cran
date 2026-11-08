@@ -11,6 +11,7 @@ import {
   morningWorseToday,
   sessionDoneToday,
   workedRecently,
+  type Activity,
   type ImposedActivity,
   type KneeLog,
 } from './recovery';
@@ -67,6 +68,20 @@ describe('charge sur les jambes', () => {
     expect(legsLoaded([imposed('2026-11-13', hoursAgo(1))], NOW)).toBe(true);
     // Séance d'avant-hier saisie ce matin : midi avant-hier, il y a 45 h.
     expect(legsLoaded([imposed('2026-11-12', hoursAgo(1))], NOW)).toBe(false);
+  });
+
+  it('une course charge les jambes ; le vélo et le vélotaf non (J5a)', () => {
+    const evening = new Date(2026, 10, 13, 19).toISOString();
+    const acts: Activity[] = [
+      { type: 'bike', day: '2026-11-13', at: evening, minutes: 40, kind: 'intervals', feel: 'hard' },
+      { type: 'commute', day: '2026-11-13', at: evening, trips: 2 },
+    ];
+    expect(legsLoaded(acts, NOW)).toBe(false);
+    const withRun: Activity[] = [...acts, { type: 'run', day: '2026-11-13', at: evening, minutes: 35, kind: 'easy', feel: 'ok', kneeAfter: 1 }];
+    expect(legsLoaded(withRun, NOW)).toBe(true);
+    // Le lendemain matin d'une course : question « genou ce matin ».
+    expect(askMorningKnee(NOW, [], withRun, [], CATALOG)).toBe(true);
+    expect(askMorningKnee(NOW, [], acts, [], CATALOG)).toBe(false);
   });
 });
 

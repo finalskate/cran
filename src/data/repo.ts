@@ -64,7 +64,7 @@ export function listRecentKneeLogs(days = 14): Promise<KneeLogRow[]> {
   return db.kneeLogs.where('date').aboveOrEqual(since).toArray();
 }
 
-// ─── Activités (séances imposées) ───
+// ─── Activités (séances imposées, course, vélo, vélotaf) ───
 
 export function listActivities(): Promise<Activity[]> {
   return db.activities.orderBy('day').toArray();

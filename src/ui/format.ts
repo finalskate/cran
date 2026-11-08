@@ -117,6 +117,36 @@ export const INTENSITY_LABEL = {
   hard: 'Dure',
 } as const;
 
+/** Course (J5a) : sortie en aisance ou sortie « jeu ». */
+export const RUN_KIND_LABEL = {
+  easy: 'Aisance',
+  play: 'Jeu',
+} as const;
+
+/** Vélo (J5a) : séance en aisance ou fractionnée. */
+export const BIKE_KIND_LABEL = {
+  easy: 'Aisance',
+  intervals: 'Fractionné',
+} as const;
+
+/** Ressenti d'une course ou d'une séance de vélo (mêmes mots que pour une série). */
+export const FEEL_LABEL = {
+  easy: 'Facile',
+  ok: 'OK',
+  hard: 'Dur',
+} as const;
+
+/** Vélotaf : un trajet (aller ou retour) ou les deux. */
+export const COMMUTE_LABEL = {
+  1: 'Un trajet',
+  2: 'Aller et retour',
+} as const;
+
+/** Distance : « 5,2 km ». */
+export function formatKm(km: number): string {
+  return `${km.toLocaleString('fr-FR', { maximumFractionDigits: 1 })} km`;
+}
+
 const shortDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** « sam. 14 nov. » (carnet). */

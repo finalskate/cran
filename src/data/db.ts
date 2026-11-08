@@ -15,7 +15,8 @@
  *  - v2 (J1) : locations, levels, kneeLogs, workouts, activeSession ; lieux par défaut créés.
  *  - v3 (retouches J1) : events (journal d'usage local, cf. src/data/usage.ts).
  *  - v4 (J4 phase A) : foods (aliments connus), foodLog (journal alimentaire), weights (pesées).
- *  - v5 (J2) : activities (séances imposées ; course et vélotaf au J5).
+ *  - v5 (J2) : activities (séances imposées). J5a : course, vélo et vélotaf s'y ajoutent sans
+ *    migration (même table, nouveaux `type` ; les champs non indexés sont libres).
  *  - v6 (J3) : measures (tour de taille), photos (photos de progression), levelHistory
  *    (changements de niveau, reconstitués depuis le journal d'usage pour le passé).
  *  - v7 (J4B) : reviews (bilan alimentaire du soir, un par jour).

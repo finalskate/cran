@@ -1,9 +1,9 @@
 /**
- * État partagé de l'entraînement (J2) : historique des séances, activités (séances imposées),
- * scores de genou récents. Relu au démarrage, puis après chaque écriture : l'accueil, le carnet
- * et le moteur lisent la même chose.
+ * État partagé de l'entraînement (J2) : historique des séances, activités (séances imposées ;
+ * course, vélo et vélotaf au J5a), scores de genou. Relu au démarrage, puis après chaque
+ * écriture : l'accueil, le carnet et le moteur lisent la même chose.
  */
-import { signal } from '@preact/signals';
+import { computed, signal } from '@preact/signals';
 import { CATALOG } from '../data/catalog';
 import {
   addActivity,
@@ -15,22 +15,42 @@ import {
   listWorkouts,
 } from '../data/repo';
 import { track } from '../data/usage';
+import { dayKey } from '../domain/days';
 import type { WorkoutRecord } from '../domain/history';
 import { levelChanges, type LevelChange } from '../domain/progression';
-import { MORNING_WORSE_SCORE, type Activity, type ImposedActivity, type KneeLog } from '../domain/recovery';
+import {
+  MORNING_WORSE_SCORE,
+  type Activity,
+  type BikeActivity,
+  type CommuteActivity,
+  type ImposedActivity,
+  type KneeLog,
+  type RunActivity,
+} from '../domain/recovery';
 import { chooseLevel, levels, levelSince } from './state';
 
 /** Toutes les séances terminées, de la plus ancienne à la plus récente. */
 export const workouts = signal<WorkoutRecord[]>([]);
 
-/** Activités hors renfo (séances imposées). */
+/** Jours des séances de renfo terminées avec au moins une série (une entrée par séance). */
+export const renfoDays = computed(() =>
+  workouts.value.filter((w) => w.entries.some((e) => e.sets.length > 0)).map((w) => dayKey(new Date(w.endedAt))),
+);
+
+/** Activités hors renfo (séances imposées, course, vélo, vélotaf), triées par jour. */
 export const activities = signal<Activity[]>([]);
 
-/** Scores de genou des 14 derniers jours. */
+/**
+ * Scores de genou de la dernière année : la règle kiné n'en lit que 7 jours, mais le plan de
+ * course regarde le genou de chaque semaine depuis sa 1re sortie (src/domain/running.ts).
+ */
 export const kneeLogs = signal<KneeLog[]>([]);
 
+/** Profondeur des scores de genou chargés (une ligne par séance, course ou matin : c'est léger). */
+const KNEE_DAYS = 400;
+
 export async function loadTraining(): Promise<void> {
-  const [w, a, k] = await Promise.all([listWorkouts(), listActivities(), listRecentKneeLogs()]);
+  const [w, a, k] = await Promise.all([listWorkouts(), listActivities(), listRecentKneeLogs(KNEE_DAYS)]);
   workouts.value = w;
   activities.value = a;
   kneeLogs.value = k;
@@ -43,9 +63,35 @@ export async function logImposed(activity: ImposedActivity): Promise<void> {
   await loadTraining();
 }
 
+/**
+ * Note une course (J5a). Le genou noté après la course va aussi dans `kneeLogs` (contexte
+ * « run ») : il compte pour la règle kiné et pour le plan de course, comme un score de séance.
+ */
+export async function logRun(run: RunActivity): Promise<void> {
+  await addActivity(run);
+  await addKneeLog({ date: run.at, score: run.kneeAfter, context: 'run' });
+  track('run', { minutes: run.minutes, km: run.km !== undefined, kind: run.kind, feel: run.feel, knee: run.kneeAfter, day: run.day });
+  await loadTraining();
+}
+
+/** Note une séance de vélo. */
+export async function logBike(bike: BikeActivity): Promise<void> {
+  await addActivity(bike);
+  track('bike', { minutes: bike.minutes, kind: bike.kind, feel: bike.feel, day: bike.day });
+  await loadTraining();
+}
+
+/** Note un vélotaf (aller, retour ou les deux). */
+export async function logCommute(commute: CommuteActivity): Promise<void> {
+  await addActivity(commute);
+  track('commute', { trips: commute.trips, day: commute.day });
+  await loadTraining();
+}
+
 export async function removeActivity(id: number): Promise<void> {
+  const type = activities.value.find((a) => a.id === id)?.type;
   await deleteActivity(id);
-  track('activity-delete');
+  track('activity-delete', { type });
   await loadTraining();
 }
 

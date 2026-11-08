@@ -1151,6 +1151,63 @@ export const CATALOG: Movement[] = [
       },
     ],
   },
+  // Mini-bandes (retour du 08/11) : le moyen fessier tient le genou dans l'axe ; deux exercices
+  // de plus dans la rotation du bloc genou, à faible charge pour l'articulation.
+  {
+    id: 'knee-band-bridge',
+    name: 'Pont fessier à la mini-bande',
+    category: 'knee',
+    levels: [
+      {
+        variants: [
+          {
+            id: 'band-glute-bridge',
+            videoQuery: 'mini band glute bridge abduction',
+            name: 'Pont fessier à la mini-bande',
+            needs: ['mini-bands'],
+            space: 'small',
+            knee: 'low',
+            target: { kind: 'reps', min: 12, max: 20 },
+            cues: [
+              'Sur le dos, mini-bande juste au-dessus des genoux, pieds à plat largeur de hanches',
+              'Écarte les genoux contre la bande et garde-les écartés',
+              'Monte le bassin en serrant les fessiers, 1 s en haut',
+              'Redescends lentement sans relâcher la bande',
+            ],
+            mistakes: ['Genoux qui se rapprochent', 'Dos qui se cambre en haut'],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'knee-clamshell',
+    name: 'Clamshell',
+    category: 'knee',
+    levels: [
+      {
+        variants: [
+          {
+            id: 'band-clamshell',
+            videoQuery: 'mini band clamshell exercise',
+            name: 'Clamshell à la mini-bande',
+            needs: ['mini-bands'],
+            space: 'small',
+            knee: 'low',
+            perSide: true,
+            target: { kind: 'reps', min: 12, max: 20 },
+            cues: [
+              'Allongé sur le côté, mini-bande au-dessus des genoux, genoux pliés à 90°',
+              'Pieds collés, bassin perpendiculaire au sol',
+              'Ouvre le genou du dessus sans faire basculer le bassin',
+              'Redescends lentement',
+            ],
+            mistakes: ['Bassin qui roule vers l’arrière', 'Mouvement trop rapide'],
+          },
+        ],
+      },
+    ],
+  },
 
   // ════════════════════════════ GAINAGE ════════════════════════════
   {

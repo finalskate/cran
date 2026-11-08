@@ -64,6 +64,14 @@ describe('objectif du jour', () => {
     expect(nextPrefill(sets(30, 25), TIME, 2)).toBe(30); // + 5 s
   });
 
+  it('suit la meilleure série à 2 crans de réserve quand elle montre de la marge', () => {
+    expect(nextPrefill(sets(6, 6, 10), REPS, 2)).toBe(8);
+    expect(nextPrefill(sets(7, 7, 8), REPS, 2)).toBe(8); // peu de marge : + 1 cran
+    expect(nextPrefill(sets(30, 30, 50), TIME, 2)).toBe(40);
+    // Après un « Dur », on consolide quand même.
+    expect(nextPrefill([...sets(6, 6), { value: 10, feel: 'hard' }], REPS, 2)).toBe(6);
+  });
+
   it('reste dans la fourchette', () => {
     expect(nextPrefill(sets(14, 13), REPS, 2)).toBe(12);
     expect(nextPrefill(sets(3, 2), REPS, 2)).toBe(6);

@@ -4,7 +4,8 @@
  * Chaque variante a une fourchette (ex. 6–12 répétitions, 20–40 s). On ajoute des répétitions
  * d'une séance à l'autre jusqu'au haut de la fourchette, sur TOUTES les séries :
  *  - objectif du jour = la série la plus faible de la dernière fois, + 1 cran si rien n'a été
- *    « Dur » (sinon on consolide) ;
+ *    « Dur » (sinon on consolide) ; si la meilleure série montre plus de marge (méthode « on
+ *    s'arrête à l'objectif, la dernière série à fond »), l'objectif la suit à 2 crans de réserve ;
  *  - deux séances validées au niveau actuel (toutes les séries au haut de la fourchette, aucune
  *    « Dur ») → la variante suivante est débloquée ;
  *  - deux séances de suite sous le bas de la fourchette → on propose de revenir un cran en
@@ -33,6 +34,12 @@ export const PAUSE_DAYS = 10;
 
 /** Crans retirés à la reprise. */
 export const PAUSE_STEPS = 2;
+
+/**
+ * Réserve gardée sous la meilleure série de la dernière fois (retour du 08/11) : 6 · 6 · 10 au
+ * pike → objectif 8 au lieu de 7. L'objectif rattrape la vraie capacité sans viser l'échec.
+ */
+export const RESERVE_STEPS = 2;
 
 /** Séries minimum pour qu'une séance puisse valider (une série isolée ne prouve rien). */
 export const MIN_SETS_TO_VALIDATE = 2;
@@ -63,8 +70,9 @@ export function nextPrefill(last: readonly SetResult[] | undefined, target: Targ
   if (!last || last.length === 0) return target.min;
   const step = progressStep(target);
   const weakest = Math.min(...last.map((s) => s.value));
+  const best = Math.max(...last.map((s) => s.value));
   const hard = last.some((s) => s.feel === 'hard');
-  let next = hard ? weakest : weakest + step;
+  let next = hard ? weakest : Math.max(weakest + step, best - RESERVE_STEPS * step);
   if (daysSince !== undefined && daysSince >= PAUSE_DAYS) next = weakest - PAUSE_STEPS * step;
   return clamp(next, target);
 }

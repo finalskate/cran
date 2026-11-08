@@ -12,7 +12,7 @@
  * et reprendre une séance (SPEC §4.4).
  */
 import type { SetResult, WorkoutEntry, WorkoutRecord } from './history';
-import type { Plan, PlanItem } from './types';
+import type { BandChoice, Plan, PlanItem } from './types';
 
 /** Une série à faire. */
 export interface Step {
@@ -143,6 +143,14 @@ export function replaceItem(state: SessionState, block: number, item: number, re
   return { ...state, plan: { ...state.plan, blocks } };
 }
 
+/** Change l'élastique d'un exercice (il sera enregistré avec ses séries). */
+export function setItemBand(state: SessionState, block: number, item: number, band: BandChoice): SessionState {
+  const blocks = state.plan.blocks.map((b, bi) =>
+    bi !== block ? b : { ...b, items: b.items.map((it, ii) => (ii === item ? { ...it, band } : it)) },
+  );
+  return { ...state, plan: { ...state.plan, blocks } };
+}
+
 /** Avancement : étapes terminées / total. */
 export function progress(state: SessionState): { done: number; total: number } {
   const done = state.phase === 'done' ? state.steps.length : state.index + (state.phase === 'rest' ? 1 : 0);
@@ -203,7 +211,9 @@ export function toRecord(state: SessionState, endedAt: number): WorkoutRecord {
       const sets = state.steps
         .map((s, k) => (s.block === b && s.item === i ? state.results[k] : null))
         .filter((r): r is SetResult => r !== null);
-      if (sets.length) entries.push({ movementId: item.movementId, variantId: item.variantId, level: item.level, sets });
+      if (sets.length) {
+        entries.push({ movementId: item.movementId, variantId: item.variantId, level: item.level, sets, ...(item.band ? { band: item.band } : {}) });
+      }
     });
   });
   return {

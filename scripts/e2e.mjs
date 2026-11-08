@@ -444,16 +444,21 @@ try {
   await wait(300);
   await shot('44-carnet-seances', true);
 
-  // Test de placement : 30 répétitions au niveau actuel des pompes → on monte d'un niveau.
+  // Test de placement : compteur vide (« Valider » impossible), puis 30 répétitions au niveau
+  // actuel des pompes → écran « Trop facile » → on teste le niveau au-dessus, dans la fourchette.
   await click('Niveaux');
   await wait(300);
   await page.evaluate(() => document.getElementById('lvl-push-h').closest('section').querySelector('.level-test').click());
   await wait(300);
+  await shot('45a-placement-vide');
   for (let i = 0; i < 30; i++) await page.click('dialog[open] [aria-label="Plus"]');
   await shot('45-placement');
   await clickIn('Valider');
   await wait(200);
   await shot('46-placement-suite');
+  await clickIn('Tester ce niveau');
+  await wait(200);
+  await page.click('dialog[open] [aria-label="Plus"]');
   await clickIn('Valider');
   await wait(200);
   await shot('47-placement-resultat');
@@ -669,6 +674,52 @@ try {
   await wait(300);
   if (!(await page.evaluate(() => document.body.textContent.includes('Curl aux sangles')))) throw new Error('bloc Bras absent de l’aperçu');
   await shot('63-apercu-haut-du-corps', true);
+
+  // Élastiques (retouche du 08/11) : forces saisies dans Lieux, variante « curl à l'élastique »
+  // retenue, puis en séance l'élastique se choisit sous les séries.
+  await page.goto(`${BASE}#/lieux`);
+  await wait(300);
+  await page.type('input[placeholder="ex. 10, 20, 30"]', '30, 10, 20');
+  await page.keyboard.press('Tab');
+  await wait(300);
+  if (!(await text()).includes('10 kg · 20 kg · 30 kg')) throw new Error('élastiques non enregistrés');
+  await shot('68-lieux-elastiques', true);
+  await withDb(async (idb) => {
+    const tx = idb.transaction('settings', 'readwrite');
+    tx.objectStore('settings').put({ key: 'variantChoice', value: { biceps: 'curl-band' } });
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.goto(`${BASE}#/niveaux`);
+  await page.reload({ waitUntil: 'networkidle0' });
+  await wait(400);
+  if (!(await text()).includes('Curl à l’élastique ou Curl aux sangles')) throw new Error('échelle : variante préférée non affichée en premier');
+  await openStep('lvl-biceps', 0);
+  await wait(300);
+  await shot('69-fiche-elastique');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await page.goto(BASE);
+  await wait(300);
+  await click('2e séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
+  await click('2');
+  await click('Voir la séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Ta séance'));
+  await click('C’est parti');
+  await wait(300);
+  // On passe les blocs jusqu'au curl.
+  for (let i = 0; i < 24 && !(await page.evaluate(() => document.querySelector('.work__name')?.textContent.includes('Curl'))); i++) {
+    if ((await text()).includes('Passer le repos')) {
+      await click('Passer le repos');
+      await wait(200);
+      continue;
+    }
+    await page.click('[aria-label^="Plus d’options"]');
+    await wait(150);
+    await click('Passer le bloc');
+    await wait(200);
+  }
+  if (!(await page.evaluate(() => !!document.querySelector('.band-picker')))) throw new Error('choix de l’élastique absent en séance');
+  await shot('70-seance-elastique');
 
   await page.goto(`${BASE}#/carnet`);
   await wait(200);

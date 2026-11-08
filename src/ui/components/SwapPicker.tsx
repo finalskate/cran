@@ -1,10 +1,11 @@
 /**
  * Choix d'un exercice de remplacement (SPEC §4.4) : équivalents du même mouvement,
  * puis autres mouvements de la même famille. Seul ce qui est faisable sur le lieu est proposé.
+ * Une variante ÉQUIVALENTE choisie ici est retenue pour les séances suivantes (rememberVariant).
  */
 import type { Context } from '../../domain/availability';
 import type { Plan, PlanItem } from '../../domain/types';
-import { itemFromSwap, swapOptions } from '../planner';
+import { itemFromSwap, rememberVariant, swapOptions } from '../planner';
 
 interface Props {
   item: PlanItem;
@@ -25,11 +26,14 @@ export function SwapPicker({ item, plan, ctx, onPick, onCancel }: Props) {
           key={`${opt.movement.id}-${opt.resolved.variant.id}`}
           type="button"
           class="swap__option"
-          onClick={() => onPick(itemFromSwap(opt, item, ctx))}
+          onClick={() => {
+            if (opt.sameMovement && !opt.resolved.adapted) void rememberVariant(opt.movement.id, opt.resolved.variant.id);
+            onPick(itemFromSwap(opt, item, ctx));
+          }}
         >
           <span>{opt.resolved.variant.name}</span>
           <span class="muted swap__meta">
-            {opt.sameMovement ? (opt.resolved.adapted ? 'Un niveau en dessous' : 'Équivalent') : opt.movement.name}
+            {opt.sameMovement ? (opt.resolved.adapted ? 'Un niveau en dessous' : 'Équivalent, retenu pour la suite') : opt.movement.name}
             {opt.resolved.variant.substitute ? ' · substitut' : ''}
           </span>
         </button>

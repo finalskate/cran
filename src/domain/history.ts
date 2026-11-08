@@ -2,6 +2,7 @@
  * Historique des séances : format d'enregistrement et lectures utiles au moteur.
  * Fonctions pures (l'historique est passé en paramètre, lu depuis la base par l'appelant).
  */
+import type { BandChoice } from './types';
 
 /** Ressenti d'une série (SPEC §4.4). */
 export type Feel = 'easy' | 'ok' | 'hard';
@@ -19,6 +20,8 @@ export interface WorkoutEntry {
   /** Niveau utilisé (-1 pour un substitut). */
   level: number;
   sets: SetResult[];
+  /** Élastique utilisé (exercices à l'élastique, depuis la retouche du 08/11 ; champ non indexé). */
+  band?: BandChoice;
 }
 
 /**
@@ -57,6 +60,7 @@ export function lastDoneByMovement(workouts: readonly WorkoutRecord[]): Record<s
 export interface LastSession {
   sets: SetResult[];
   at: string;
+  band?: BandChoice;
 }
 
 /**
@@ -69,7 +73,7 @@ export function lastSessionByVariant(workouts: readonly WorkoutRecord[]): Record
     for (const e of w.entries) {
       if (e.sets.length === 0) continue;
       const prev = latest[e.variantId];
-      if (!prev || w.startedAt > prev.at) latest[e.variantId] = { at: w.startedAt, sets: e.sets };
+      if (!prev || w.startedAt > prev.at) latest[e.variantId] = { at: w.startedAt, sets: e.sets, ...(e.band ? { band: e.band } : {}) };
     }
   }
   return latest;

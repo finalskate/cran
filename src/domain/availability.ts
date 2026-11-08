@@ -19,6 +19,11 @@ export interface Context {
   kneeScore: number;
   /** Règle poignet activée (par défaut) : pas de mains à plat, support adapté. */
   wristRule: boolean;
+  /**
+   * Variante préférée par mouvement (choisie en séance avec « Remplacer ») : proposée en premier
+   * parmi les variantes équivalentes d'un niveau, quand elle est faisable ici.
+   */
+  preferred?: Readonly<Record<string, string>>;
 }
 
 /** Une exigence est satisfaite si le tag est présent (ou l'un des tags d'une liste). */
@@ -90,11 +95,12 @@ export interface Resolved {
  *  2. à défaut, le niveau faisable le plus proche au-dessus (ex. niveau 1 « squat sur chaise »
  *     sans chaise → squat) ;
  *  3. à défaut, un substitut.
+ * Dans un niveau, la variante préférée (`ctx.preferred`) passe avant l'ordre du catalogue.
  * `null` si rien n'est faisable ici.
  */
 export function resolveVariant(movement: Movement, targetLevel: number, ctx: Context): Resolved | null {
   const top = Math.min(Math.max(targetLevel, 0), movement.levels.length - 1);
-  const at = (level: number) => movement.levels[level]!.variants.find((v) => isAvailable(v, ctx));
+  const at = (level: number) => preferredFirst(movement.levels[level]!.variants, ctx.preferred?.[movement.id]).find((v) => isAvailable(v, ctx));
   for (let level = top; level >= 0; level--) {
     const variant = at(level);
     if (variant) return { variant, level, adapted: level !== top };
@@ -122,6 +128,21 @@ export function alternatives(movement: Movement, level: number, currentId: strin
   for (const l of levels) movement.levels[l]!.variants.forEach((v) => push(v, l));
   movement.substitutes?.forEach((v) => push(v, -1));
   return out;
+}
+
+/** Variantes équivalentes d'un niveau, la préférée (si elle en fait partie) en premier. */
+export function preferredFirst(variants: readonly Variant[], preferredId: string | undefined): Variant[] {
+  const pref = variants.find((v) => v.id === preferredId);
+  return pref ? [pref, ...variants.filter((v) => v !== pref)] : [...variants];
+}
+
+/**
+ * Variante d'un niveau qu'on fera vraiment ici (test de niveau, échelle) : la préférée ou la
+ * première faisable ; à défaut (rien de faisable), la première de la liste.
+ */
+export function variantHere(movement: Movement, level: number, ctx: Context): Variant {
+  const ordered = preferredFirst(movement.levels[level]!.variants, ctx.preferred?.[movement.id]);
+  return ordered.find((v) => isAvailable(v, ctx)) ?? ordered[0]!;
 }
 
 /** Retrouve une variante (et son niveau) par son id dans un mouvement. */

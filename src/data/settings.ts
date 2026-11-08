@@ -49,6 +49,10 @@ export interface SettingsMap {
   focus: TrainingFocus;
   /** Plans « si… alors… » de l'utilisateur (J4B). Absent : les plans de départ (src/data/habits.ts). */
   plans: IfThenPlan[];
+  /** Variante préférée par mouvement (choisie avec « Remplacer » parmi les équivalentes). */
+  variantChoice: Readonly<Record<string, string>>;
+  /** Forces des élastiques longs possédés, en kg (saisies dans Lieux). Vide : léger / moyen / fort. */
+  bands: readonly number[];
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -66,6 +70,8 @@ export const SETTING_DEFAULTS = {
   watchReminder: true,
   photoBlur: true,
   focus: 'balanced',
+  variantChoice: {},
+  bands: [],
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

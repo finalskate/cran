@@ -18,7 +18,7 @@ import type { SessionFeel } from '../../domain/history';
 import { nthMessage } from '../../domain/messages';
 import type { LevelChange } from '../../domain/progression';
 import { formatClock, SESSION_FEEL_LABEL } from '../format';
-import { movementById } from '../planner';
+import { levelVariant, movementById } from '../planner';
 import { go } from '../router';
 import { chooseLevel } from '../state';
 import { lastRecord } from '../summary';
@@ -130,7 +130,8 @@ export function Summary() {
 
 /** Nom d'un niveau : ses variantes équivalentes. */
 function levelName(movementId: string, level: number): string {
-  return movementById(movementId)?.levels[level]?.variants.map((v) => v.name).join(' · ') ?? '';
+  const movement = movementById(movementId);
+  return movement?.levels[level] ? levelVariant(movement, level).name : '';
 }
 
 /** Niveau débloqué : célébré, déjà appliqué, annulable. */

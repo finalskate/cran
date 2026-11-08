@@ -163,3 +163,34 @@ describe('levelSteps', () => {
     ]);
   });
 });
+
+describe('exercices à l’élastique (retouche du 08/11)', () => {
+  const PULL_H = CATALOG.find((m) => m.id === 'pull-h')!;
+  const band = (rank: number) => ({ rank, of: 3, label: ['léger', 'moyen', 'fort'][rank]! });
+  let k = 0;
+  const rowing = (rank: number): WorkoutRecord => {
+    k++;
+    const at = new Date(Date.UTC(2026, 11, 1 + k, 18)).toISOString();
+    return {
+      startedAt: at,
+      endedAt: at,
+      locationId: 'home',
+      duration: 20,
+      kneeScore: 0,
+      entries: [{ movementId: PULL_H.id, variantId: 'row-band', level: 0, sets: sets(20, 20, 20), band: band(rank) }],
+    };
+  };
+
+  it('ne débloque pas le niveau suivant avant l’élastique le plus fort', () => {
+    expect(levelVerdict([rowing(1), rowing(1)], PULL_H, 0)).toBeNull();
+    expect(levelVerdict([rowing(1), rowing(2), rowing(2)], PULL_H, 0)).toBe('unlock');
+  });
+
+  it('les séances enregistrées sans élastique comptent comme avant', () => {
+    const old = rowing(0);
+    delete old.entries[0]!.band;
+    const older = rowing(0);
+    delete older.entries[0]!.band;
+    expect(levelVerdict([old, older], PULL_H, 0)).toBe('unlock');
+  });
+});

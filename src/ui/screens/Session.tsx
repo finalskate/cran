@@ -30,12 +30,14 @@ import {
   previousResults,
   replaceItem,
   restRemaining,
+  setItemBand,
   setsOfItem,
   skipBlock,
   toRecord,
   type SessionState,
   type Step,
 } from '../../domain/session';
+import { bandAt, bandLabels } from '../../domain/bands';
 import type { Movement, PlanBlock, PlanItem, Variant } from '../../domain/types';
 import { ExerciseSheet } from '../components/ExerciseSheet';
 import { Sheet } from '../components/Sheet';
@@ -478,9 +480,41 @@ function SeriesCard({ state, step, item }: WorkProps) {
       {item.last && (
         <span class="muted series__last">
           Dernière séance : <span class="num series__last-values">{item.last.map((v) => formatValue(v, isTime)).join(' · ')}</span>
+          {item.lastBand && ` · élastique ${item.lastBand}`}
         </span>
       )}
+      {item.band && <BandPicker state={state} step={step} item={item} />}
     </section>
+  );
+}
+
+/**
+ * Élastique de l'exercice (pré-choisi : celui de la dernière fois, ou le suivant après une séance
+ * au haut de la fourchette). Le changer vaut pour toutes les séries de l'exercice.
+ */
+function BandPicker({ state, step, item }: Pick<WorkProps, 'state' | 'step' | 'item'>) {
+  const labels = bandLabels(prefs.value.bands);
+  const current = item.band!;
+  return (
+    <div class="band-picker" role="radiogroup" aria-label="Élastique">
+      <span class="muted">Élastique</span>
+      {labels.map((label, rank) => (
+        <button
+          key={label}
+          type="button"
+          class="btn btn--small band-picker__btn"
+          role="radio"
+          aria-checked={current.label === label}
+          onClick={() => {
+            if (current.label === label) return;
+            track('band', { variantId: item.variantId, from: current.label, to: label });
+            updateSession(setItemBand(state, step.block, step.item, bandAt(rank, labels)));
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

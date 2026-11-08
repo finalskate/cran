@@ -4,14 +4,19 @@
  * Le mannequin animé (J8) prendra place en tête de fiche.
  *
  * Un niveau peut avoir plusieurs variantes équivalentes (une par matériel) : elles sont toutes
- * présentées, la préférée en premier.
+ * présentées, la préférée en premier (l'appelant les ordonne).
+ *
+ * Retouche du 08/11 : repère de départ (charge du sac), élastique conseillé, et consigne
+ * d'installation de l'ancrage de porte pour les sangles.
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
-import { EQUIPMENT } from '../../data/equipment';
+import { EQUIPMENT, SETUP_NOTES } from '../../data/equipment';
 import { track } from '../../data/usage';
+import { bandLabels, startRank } from '../../domain/bands';
 import type { Requirement, Variant } from '../../domain/types';
 import { formatTarget } from '../format';
+import { prefs } from '../state';
 import { DemoLink } from './DemoLink';
 import { Sheet } from './Sheet';
 
@@ -32,6 +37,12 @@ function requirementLabel(req: Requirement): string {
   return labels.join(' ou ');
 }
 
+/** Variante aux sangles qui peut se faire avec l'ancrage de porte. */
+function usesDoorAnchor(v: Variant): boolean {
+  const tags = v.needs.flat();
+  return tags.includes('straps') && tags.includes('anchor');
+}
+
 export function ExerciseSheet({ open, onClose, variants, kicker, from, footer }: Props) {
   const first = variants[0];
 
@@ -40,10 +51,14 @@ export function ExerciseSheet({ open, onClose, variants, kicker, from, footer }:
   }, [open, first?.id]);
 
   if (!first) return null;
-  const title = variants.map((v) => v.name).join(' · ');
+  const title = variants.length > 1 ? `${first.name} (ou équivalent)` : first.name;
+  const labels = bandLabels(prefs.value.bands);
 
   return (
     <Sheet open={open} onClose={onClose} title={title} kicker={kicker} footer={footer}>
+      {variants.length > 1 && (
+        <p class="muted sheet__lead">Variantes équivalentes : l’appli propose celle que permet le matériel du lieu.</p>
+      )}
       {variants.map((v) => (
         <section key={v.id} class="fiche" aria-label={v.name}>
           {variants.length > 1 && <h3 class="fiche__name">{v.name}</h3>}
@@ -58,6 +73,9 @@ export function ExerciseSheet({ open, onClose, variants, kicker, from, footer }:
               <li key={c}>{c}</li>
             ))}
           </ul>
+          {v.band && <p class="fiche__hint">Élastique de départ : {labels[startRank(v.band, labels.length)]}{v.band.assist ? ' (il aide : plus léger = plus dur)' : ''}.</p>}
+          {v.startHint && <p class="fiche__hint">{v.startHint}</p>}
+          {usesDoorAnchor(v) && <p class="fiche__hint">{SETUP_NOTES.straps}</p>}
           {v.mistakes.length > 0 && (
             <>
               <span class="card__label">Erreurs courantes</span>

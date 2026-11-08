@@ -2538,3 +2538,46 @@ h3 {
   justify-content: flex-end;
   gap: 4px;
 }
+
+/* ─── Retouche du 08/11 : élastiques, test de niveau, fiche ─── */
+.band-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.band-picker__btn {
+  min-width: 0;
+  padding-inline: 10px;
+}
+
+.placement__text {
+  margin: 0;
+  font-size: 14px;
+}
+
+.placement-tried {
+  margin: 0;
+  padding: 10px 12px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.fiche__hint {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(251, 146, 60, 0.08);
+  font-size: 14px;
+}
+
+.ladder__alt {
+  color: var(--text-muted);
+  font-size: 13px;
+}

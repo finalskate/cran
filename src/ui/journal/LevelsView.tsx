@@ -21,6 +21,7 @@ import { levelSteps, type LevelHistoryEntry } from '../../domain/progression';
 import { StepChart } from '../components/SmallCharts';
 import type { Movement } from '../../domain/types';
 import { ExerciseSheet } from '../components/ExerciseSheet';
+import { levelVariant } from '../planner';
 import { PlacementSheet } from './PlacementSheet';
 import { chooseLevel, levels, prefs } from '../state';
 
@@ -85,6 +86,8 @@ export function LevelsView() {
             <ol class="ladder">
               {m.levels.map((level, i) => {
                 const heavy = level.variants.some((v) => v.wristHeavy);
+                const main = levelVariant(m, i);
+                const others = level.variants.filter((v) => v !== main);
                 const state = i < current ? 'done' : i === current ? 'current' : 'next';
                 return (
                   <li key={i}>
@@ -105,8 +108,9 @@ export function LevelsView() {
                       </span>
                       <span class="ladder__names">
                         {state === 'done' && <span class="visually-hidden">Acquis : </span>}
-                        {level.variants.map((v) => v.name).join(' · ')}
+                        {main.name}
                         {heavy ? ' ⚠ poignet' : ''}
+                        {others.length > 0 && <span class="ladder__alt"> ou {others.map((v) => v.name).join(', ')}</span>}
                       </span>
                       {state === 'current' && <span class="ladder__badge">Ton niveau</span>}
                     </button>
@@ -134,7 +138,10 @@ export function LevelsView() {
           open
           from="levels"
           onClose={() => setOpen(null)}
-          variants={open.movement.levels[open.level]!.variants}
+          variants={(() => {
+            const main = levelVariant(open.movement, open.level);
+            return [main, ...open.movement.levels[open.level]!.variants.filter((v) => v !== main)];
+          })()}
           kicker={`${open.movement.name} · niveau ${open.level + 1} / ${open.movement.levels.length}`}
           footer={
             (levels.value[open.movement.id] ?? 0) === open.level ? (

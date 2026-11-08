@@ -8,9 +8,9 @@ import type { EquipmentTag, Location, SpaceSize } from '../domain/types';
 export const EQUIPMENT: { tag: EquipmentTag; label: string; hint?: string }[] = [
   { tag: 'pushup-handles', label: 'Poignées de pompes' },
   { tag: 'straps', label: 'Sangles de suspension' },
-  { tag: 'anchor', label: 'Point d’ancrage', hint: 'Porte, poteau, arbre : pour sangles et élastiques' },
-  { tag: 'pullup-bar', label: 'Barre de traction', hint: 'Sert aussi d’ancrage en hauteur' },
-  { tag: 'dip-bars', label: 'Barres parallèles' },
+  { tag: 'anchor', label: 'Ancrage de porte', hint: 'Ou poteau, arbre : les sangles restent collées au support' },
+  { tag: 'pullup-bar', label: 'Barre de traction', hint: 'Ou poutre : ancrage dégagé, les sangles pendent librement (dips)' },
+  { tag: 'dip-bars', label: 'Barres parallèles', hint: 'Ou double poutre : pour les dips' },
   { tag: 'bands', label: 'Élastiques longs' },
   { tag: 'mini-bands', label: 'Mini-bandes de hanche' },
   { tag: 'table', label: 'Table solide', hint: 'Pour le rowing inversé : vérifie qu’elle ne bascule pas' },
@@ -20,6 +20,15 @@ export const EQUIPMENT: { tag: EquipmentTag; label: string; hint?: string }[] = 
   { tag: 'backpack', label: 'Sac à dos lestable' },
   { tag: 'bike', label: 'Vélo' },
 ];
+
+/**
+ * Consignes d'installation affichées dans la fiche quand une variante utilise ce matériel.
+ * (Ancrage de porte à mors : la porte se ferme sur l'ancrage et reste tenue par la tension.)
+ */
+export const SETUP_NOTES: Partial<Record<EquipmentTag, string>> = {
+  straps:
+    'Ancrage de porte : porte fermée sur l’ancrage. Place-toi du côté où elle s’ouvre en poussant : en tirant, tu la plaques contre son cadre au lieu de l’ouvrir.',
+};
 
 export const SPACES: { value: SpaceSize; label: string }[] = [
   { value: 'small', label: 'Petit (~2 m², de quoi s’allonger)' },

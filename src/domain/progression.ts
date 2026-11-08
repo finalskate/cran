@@ -13,9 +13,14 @@
  *
  * Seules les séances faites DEPUIS le dernier changement de niveau comptent : après un retour
  * en arrière, les anciennes séances validées ne redébloquent pas aussitôt.
+ *
+ * Exercices à l'élastique : une séance n'est validée pour le déblocage qu'avec l'élastique le
+ * plus dur (le plus fort, ou le plus léger quand l'élastique aide). Avant, une séance au haut de
+ * la fourchette fait passer à l'élastique suivant (bands.ts).
  */
 import type { SessionFeel, SetResult, WorkoutRecord } from './history';
-import type { Movement, Target } from './types';
+import { isHardestBand } from './bands';
+import type { Movement, Target, Variant } from './types';
 
 /** Séances validées nécessaires pour débloquer la variante suivante. */
 export const UNLOCK_SESSIONS = 2;
@@ -64,13 +69,18 @@ export function nextPrefill(last: readonly SetResult[] | undefined, target: Targ
   return clamp(next, target);
 }
 
-/** Retrouve la fourchette d'une variante dans le catalogue. */
-export function targetOf(movement: Movement, variantId: string): Target | undefined {
+/** Retrouve une variante d'un mouvement (hors substituts). */
+function variantOf(movement: Movement, variantId: string): Variant | undefined {
   for (const level of movement.levels) {
     const v = level.variants.find((x) => x.id === variantId);
-    if (v) return v.target;
+    if (v) return v;
   }
   return undefined;
+}
+
+/** Retrouve la fourchette d'une variante dans le catalogue. */
+export function targetOf(movement: Movement, variantId: string): Target | undefined {
+  return variantOf(movement, variantId)?.target;
 }
 
 export type Verdict = 'unlock' | 'step-back' | null;
@@ -85,16 +95,16 @@ export function levelVerdict(
   level: number,
   since?: string,
 ): Verdict {
-  const sessions: { sets: SetResult[]; target: Target }[] = [];
+  const sessions: { sets: SetResult[]; target: Target; hardest: boolean }[] = [];
   for (const w of [...workouts].sort((a, b) => a.startedAt.localeCompare(b.startedAt))) {
     if (since && w.startedAt < since) continue;
     for (const e of w.entries) {
       if (e.movementId !== movement.id || e.level !== level || e.sets.length === 0) continue;
-      const target = targetOf(movement, e.variantId);
-      if (target) sessions.push({ sets: e.sets, target });
+      const variant = variantOf(movement, e.variantId);
+      if (variant) sessions.push({ sets: e.sets, target: variant.target, hardest: !variant.band || isHardestBand(e.band, variant.band) });
     }
   }
-  const validated = sessions.filter((s) => isValidated(s.sets, s.target)).length;
+  const validated = sessions.filter((s) => s.hardest && isValidated(s.sets, s.target)).length;
   if (validated >= UNLOCK_SESSIONS) return 'unlock';
   const recent = sessions.slice(-STEP_BACK_SESSIONS);
   if (recent.length === STEP_BACK_SESSIONS && recent.every((s) => isBelow(s.sets, s.target))) return 'step-back';

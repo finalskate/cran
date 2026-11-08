@@ -3,13 +3,15 @@
  * les niveaux, le lieu, la charge et le genou, puis construit le plan du jour.
  */
 import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
-import { alternatives, handSupport, resolveVariant, type Context, type Resolved } from '../domain/availability';
+import { alternatives, handSupport, resolveVariant, variantHere, type Context, type Resolved } from '../domain/availability';
+import { bandLabels, plannedBand } from '../domain/bands';
 import { buildPlan } from '../domain/engine';
 import { lastDoneByMovement, lastSessionByVariant, lastSessionFeel, lastSetsByVariant, type LastSession } from '../domain/history';
-import { nextPrefill, volumeDelta } from '../domain/progression';
+import { isValidated, nextPrefill, volumeDelta } from '../domain/progression';
 import { legsLoaded, MORNING_WORSE_SCORE, morningWorseToday, sessionDoneToday, workedRecently } from '../domain/recovery';
-import type { Duration, Location, Movement, Plan, PlanItem } from '../domain/types';
-import { levels, prefs } from './state';
+import type { Duration, Location, Movement, Plan, PlanItem, Variant } from '../domain/types';
+import { track } from '../data/usage';
+import { levels, locations, prefs, setPref } from './state';
 import { activities, kneeLogs, loadTraining, workouts as allWorkouts } from './training';
 
 const ALL: Movement[] = [...CATALOG, WARMUP, COOLDOWN];
@@ -28,7 +30,27 @@ export function describeItem(item: PlanItem) {
 }
 
 export function contextFor(location: Location, kneeScore: number): Context {
-  return { location, kneeScore, wristRule: prefs.value.wristRule };
+  return { location, kneeScore, wristRule: prefs.value.wristRule, preferred: prefs.value.variantChoice };
+}
+
+/**
+ * Variante d'un niveau telle qu'elle serait proposée sur le lieu habituel (dernier utilisé) :
+ * la préférée si elle y est faisable, sinon la première faisable. Sert à nommer un niveau
+ * (échelle, test, déblocage) par l'exercice qu'on fera vraiment.
+ */
+export function levelVariant(movement: Movement, level: number): Variant {
+  const location = locations.value.find((l) => l.id === prefs.value.lastLocationId) ?? locations.value[0];
+  return location ? variantHere(movement, level, contextFor(location, 0)) : movement.levels[level]!.variants[0]!;
+}
+
+/**
+ * Retient la variante choisie parmi les équivalentes d'un niveau (ex. développé élastique plutôt
+ * que pike push-up) : elle sera proposée en premier les fois suivantes, là où elle est faisable.
+ */
+export async function rememberVariant(movementId: string, variantId: string): Promise<void> {
+  if (prefs.value.variantChoice[movementId] === variantId) return;
+  track('variant-choice', { movementId, variantId });
+  await setPref('variantChoice', { ...prefs.value.variantChoice, [movementId]: variantId });
 }
 
 /**
@@ -43,6 +65,23 @@ let lastSessions: Record<string, LastSession> = {};
 function withLast(item: PlanItem): PlanItem {
   const last = lastSets[item.variantId];
   return last && !item.guided ? { ...item, last } : item;
+}
+
+/**
+ * Exercice à l'élastique : élastique prévu (le même, ou le suivant après une séance au haut de la
+ * fourchette, l'objectif repartant alors du bas), et celui de la dernière fois pour le rappel.
+ */
+function withBand(item: PlanItem): PlanItem {
+  if (item.guided) return item;
+  const { variant } = describeItem(item);
+  if (!variant.band) return item;
+  const last = lastSessions[item.variantId];
+  const { band, reset } = plannedBand(
+    variant.band,
+    bandLabels(prefs.value.bands),
+    last && { band: last.band, validated: isValidated(last.sets, variant.target) },
+  );
+  return { ...item, band, ...(reset ? { prefill: variant.target.min } : {}), ...(last?.band ? { lastBand: last.band.label } : {}) };
 }
 
 export async function makePlan(location: Location, duration: Duration, kneeScore: number): Promise<Plan> {
@@ -72,7 +111,7 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
   });
   return {
     ...plan,
-    blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map(withLast) })),
+    blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map((i) => withLast(withBand(i))) })),
     ...(recall ? { recall } : {}),
   };
 }
@@ -108,7 +147,7 @@ export function swapOptions(item: PlanItem, plan: Plan, ctx: Context): SwapOptio
 export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): PlanItem {
   const { variant, level, adapted } = option.resolved;
   const support = handSupport(variant, ctx);
-  return withLast({
+  return withLast(withBand({
     movementId: option.movement.id,
     variantId: variant.id,
     level,
@@ -122,5 +161,5 @@ export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): 
     ),
     ...(variant.perSide ? { perSide: true } : {}),
     ...(support ? { handSupport: support } : {}),
-  });
+  }));
 }

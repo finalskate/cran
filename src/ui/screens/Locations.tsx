@@ -1,8 +1,13 @@
 /**
  * Lieux et matériel (SPEC §4.2) : chaque lieu se modifie (matériel, espace, nom),
- * on peut en créer ou en supprimer. Le moteur ne propose que ce qui est faisable sur le lieu choisi.
+ * on peut en créer, en dupliquer (ex. le même lieu avec un équipement en plus certains jours)
+ * ou en supprimer. Le moteur ne propose que ce qui est faisable sur le lieu choisi.
+ *
+ * Retouche du 08/11 : « Mes élastiques » (forces en kg), communs à tous les lieux.
  */
 import { useState } from 'preact/hooks';
+import { track } from '../../data/usage';
+import { bandLabels, parseBands } from '../../domain/bands';
 import { EQUIPMENT, SPACES } from '../../data/equipment';
 import { deleteLocation, saveLocation } from '../../data/repo';
 import type { EquipmentTag, Location, SpaceSize } from '../../domain/types';
@@ -10,6 +15,8 @@ import { locations, prefs, reloadLocations, setPref } from '../state';
 
 export function Locations() {
   const [open, setOpen] = useState<string | null>(null);
+  // Saisie en cours des élastiques (enregistrée en quittant le champ, puis remise au propre).
+  const [bandsText, setBandsText] = useState(prefs.value.bands.join(', '));
 
   async function update(loc: Location) {
     await saveLocation(loc);
@@ -21,6 +28,20 @@ export function Locations() {
     const order = Math.max(-1, ...locations.value.map((l) => l.order)) + 1;
     await update({ id, name: 'Nouveau lieu', equipment: [], space: 'small', order });
     setOpen(id);
+  }
+
+  async function duplicate(loc: Location) {
+    const id = `loc-${Date.now().toString(36)}`;
+    const order = Math.max(-1, ...locations.value.map((l) => l.order)) + 1;
+    await update({ ...loc, id, name: `${loc.name} (copie)`.slice(0, 30), order });
+    setOpen(id);
+  }
+
+  async function saveBands(text: string) {
+    const bands = parseBands(text);
+    track('bands', { count: bands.length });
+    await setPref('bands', bands);
+    setBandsText(bands.join(', '));
   }
 
   async function remove(loc: Location) {
@@ -57,15 +78,7 @@ export function Locations() {
 
             {isOpen && (
               <>
-                <label class="field">
-                  <span class="card__label">Nom</span>
-                  <input
-                    type="text"
-                    value={loc.name}
-                    maxLength={30}
-                    onChange={(e) => void update({ ...loc, name: e.currentTarget.value.trim() || loc.name })}
-                  />
-                </label>
+                <NameField key={loc.id} name={loc.name} onSave={(name) => void update({ ...loc, name })} />
 
                 <label class="field">
                   <span class="card__label">Espace</span>
@@ -91,6 +104,9 @@ export function Locations() {
                   ))}
                 </fieldset>
 
+                <button type="button" class="btn" onClick={() => void duplicate(loc)}>
+                  Dupliquer ce lieu
+                </button>
                 {locations.value.length > 1 && (
                   <button type="button" class="btn btn--danger" onClick={() => void remove(loc)}>
                     Supprimer ce lieu
@@ -105,6 +121,51 @@ export function Locations() {
       <button type="button" class="btn" onClick={() => void create()}>
         + Nouveau lieu
       </button>
+
+      <section class="card" aria-labelledby="bands-title">
+        <span id="bands-title" class="card__label">
+          Mes élastiques
+        </span>
+        <label class="field">
+          <span class="muted">Forces en kg, séparées par des virgules (écrites sur l’élastique)</span>
+          <input
+            type="text"
+            placeholder="ex. 10, 20, 30"
+            value={bandsText}
+            onInput={(e) => setBandsText(e.currentTarget.value)}
+            // onBlur et non onChange : avec Preact 11, onChange suit chaque frappe (comme React).
+            onBlur={(e) => void saveBands(e.currentTarget.value)}
+          />
+        </label>
+        <span class="muted">
+          En séance : {bandLabels(prefs.value.bands).join(' · ')}. Au haut de la fourchette, l’appli passe à l’élastique suivant,
+          puis au niveau au-dessus.
+        </span>
+      </section>
     </main>
+  );
+}
+
+/**
+ * Nom d'un lieu : saisi librement, enregistré en quittant le champ. (Avec Preact 11, onChange
+ * suit chaque frappe : enregistrer à chaque lettre, nom nettoyé, avalait les espaces.)
+ */
+function NameField({ name, onSave }: { name: string; onSave: (name: string) => void }) {
+  const [draft, setDraft] = useState(name);
+  return (
+    <label class="field">
+      <span class="card__label">Nom</span>
+      <input
+        type="text"
+        value={draft}
+        maxLength={30}
+        onInput={(e) => setDraft(e.currentTarget.value)}
+        onBlur={() => {
+          const clean = draft.trim();
+          if (clean && clean !== name) onSave(clean);
+          else setDraft(name);
+        }}
+      />
+    </label>
   );
 }

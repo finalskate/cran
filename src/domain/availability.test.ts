@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CATALOG } from '../data/catalog';
 import { DEFAULT_LOCATIONS } from '../data/equipment';
-import { alternatives, handSupport, isAvailable, maxKneeImpact, resolveVariant, type Context } from './availability';
+import { alternatives, handSupport, isAvailable, maxKneeImpact, resolveVariant, variantHere, type Context } from './availability';
 import type { Location, Movement } from './types';
 
 const byId = (id: string): Movement => CATALOG.find((m) => m.id === id)!;
@@ -91,5 +91,46 @@ describe('alternatives', () => {
     const alts = alternatives(pullH, 2, 'row-table-bent', ctx(loc('home')));
     expect(alts[0]?.variant.id).toBe('row-straps-horizontal-bent');
     expect(alts.every((a) => a.variant.id !== 'row-table-bent')).toBe(true);
+  });
+});
+
+describe('variante préférée (retouche du 08/11)', () => {
+  const pushV = byId('push-v');
+
+  it('sans préférence : la première faisable du niveau (pike push-up)', () => {
+    expect(resolveVariant(pushV, 0, ctx(loc('home')))?.variant.id).toBe('pike-pushup');
+    expect(variantHere(pushV, 0, ctx(loc('home'))).id).toBe('pike-pushup');
+  });
+
+  it('la variante choisie passe en premier, au même niveau', () => {
+    const c = ctx(loc('home'), { preferred: { 'push-v': 'band-press' } });
+    expect(resolveVariant(pushV, 0, c)).toEqual({ variant: pushV.levels[0]!.variants[1], level: 0, adapted: false });
+  });
+
+  it('ignorée là où elle n’est pas faisable, et aux autres niveaux', () => {
+    // Pas d'élastiques au parc : retour au pike push-up.
+    expect(resolveVariant(pushV, 0, ctx(loc('park'), { preferred: { 'push-v': 'band-press' } }))?.variant.id).toBe('pike-pushup');
+    expect(resolveVariant(pushV, 1, ctx(loc('home'), { preferred: { 'push-v': 'band-press' } }))?.variant.id).toBe('pike-pushup-elevated');
+  });
+});
+
+describe('ancrage de porte (retouche du 08/11)', () => {
+  it('pas de dips aux sangles contre une porte, mais avec une barre ou des barres parallèles', () => {
+    const dips = byId('dips');
+    expect(resolveVariant(dips, 0, ctx(loc('home')))).toBeNull();
+    expect(resolveVariant(dips, 0, ctx(loc('equipped')))?.variant.id).toBe('dips-straps-assisted');
+    const withBeams: Location = { ...loc('home'), equipment: [...loc('home').equipment, 'dip-bars'] };
+    expect(resolveVariant(dips, 0, ctx(withBeams))).toMatchObject({ variant: { id: 'dips-bars' }, level: 1 });
+  });
+
+  it('body saw sur serviette à la maison', () => {
+    const core = byId('core');
+    const last = core.levels.length - 1;
+    expect(resolveVariant(core, last, ctx(loc('home')))?.variant.id).toBe('body-saw-towel');
+  });
+
+  it('rowing élastique sans ancrage', () => {
+    const onlyBands: Location = { ...bare, equipment: ['bands'] };
+    expect(resolveVariant(byId('pull-h'), 0, ctx(onlyBands))?.variant.id).toBe('row-band');
   });
 });

@@ -177,6 +177,7 @@ export const CATALOG: Movement[] = [
             handsOnFloor: true,
             fistsOk: true,
             target: { kind: 'reps', min: 6, max: 12 },
+            startHint: 'Commence avec 4 à 5 kg dans le sac (des bouteilles d’eau), puis ajoute 2 kg à la fois.',
             cues: [
               'Sac lesté bien serré sur le dos',
               'Pieds surélevés, corps gainé',
@@ -222,6 +223,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 10, max: 15 },
+            band: { start: 1 },
             cues: [
               'Pieds sur l’élastique, largeur de hanches',
               'Pousse au-dessus de la tête, bras tendus',
@@ -306,7 +308,8 @@ export const CATALOG: Movement[] = [
     id: 'dips',
     name: 'Dips',
     category: 'push',
-    note: 'Pas de dips sur chaise (épaules).',
+    note:
+      'Pas de dips sur chaise : le poignet y est plié en arrière sous tout le poids du corps, et l’épaule part vers l’avant en bas du mouvement. Aux sangles, il faut un ancrage dégagé (barre, poutre) : contre une porte, on a le nez dessus.',
     levels: [
       {
         variants: [
@@ -314,12 +317,14 @@ export const CATALOG: Movement[] = [
             id: 'dips-straps-assisted',
             videoQuery: 'TRX dips assisted',
             name: 'Dips aux sangles assistés',
-            needs: ['straps', ['anchor', 'pullup-bar']],
+            // Il faut se placer ENTRE les sangles : impossible avec un ancrage de porte.
+            needs: ['straps', 'pullup-bar'],
             space: 'medium',
             knee: 'low',
             target: { kind: 'reps', min: 6, max: 12 },
             cues: [
-              'Sangles à hauteur des hanches, pieds au sol devant',
+              'Sangles accrochées à une barre ou une poutre, pendantes librement, écartées de la largeur des épaules',
+              'Poignées à hauteur des hanches, pieds au sol devant',
               'Les jambes aident juste ce qu’il faut',
               'Descends jusqu’à coudes à 90°',
               'Épaules basses, loin des oreilles',
@@ -356,6 +361,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 5, max: 10 },
+            startHint: 'Commence avec 4 à 5 kg dans le sac, puis ajoute 2 kg à la fois.',
             cues: [
               'Sac porté devant ou sur le dos, bien serré',
               'Même technique que sans charge',
@@ -396,19 +402,20 @@ export const CATALOG: Movement[] = [
           },
           {
             id: 'row-band',
-            videoQuery: 'resistance band row anchored door',
-            name: 'Rowing élastique',
-            needs: ['bands', ['anchor', 'pullup-bar']],
+            videoQuery: 'seated resistance band row',
+            name: 'Rowing élastique assis',
+            needs: ['bands'],
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 12, max: 20 },
+            band: { start: 1 },
             cues: [
-              'Élastique ancré à hauteur de poitrine',
-              'Recule jusqu’à tension, genoux souples',
-              'Coudes vers l’arrière, omoplates serrées',
-              'Retour lent',
+              'Assis au sol, jambes tendues, élastique passé sous les pieds',
+              'Dos droit, buste à peine penché en arrière',
+              'Coudes vers l’arrière, près du corps, omoplates serrées',
+              'Retour lent, sans arrondir le dos',
             ],
-            mistakes: ['Élastique trop faible', 'Dos qui s’arrondit'],
+            mistakes: ['Tirer avec le buste plutôt qu’avec les bras', 'Dos qui s’arrondit'],
           },
         ],
       },
@@ -619,6 +626,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 5, max: 10 },
+            band: { start: 2, assist: true },
             cues: [
               'Élastique accroché à la barre, un pied ou un genou dedans',
               'Tire la poitrine vers la barre',
@@ -658,6 +666,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 3, max: 8 },
+            startHint: 'Commence avec 2 à 4 kg dans le sac, puis ajoute 2 kg à la fois.',
             cues: [
               'Sac lesté bien serré',
               'Même technique que sans charge',
@@ -679,8 +688,9 @@ export const CATALOG: Movement[] = [
         knee: 'low',
         substitute: true,
         target: { kind: 'reps', min: 12, max: 20 },
+        band: { start: 1 },
         cues: [
-          'Élastique ancré en haut de porte',
+          'Élastique ancré en haut de porte (ou passé dans une poignée des sangles réglée en haut)',
           'À genoux, buste droit',
           'Tire les coudes vers les hanches',
           'Substitut faible : la progression « barre » reste en attente',
@@ -936,6 +946,7 @@ export const CATALOG: Movement[] = [
             knee: 'low',
             perSide: true,
             target: { kind: 'reps', min: 8, max: 12 },
+            startHint: 'Commence avec 5 à 8 kg dans le sac, tenu d’une main.',
             cues: [
               'Sac lesté dans une main',
               'Penche le buste, jambe libre tendue vers l’arrière',
@@ -1011,12 +1022,14 @@ export const CATALOG: Movement[] = [
             id: 'spanish-squat',
             videoQuery: 'spanish squat patellar tendon',
             name: 'Spanish squat',
-            needs: [['straps', 'bands'], ['anchor', 'pullup-bar']],
+            // Il faut tirer à l'horizontale, à hauteur des genoux : un ancrage en haut de porte ne va pas.
+            needs: ['bands', 'table'],
             space: 'small',
             knee: 'low',
             target: { kind: 'time', min: 30, max: 45 },
+            band: { start: 1, fixed: true },
             cues: [
-              'Sangle ou élastique derrière les genoux, ancré devant',
+              'Élastique en boucle autour du pied d’une table lourde (ou d’un meuble qui ne bouge pas), derrière les genoux',
               'Penche-toi en arrière, tibias verticaux',
               'Descends en squat, tension dans la sangle',
               'Tiens la position',
@@ -1314,7 +1327,8 @@ export const CATALOG: Movement[] = [
             id: 'body-saw-straps',
             videoQuery: 'TRX body saw',
             name: 'Body saw aux sangles',
-            needs: ['straps', ['anchor', 'pullup-bar']],
+            // En reculant, les pieds passent sous l'ancrage : avec une porte, ils tapent dedans.
+            needs: ['straps', 'pullup-bar'],
             space: 'large',
             knee: 'low',
             target: { kind: 'reps', min: 6, max: 12 },
@@ -1323,6 +1337,22 @@ export const CATALOG: Movement[] = [
               'Glisse le corps vers l’arrière puis l’avant',
               'Bassin aligné tout le long',
               'Petite amplitude au début',
+            ],
+            mistakes: ['Fesses qui montent', 'Bas du dos qui s’affaisse'],
+          },
+          {
+            id: 'body-saw-towel',
+            videoQuery: 'body saw towel slide',
+            name: 'Body saw sur serviette',
+            needs: [],
+            space: 'medium',
+            knee: 'low',
+            target: { kind: 'reps', min: 6, max: 12 },
+            cues: [
+              'Planche sur avant-bras, pointes de pieds sur une serviette',
+              'Sur un sol lisse (parquet, carrelage), avant-bras sur le tapis',
+              'Pousse avec les avant-bras : le corps glisse vers l’arrière, puis reviens',
+              'Bassin aligné, petite amplitude au début',
             ],
             mistakes: ['Fesses qui montent', 'Bas du dos qui s’affaisse'],
           },
@@ -1472,6 +1502,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 12, max: 20 },
+            band: { start: 0 },
             cues: [
               'Debout sur l’élastique, pieds largeur de hanches',
               'Coudes collés au corps',
@@ -1508,6 +1539,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 10, max: 15 },
+            band: { start: 1 },
             cues: [
               'Élastique plus fort, ou pris plus court',
               'Monte en 1 seconde, descends en 3',
@@ -1593,6 +1625,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 12, max: 20 },
+            band: { start: 0 },
             cues: [
               'Élastique sous le pied arrière, tenu derrière la tête',
               'Coudes pointés vers le plafond, près de la tête',
@@ -1609,8 +1642,9 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 12, max: 20 },
+            band: { start: 0 },
             cues: [
-              'Élastique ancré en haut (porte, barre)',
+              'Élastique ancré en haut : barre, ou poignée des sangles réglée en haut de porte',
               'Coudes collés au corps',
               'Pousse vers le bas jusqu’à bras tendus',
               'Remonte lentement jusqu’à 90°',
@@ -1645,6 +1679,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 10, max: 15 },
+            band: { start: 1 },
             cues: [
               'Élastique plus fort, ou pris plus court',
               'Au-dessus de la tête ou ancré en haut',
@@ -1694,6 +1729,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 15, max: 20 },
+            band: { start: 0 },
             cues: [
               'Élastique tenu bras tendus devant',
               'Écarte jusqu’à la poitrine',
@@ -1721,8 +1757,9 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 12, max: 20 },
+            band: { start: 0 },
             cues: [
-              'Élastique ancré à hauteur du visage',
+              'Élastique ancré à hauteur du visage (ou passé dans une poignée des sangles réglée à cette hauteur)',
               'Tire vers le front, coudes hauts',
               'Termine pouces vers l’arrière',
               'Retour lent',

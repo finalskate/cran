@@ -9,6 +9,7 @@ import {
   previousResults,
   progress,
   restRemaining,
+  setItemBand,
   setsOfItem,
   skipBlock,
   startSession,
@@ -136,5 +137,20 @@ describe('avancement par bloc et cases de séries', () => {
     s = completeStep(s, { value: 9 }, T0); // A2, repos
     s = endRest(s); // B2
     expect(setsOfItem(s, currentStep(s)!)).toEqual([null, undefined]);
+  });
+});
+
+describe('élastique de l’exercice (retouche du 08/11)', () => {
+  it('se change en séance et s’enregistre avec les séries', () => {
+    const band = { rank: 2, of: 3, label: 'fort' };
+    let s = startSession(PLAN, T0);
+    s = setItemBand(s, 1, 0, band);
+    expect(s.plan.blocks[1]!.items[0]!.band).toEqual(band);
+    while (s.phase !== 'done') {
+      s = s.phase === 'rest' ? endRest(s) : completeStep(s, { value: 8, feel: 'ok' }, T0);
+    }
+    const rec = toRecord(s, T0 + 600_000);
+    expect(rec.entries.find((e) => e.movementId === 'a')?.band).toEqual(band);
+    expect(rec.entries.find((e) => e.movementId === 'b')).not.toHaveProperty('band');
   });
 });

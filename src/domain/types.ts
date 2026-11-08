@@ -104,6 +104,32 @@ export interface Variant {
    * (par défaut : le nom + « exercice »).
    */
   videoQuery?: string;
+  /** Exercice à l'élastique : la force de l'élastique est suivie (voir bands.ts). */
+  band?: BandUse;
+  /** Repère de départ affiché dans la fiche et au test de niveau (ex. charge du sac). */
+  startHint?: string;
+}
+
+/**
+ * Élastiques longs : leur force est un second levier de progression, avant la variante suivante
+ * (plus de répétitions, puis un élastique plus fort, puis le niveau au-dessus).
+ *  - `start` : élastique conseillé au départ, sur une échelle 0 (le plus léger) → 2 (le plus fort),
+ *    ramenée au nombre d'élastiques réellement possédés ;
+ *  - `assist` : l'élastique AIDE (tractions assistées) : progresser = prendre plus léger ;
+ *  - `fixed` : pas de progression par l'élastique (isométrie : la tension sert juste à tenir).
+ */
+export interface BandUse {
+  start: 0 | 1 | 2;
+  assist?: boolean;
+  fixed?: boolean;
+}
+
+/** Élastique utilisé : rang parmi les élastiques possédés (0 = le plus léger), et son libellé. */
+export interface BandChoice {
+  rank: number;
+  /** Nombre d'élastiques possédés à ce moment-là. */
+  of: number;
+  label: string;
 }
 
 /** Un niveau de l'échelle : une ou plusieurs variantes équivalentes, pour des matériels différents. */
@@ -160,6 +186,10 @@ export interface PlanItem {
   guided?: boolean;
   /** Séries de la dernière séance avec cette variante (rappel du carnet pendant la séance). */
   last?: number[];
+  /** Élastique prévu (exercices à l'élastique) ; modifiable pendant la séance. */
+  band?: BandChoice;
+  /** Élastique de la dernière séance, affiché avec son rappel (« élastique 20 kg »). */
+  lastBand?: string;
 }
 
 /** Un bloc : un exercice seul, un superset (2 exercices alternés) ou un circuit. */

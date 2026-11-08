@@ -16,6 +16,9 @@
  *   sheet          fiche d'exercice ouverte : variante, écran d'origine
  *   demo           lien vidéo ouvert : variante
  *   swap           exercice remplacé : ancienne et nouvelle variante, écran
+ *   variant-choice variante équivalente retenue pour la suite (après un remplacement) : mouvement, variante
+ *   band           élastique changé pendant la séance : variante, ancien, nouveau
+ *   bands          forces des élastiques enregistrées (Lieux) : nombre d'élastiques
  *   session-start  séance lancée : lieu, durée, genou, nombre d'étapes
  *   set            série validée : variante, valeur, pré-rempli, objectif, ressenti, durée de la série
  *   set-skip       série sautée
@@ -50,7 +53,7 @@
  *   level-up       niveau débloqué par la double progression : mouvement, ancien, nouveau
  *   level-stay     « Rester encore à ce niveau » après un déblocage
  *   step-back      retour en arrière accepté (deux séances sous la fourchette)
- *   placement      série du test de placement : niveau testé, valeur, suite (monter, descendre, placé)
+ *   placement      série du test de placement : niveau testé, variante, valeur, suite (monter, descendre, placé)
  *   focus          priorité d'entraînement changée (équilibrée, haut du corps)
  *   protein-ideas  idées de protéines ouvertes, ou une idée choisie (laquelle)
  *   review         bilan du soir noté : d'où (soir, rattrapage, Assiette), écart, déclencheur, protéines (auto ?), légumes

@@ -61,6 +61,19 @@ describe('catalogue', () => {
     }
   });
 
+  it('suit la force de l’élastique seulement pour les variantes à l’élastique', () => {
+    for (const v of ALL_MOVEMENTS.flatMap(allVariants)) {
+      if (v.band) expect(v.needs.flat(), v.id).toContain('bands');
+    }
+  });
+
+  it('ne demande pas de se placer entre les sangles avec un ancrage de porte (dips, body saw)', () => {
+    for (const id of ['dips-straps-assisted', 'body-saw-straps']) {
+      const v = ALL_MOVEMENTS.flatMap(allVariants).find((x) => x.id === id)!;
+      expect(v.needs.flat(), id).not.toContain('anchor');
+    }
+  });
+
   it('ne propose jamais la chaise sur une jambe', () => {
     for (const v of ALL_MOVEMENTS.flatMap(allVariants)) {
       expect(v.name.toLowerCase(), v.id).not.toMatch(/chaise.*une jambe/);

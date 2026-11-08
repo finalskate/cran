@@ -2593,3 +2593,41 @@ h3 {
   align-items: center;
   gap: 8px 14px;
 }
+
+/* ─── Mannequin animé (J8) ─── */
+.figure {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+.figure__floor {
+  fill: rgba(255, 255, 255, 0.05);
+  stroke: rgba(255, 255, 255, 0.08);
+  stroke-width: 0.5;
+}
+
+.figure__bar {
+  fill: #9ca3af;
+}
+
+.figure__strap {
+  fill: #a8a29e;
+}
+
+.figure__band {
+  fill: var(--accent-2);
+}
+
+.figure__part {
+  stroke: var(--bg);
+  stroke-width: 0.9;
+  paint-order: stroke;
+}
+
+/* Revue : positions clés en petit, côte à côte. */
+.figure-keys {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 6px;
+}

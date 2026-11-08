@@ -17,6 +17,7 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { finishWorkout } from '../../data/repo';
+import { FIGURES } from '../../data/figures';
 import { REST_BREAK } from '../../data/messages';
 import { track } from '../../data/usage';
 import { compareWithLast, type Feel, type SetResult } from '../../domain/history';
@@ -42,6 +43,7 @@ import { bandAt, bandLabels } from '../../domain/bands';
 import type { Movement, PlanBlock, PlanItem, Variant } from '../../domain/types';
 import { DemoLink } from '../components/DemoLink';
 import { ExerciseSheet } from '../components/ExerciseSheet';
+import { Figure } from '../components/Figure';
 import { Sheet } from '../components/Sheet';
 import { SwapPicker } from '../components/SwapPicker';
 import { beep, notify, speak, vibrate } from '../device/feedback';
@@ -257,8 +259,8 @@ const NEXT_CUES = 3;
 
 /**
  * « Ensuite » pendant le repos (retour du 08/11) : de quoi se préparer à l'exercice qui suit sans
- * ouvrir la fiche — objectif, dernière séance, élastique, consignes principales, puis la fiche
- * complète et la vidéo. Si la suite est le même exercice, on annonce aussi le suivant (« Puis »).
+ * ouvrir la fiche — l'animation du mouvement (J8), objectif, dernière séance, élastique,
+ * consignes principales, puis la fiche complète et la vidéo. Si la suite est le même exercice, on annonce aussi le suivant (« Puis »).
  */
 function NextCard({ state, next }: { state: SessionState; next: Step }) {
   const [fiche, setFiche] = useState(false);
@@ -277,6 +279,7 @@ function NextCard({ state, next }: { state: SessionState; next: Step }) {
     <section class="card next-card" aria-label="Exercice suivant">
       <span class="card__label">Ensuite</span>
       <span class="card__title">{variant.name}</span>
+      {FIGURES[variant.id] && <Figure anim={FIGURES[variant.id]!} label={variant.name} height={130} />}
       {meta.length > 0 && <span class="muted">{meta.join(' · ')}</span>}
       {item.last && !item.guided && (
         <span class="muted">

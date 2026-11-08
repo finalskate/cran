@@ -20,7 +20,8 @@ export type RouteName =
   | 'session' // séance en cours
   | 'summary' // séance terminée
   | 'food' // journal alimentaire du jour
-  | 'profile'; // profil et cible calorique
+  | 'profile' // profil et cible calorique
+  | 'figures'; // revue des animations du mannequin (sans lien dans la navigation)
 
 export interface Route {
   name: RouteName;
@@ -41,6 +42,7 @@ const PATHS: Record<string, RouteName> = {
   bravo: 'summary',
   assiette: 'food',
   profil: 'profile',
+  mannequin: 'figures',
 };
 
 /**

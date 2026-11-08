@@ -12,12 +12,14 @@
 import type { ComponentChildren } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { EQUIPMENT, SETUP_NOTES } from '../../data/equipment';
+import { FIGURES } from '../../data/figures';
 import { track } from '../../data/usage';
 import { bandLabels, startRank } from '../../domain/bands';
 import type { Requirement, Variant } from '../../domain/types';
 import { formatTarget } from '../format';
 import { prefs } from '../state';
 import { DemoLink } from './DemoLink';
+import { Figure } from './Figure';
 import { Sheet } from './Sheet';
 
 interface Props {
@@ -62,6 +64,7 @@ export function ExerciseSheet({ open, onClose, variants, kicker, from, footer }:
       {variants.map((v) => (
         <section key={v.id} class="fiche" aria-label={v.name}>
           {variants.length > 1 && <h3 class="fiche__name">{v.name}</h3>}
+          {FIGURES[v.id] && <Figure anim={FIGURES[v.id]!} label={v.name} />}
           <span class="muted fiche__meta">
             {formatTarget(v.target, v.perSide)}
             {v.needs.length > 0 ? ` · ${v.needs.map(requirementLabel).join(', ')}` : ''}

@@ -6,6 +6,7 @@ import type { RouteName } from '../domain/route';
 import { Nav } from './components/Nav';
 import { UpdateBanner } from './components/UpdateBanner';
 import { currentRoute } from './router';
+import { Figures } from './screens/Figures';
 import { Food } from './screens/Food';
 import { Journal } from './screens/Journal';
 import { KneeCheck } from './screens/KneeCheck';
@@ -32,6 +33,7 @@ const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   summary: Summary,
   food: Food,
   profile: Profile,
+  figures: Figures,
 };
 
 /** Écrans « de passage » de la séance : plein écran, sans navigation. */

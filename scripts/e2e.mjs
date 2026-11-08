@@ -726,6 +726,20 @@ try {
   if (!(await page.evaluate(() => !!document.querySelector('.band-picker')))) throw new Error('choix de l’élastique absent en séance');
   await shot('70-seance-elastique');
 
+  // Mannequin animé (J8, prototype) : page de revue, puis la fiche d'une variante animée.
+  await page.goto(`${BASE}#/mannequin`);
+  await wait(600);
+  const figures = await page.evaluate(() => document.querySelectorAll('svg.figure').length);
+  if (figures < 4) throw new Error(`mannequin : ${figures} figures affichées`);
+  await shot('71-mannequin');
+  await page.goto(`${BASE}#/niveaux`);
+  await wait(300);
+  await openStep('lvl-push-v', 0);
+  await wait(500);
+  if (!(await page.evaluate(() => !!document.querySelector('dialog[open] svg.figure')))) throw new Error('fiche : animation absente');
+  await shot('72-fiche-animee');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+
   await page.goto(`${BASE}#/carnet`);
   await wait(200);
   await click('Séances');

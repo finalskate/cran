@@ -228,7 +228,11 @@ export function BodyView() {
         ) : (
           <span class="muted">Une série par mois, de face et de profil. Elles restent sur ce téléphone.</span>
         )}
-        {due && photos.value.length > 0 && <span class="notice-line">C’est le moment des photos de ce mois-ci.</span>}
+        {due && (
+          <span class="notice-line">
+            {photos.value.length > 0 ? 'C’est le moment des photos de ce mois-ci.' : 'Les photos de départ restent à faire, de préférence en journée.'}
+          </span>
+        )}
       </a>
 
       {(weights.value.length > 0 || measures.value.length > 0) && <History />}

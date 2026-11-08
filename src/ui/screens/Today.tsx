@@ -217,7 +217,10 @@ function BodyCard() {
           {s.rate !== null && <span class={`body-card__rate ${s.direction === 'down' ? 'trend-good' : 'muted'}`}> {formatSigned(s.rate)} kg/sem.</span>}
         </span>
         {line && <span class="muted">{line}</span>}
-        {photoDue(photos.value, today) && photos.value.length > 0 && <span class="notice-line">Photos du mois à faire</span>}
+        {/* Aussi avant la toute première série : le point de départ est la photo la plus précieuse. */}
+        {photoDue(photos.value, today) && (
+          <span class="notice-line">{photos.value.length > 0 ? 'Photos du mois à faire' : 'Photos de départ à faire'}</span>
+        )}
       </div>
       <Sparkline values={trend.value.slice(-SPARK_POINTS).map((p) => p.trend)} />
     </a>

@@ -168,8 +168,12 @@ export function bodySummary(weights: readonly WeightEntry[], goals: readonly num
 
 // ─── Mensurations ───
 
-/** Mesures suivies. Le tour de taille seul pour l'instant ; la table accepte d'autres types. */
-export type MeasureKind = 'waist';
+/**
+ * Mesures suivies : tour de taille (hebdomadaire), et depuis le J3b tours de bras (contracté)
+ * et de poitrine (mensuels, avec les photos) : ils montrent le muscle gagné pendant que la
+ * balance descend.
+ */
+export type MeasureKind = 'waist' | 'arm' | 'chest';
 
 /** Une mesure (une par type et par jour : la dernière remplace). */
 export interface MeasureEntry {
@@ -193,6 +197,34 @@ export const WAIST_INTERVAL_DAYS = 7;
 export const WAIST_MIN = 40;
 export const WAIST_MAX = 200;
 
+/** Bornes de saisie par type de mesure (cm). */
+export const MEASURE_BOUNDS: Record<MeasureKind, { min: number; max: number }> = {
+  waist: { min: WAIST_MIN, max: WAIST_MAX },
+  arm: { min: 15, max: 70 },
+  chest: { min: 50, max: 200 },
+};
+
+/** Mesures du mois (bras, poitrine) : même rythme que les photos. */
+export const MONTHLY_MEASURES: readonly MeasureKind[] = ['arm', 'chest'];
+
+/**
+ * Tours de bras et de poitrine à proposer ? Même règle que les photos : rien ce mois-ci, et
+ * au moins trois semaines depuis la dernière mesure (ou aucune mesure encore).
+ */
+export function monthlyMeasuresDue(measures: readonly MeasureEntry[], today: string): boolean {
+  const monthly = measures.filter((m) => MONTHLY_MEASURES.includes(m.kind));
+  if (monthly.some((m) => m.day.slice(0, 7) === today.slice(0, 7))) return false;
+  const last = monthly.reduce<string | null>((d, m) => (!d || m.day > d ? m.day : d), null);
+  return !last || daysBetween(last, today) >= PHOTO_MIN_GAP_DAYS;
+}
+
+/** Écart entre la dernière et la première mesure d'un type (null s'il y en a moins de deux). */
+export function measureChange(measures: readonly MeasureEntry[], kind: MeasureKind): { delta: number; since: string } | null {
+  const list = measures.filter((m) => m.kind === kind).sort((a, b) => a.day.localeCompare(b.day));
+  if (list.length < 2) return null;
+  return { delta: Math.round((list.at(-1)!.value - list[0]!.value) * 10) / 10, since: list[0]!.day };
+}
+
 /**
  * Faut-il proposer le tour de taille (juste après une pesée) ? Oui si la dernière mesure date
  * d'au moins une semaine (ou s'il n'y en a pas), sauf si l'invitation a été repoussée.
@@ -210,6 +242,13 @@ export type PhotoPose = 'front' | 'side';
 /** Ordre de prise de vue : face, puis profil. */
 export const PHOTO_POSES: readonly PhotoPose[] = ['front', 'side'];
 
+/**
+ * Façon de prendre la photo (J3b) : téléphone posé avec le retardateur (caméra avant), ou tenu
+ * devant un miroir (caméra arrière). Les deux cadrages ne se superposent pas : le calque et la
+ * comparaison préfèrent une photo prise de la même façon.
+ */
+export type PhotoMode = 'timer' | 'mirror';
+
 /** Description d'une photo (sans l'image elle-même, pour rester pur et testable). */
 export interface PhotoMeta {
   id?: number;
@@ -217,6 +256,39 @@ export interface PhotoMeta {
   /** « 2026-11 » : une série de photos par mois. */
   month: string;
   pose: PhotoPose;
+  /** Absent sur les photos d'avant le J3b : elles ont toutes été prises au retardateur. */
+  mode?: PhotoMode;
+  /** Lieu de la prise de vue (la lumière en dépend). Absent sur les photos d'avant le J3b. */
+  locationId?: string;
+}
+
+/** Mode d'une photo (les anciennes, sans mode, sont au retardateur). */
+export function photoMode(p: Pick<PhotoMeta, 'mode'>): PhotoMode {
+  return p.mode ?? 'timer';
+}
+
+/**
+ * Calque pour une nouvelle photo : la plus récente de la même pose prise de la même façon,
+ * sinon la plus récente de la pose (mieux qu'aucun repère).
+ */
+export function ghostPhoto<T extends PhotoMeta>(photos: readonly T[], pose: PhotoPose, mode: PhotoMode): T | undefined {
+  const same = [...photos].reverse().filter((p) => p.pose === pose);
+  return same.find((p) => photoMode(p) === mode) ?? same[0];
+}
+
+/**
+ * Mois comparés par défaut, pour une pose : le plus récent (« après ») et, comme « avant », le
+ * plus ancien pris au même lieu et de la même façon (même lumière, même cadrage), sinon le plus
+ * ancien tout court. Les lieux inconnus (anciennes photos) sont considérés comme identiques.
+ */
+export function defaultComparison(photos: readonly PhotoMeta[], pose: PhotoPose): { before: string; after: string } | null {
+  const list = photos.filter((p) => p.pose === pose).sort((a, b) => a.month.localeCompare(b.month));
+  const after = list.at(-1);
+  if (!after) return null;
+  const sameSetting = (p: PhotoMeta) =>
+    photoMode(p) === photoMode(after) && (!p.locationId || !after.locationId || p.locationId === after.locationId);
+  const before = list.find((p) => p.month !== after.month && sameSetting(p)) ?? list[0]!;
+  return { before: before.month, after: after.month };
 }
 
 /** Écart minimal entre deux séries de photos, même à cheval sur deux mois (28 nov. → 1er déc.). */

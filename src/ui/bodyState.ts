@@ -10,11 +10,11 @@ import type { PhotoRow } from '../data/db';
 import { deleteWeight } from '../data/foodRepo';
 import { getSetting, setSetting } from '../data/settings';
 import { track } from '../data/usage';
-import { bodySummary, measureId, trendSeries, type MeasureEntry, type PhotoPose } from '../domain/body';
+import { bodySummary, measureId, trendSeries, type MeasureEntry, type MeasureKind, type PhotoMode, type PhotoPose } from '../domain/body';
 import { addDays, dayKey } from '../domain/days';
 import { weights } from './foodState';
 
-/** Mesures (tour de taille), de la plus ancienne à la plus récente. */
+/** Mesures (taille, bras, poitrine), de la plus ancienne à la plus récente. */
 export const measures = signal<MeasureEntry[]>([]);
 
 /** Photos de progression, de la plus ancienne à la plus récente (les Blobs ne coûtent qu'une référence). */
@@ -34,6 +34,10 @@ export const summary = computed(() => bodySummary(weights.value, weightGoals.val
 
 /** Tours de taille seuls. */
 export const waists = computed(() => measures.value.filter((m) => m.kind === 'waist'));
+
+/** Tours de bras et de poitrine (J3b). */
+export const arms = computed(() => measures.value.filter((m) => m.kind === 'arm'));
+export const chests = computed(() => measures.value.filter((m) => m.kind === 'chest'));
 
 export async function loadBodyState(): Promise<void> {
   const [m, p, goals, snooze] = await Promise.all([listMeasures(), listPhotos(), getSetting('weightGoals'), getSetting('waistSnoozedUntil')]);
@@ -61,14 +65,19 @@ export async function removeWeight(day: string): Promise<void> {
   track('weight-delete');
 }
 
-// ─── Tour de taille ───
+// ─── Mensurations ───
 
-export async function recordWaist(cm: number, at = new Date()): Promise<void> {
+/** Enregistre une mesure du jour (la dernière du même type le même jour remplace). */
+export async function recordMeasure(kind: MeasureKind, cm: number, at = new Date()): Promise<void> {
   const day = dayKey(at);
-  const entry: MeasureEntry = { id: measureId('waist', day), kind: 'waist', day, at: at.toISOString(), value: Math.round(cm * 10) / 10 };
+  const entry: MeasureEntry = { id: measureId(kind, day), kind, day, at: at.toISOString(), value: Math.round(cm * 10) / 10 };
   await saveMeasure(entry);
   measures.value = [...measures.value.filter((m) => m.id !== entry.id), entry].sort((a, b) => a.day.localeCompare(b.day));
-  track('waist', { action: 'record' });
+  track(kind === 'waist' ? 'waist' : 'measure', kind === 'waist' ? { action: 'record' } : { action: 'record', kind });
+}
+
+export function recordWaist(cm: number, at = new Date()): Promise<void> {
+  return recordMeasure('waist', cm, at);
 }
 
 /** « Pas cette fois » : on reposera la question dans une semaine. */
@@ -80,9 +89,10 @@ export async function snoozeWaist(days = 7): Promise<void> {
 }
 
 export async function removeMeasure(id: string): Promise<void> {
+  const kind = measures.value.find((m) => m.id === id)?.kind;
   await deleteMeasure(id);
   measures.value = measures.value.filter((m) => m.id !== id);
-  track('waist', { action: 'delete' });
+  track(kind === 'waist' || !kind ? 'waist' : 'measure', kind && kind !== 'waist' ? { action: 'delete', kind } : { action: 'delete' });
 }
 
 // ─── Photos ───
@@ -90,13 +100,14 @@ export async function removeMeasure(id: string): Promise<void> {
 export async function addPhoto(
   pose: PhotoPose,
   image: { blob: Blob; width: number; height: number },
-  meta: { source: 'camera' | 'file'; timer: number },
+  meta: { source: 'camera' | 'file'; timer: number; mode: PhotoMode; locationId?: string },
   at = new Date(),
 ): Promise<void> {
   const day = dayKey(at);
-  await savePhoto({ day, month: day.slice(0, 7), pose, at: at.toISOString(), ...image });
+  const { mode, locationId, ...usage } = meta;
+  await savePhoto({ day, month: day.slice(0, 7), pose, mode, ...(locationId ? { locationId } : {}), at: at.toISOString(), ...image });
   photos.value = await listPhotos();
-  track('photo', { pose, ...meta });
+  track('photo', { pose, mode, ...usage });
 }
 
 export async function removePhotos(month: string): Promise<void> {

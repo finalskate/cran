@@ -172,3 +172,73 @@ describe('récupération et charge (J2)', () => {
     expect(sets(-1)).toBeGreaterThanOrEqual(2);
   });
 });
+
+describe('priorité haut du corps (J3b)', () => {
+  const armsBlock = (plan: Plan) => plan.blocks.find((b) => b.title === 'Bras');
+  const legsIn = (plan: Plan) => mainItems(plan).filter((i) => categoryOf(i.movementId) === 'legs');
+
+  it('équilibrée (par défaut) : pas de bloc bras', () => {
+    for (const duration of DURATIONS) expect(armsBlock(buildPlan(input({ duration }))), `${duration}`).toBeUndefined();
+  });
+
+  it('ajoute un superset biceps + triceps dès 20 min, après les mouvements principaux', () => {
+    const plan = buildPlan(input({ duration: 30, focus: 'upper' }));
+    const arms = armsBlock(plan)!;
+    expect(arms.items.map((i) => i.movementId).sort()).toEqual(['biceps', 'triceps']);
+    const lastMain = plan.blocks.findLastIndex((b) => b.items.some((i) => ['push', 'pull', 'legs'].includes(categoryOf(i.movementId) ?? '')));
+    expect(plan.blocks.indexOf(arms)).toBeGreaterThan(lastMain);
+    // À la maison : sangles (poignées libres en rotation) plutôt qu'élastique.
+    expect(arms.items.map((i) => i.variantId)).toContain('curl-straps-easy');
+  });
+
+  it('10 min : le circuit pousser/tirer seul, sans bras', () => {
+    const plan = buildPlan(input({ duration: 10, focus: 'upper' }));
+    expect(armsBlock(plan)).toBeUndefined();
+    expect(plan.blocks.map((b) => b.kind)).toEqual(['knee', 'superset']);
+  });
+
+  it('jambes environ 2 fois par semaine : pas de jambes si elles ont moins de 3 jours, et le dit', () => {
+    const recent = buildPlan(input({ duration: 20, focus: 'upper', lastDone: { squat: daysAgo(1) } }));
+    expect(legsIn(recent)).toHaveLength(0);
+    expect(recent.notes?.some((n) => /Priorité haut du corps/.test(n))).toBe(true);
+    expect(recent.blocks[0]!.kind).toBe('knee'); // la prévention genou reste
+
+    const due = buildPlan(input({ duration: 20, focus: 'upper', lastDone: { squat: daysAgo(3), hinge: daysAgo(4) } }));
+    expect(legsIn(due)).toHaveLength(1);
+    expect(due.notes ?? []).not.toContainEqual(expect.stringMatching(/Priorité haut du corps/));
+  });
+
+  it('une seule famille de jambes par séance, même à 40 min', () => {
+    const balanced = buildPlan(input({ duration: 40 }));
+    const upper = buildPlan(input({ duration: 40, focus: 'upper' }));
+    expect(legsIn(balanced).length).toBeGreaterThanOrEqual(1);
+    expect(legsIn(upper)).toHaveLength(1);
+    expect(mainItems(upper)).toHaveLength(5);
+  });
+
+  it('dès 30 min : une série de plus sur les blocs sans jambes, 4 au plus', () => {
+    const setsOf = (plan: Plan) =>
+      plan.blocks.find((b) => b.kind === 'superset' && b.items.every((i) => ['push', 'pull'].includes(categoryOf(i.movementId) ?? '')))!
+        .items[0]!.sets;
+    expect(setsOf(buildPlan(input({ duration: 30, focus: 'upper' })))).toBe(setsOf(buildPlan(input({ duration: 30 }))) + 1);
+    expect(setsOf(buildPlan(input({ duration: 40, focus: 'upper', volume: 1 })))).toBeLessThanOrEqual(4);
+  });
+
+  it('reste dans la durée choisie', () => {
+    for (const duration of DURATIONS) {
+      const plan = buildPlan(input({ duration, focus: 'upper' }));
+      expect(plan.estimatedMinutes, `${duration} min`).toBeLessThanOrEqual(duration === 40 ? 50 : duration * 1.15);
+    }
+  });
+
+  it('2e séance du jour : les bras travaillés dans les 48 h sont écartés', () => {
+    const plan = buildPlan(input({ duration: 30, focus: 'upper', exclude: ['biceps', 'triceps'] }));
+    expect(armsBlock(plan)).toBeUndefined();
+  });
+
+  it('gainage et abdos en flexion alternent (le moins récent d’abord)', () => {
+    const core = (lastDone: Record<string, string>) => buildPlan(input({ duration: 30, lastDone })).blocks.find((b) => b.kind === 'core')!;
+    expect(core({ core: daysAgo(2) }).title).toBe('Abdos');
+    expect(core({ abs: daysAgo(2) }).title).toBe('Gainage');
+  });
+});

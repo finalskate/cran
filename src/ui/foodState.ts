@@ -21,6 +21,7 @@ import {
   foodDay,
   KCAL_FLOOR,
   latestWeight,
+  proteinPerKg,
   roundWeight,
   type FoodEntry,
   type Profile,
@@ -37,6 +38,8 @@ import {
 } from '../data/foodRepo';
 import { getSetting, setSetting } from '../data/settings';
 import { track } from '../data/usage';
+// Import circulaire assumé (state importe aussi ce module) : `prefs` n'est lu que dans `computed`.
+import { prefs } from './state';
 
 /** Profil saisi (null tant que la cible n'a pas été calculée). */
 export const profile = signal<Profile | null>(null);
@@ -68,6 +71,7 @@ export const targets = computed(() => {
     latestWeight(weights.value)?.kg ?? p.weightKg,
     new Date().getFullYear(),
     adoptedExpenditure(adjustments.value),
+    proteinPerKg(prefs.value.focus),
   );
 });
 

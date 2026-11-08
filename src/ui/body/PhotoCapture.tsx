@@ -9,6 +9,10 @@
  * - Calque : la photo précédente de la même pose s'affiche en transparence pour reprendre la
  *   même position, à la même distance.
  * - Retardateur 10 s (ou 3 s) : bips sur les 3 dernières secondes, téléphone posé.
+ * - Mode « Miroir » (J3b), quand on ne peut pas poser le téléphone : on le tient à hauteur de
+ *   poitrine devant un miroir, caméra arrière, et on touche le bouton. Le téléphone cache le
+ *   visage. Le calque reprend une photo prise de la même façon (les cadrages diffèrent).
+ * - Lieu noté avec la photo (J3b) : la comparaison préfère deux photos du même lieu (même lumière).
  * - Sans caméra (refusée, indisponible) : choix d'un fichier, réduit de la même façon.
  *
  * Affiché dans <body> (portail) : l'écran a son propre contexte d'empilement (« isolation »),
@@ -19,8 +23,9 @@
  */
 import { createPortal } from 'preact/compat';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { PHOTO_POSES, type PhotoPose } from '../../domain/body';
+import { ghostPhoto, PHOTO_POSES, photoMode, type PhotoMode, type PhotoPose } from '../../domain/body';
 import { addPhoto, photos } from '../bodyState';
+import { locations, prefs } from '../state';
 import { beep, unlockAudio, vibrate } from '../device/feedback';
 import { useBlobUrl } from './PhotoImg';
 
@@ -33,6 +38,20 @@ const POSE_HINT: Record<PhotoPose, string> = {
   front: 'Debout, bras légèrement écartés, tout le corps dans le cadre.',
   side: 'Tourné de côté, bras le long du corps, regard droit devant.',
 };
+
+/** En mode miroir, le bras qui tient le téléphone ne peut pas être écarté. */
+const MIRROR_HINT: Record<PhotoPose, string> = {
+  front: 'Face au miroir, téléphone à hauteur de poitrine, caméra arrière vers le miroir. L’autre bras légèrement écarté.',
+  side: 'De profil face au miroir, téléphone à hauteur de poitrine, le buste tourné, regard vers l’écran.',
+};
+
+const MODES: { value: PhotoMode; label: string }[] = [
+  { value: 'timer', label: 'Téléphone posé' },
+  { value: 'mirror', label: 'Miroir' },
+];
+
+/** Caméra par défaut : celle de l'écran pour se voir (posé), celle du dos face au miroir. */
+const FACING: Record<PhotoMode, 'user' | 'environment'> = { timer: 'user', mirror: 'environment' };
 
 type Facing = 'user' | 'environment';
 type Captured = { blob: Blob; width: number; height: number };
@@ -59,7 +78,10 @@ async function encode(source: CanvasImageSource, srcW: number, srcH: number, mir
 export function PhotoCapture({ onClose }: { onClose: () => void }) {
   const [poseIndex, setPoseIndex] = useState(0);
   const pose = PHOTO_POSES[poseIndex]!;
-  const [facing, setFacing] = useState<Facing>('user');
+  // Même façon que la dernière fois, par défaut : c'est ce qui rend les séries comparables.
+  const [mode, setMode] = useState<PhotoMode>(() => (photos.value.at(-1) ? photoMode(photos.value.at(-1)!) : 'timer'));
+  const [facing, setFacing] = useState<Facing>(FACING[mode]);
+  const [place, setPlace] = useState(prefs.value.lastLocationId);
   const [timer, setTimer] = useState<10 | 3>(10);
   const [camera, setCamera] = useState<'starting' | 'on' | 'unavailable'>('starting');
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -68,8 +90,8 @@ export function PhotoCapture({ onClose }: { onClose: () => void }) {
   const video = useRef<HTMLVideoElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  // Calque : la photo la plus récente de cette pose (d'un mois précédent ou du mois en cours).
-  const ghost = [...photos.value].reverse().find((p) => p.pose === pose);
+  // Calque : la photo la plus récente de cette pose, prise de la même façon si possible.
+  const ghost = ghostPhoto(photos.value, pose, mode);
   const ghostUrl = useBlobUrl(ghost?.blob);
   const capturedUrl = useBlobUrl(captured?.blob);
 
@@ -131,7 +153,12 @@ export function PhotoCapture({ onClose }: { onClose: () => void }) {
     if (!captured) return;
     setSaving(true);
     const { source, ...image } = captured;
-    await addPhoto(pose, image, { source, timer: source === 'camera' ? timer : 0 });
+    await addPhoto(pose, image, {
+      source,
+      timer: source === 'camera' && mode === 'timer' ? timer : 0,
+      mode,
+      ...(locations.value.some((l) => l.id === place) ? { locationId: place } : {}),
+    });
     setSaving(false);
     setCaptured(null);
     if (poseIndex < PHOTO_POSES.length - 1) setPoseIndex(poseIndex + 1);
@@ -198,10 +225,30 @@ export function PhotoCapture({ onClose }: { onClose: () => void }) {
         ) : (
           <>
             <p class="muted capture__hint">
-              {POSE_HINT[pose]}
+              {(mode === 'mirror' ? MIRROR_HINT : POSE_HINT)[pose]}
               {ghostUrl ? ' Cale-toi sur le contour de la dernière photo.' : ''}
             </p>
             {camera === 'on' && (
+              <div class="segmented segmented--tight" role="radiogroup" aria-label="Façon de prendre la photo">
+                {MODES.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    class="btn btn--small"
+                    role="radio"
+                    aria-checked={mode === m.value}
+                    disabled={countdown !== null}
+                    onClick={() => {
+                      setMode(m.value);
+                      setFacing(FACING[m.value]);
+                    }}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            )}
+            {camera === 'on' && mode === 'timer' && (
               <div class="segmented segmented--tight" role="radiogroup" aria-label="Retardateur">
                 {([10, 3] as const).map((t) => (
                   <button key={t} type="button" class="btn btn--small" role="radio" aria-checked={timer === t} onClick={() => setTimer(t)}>
@@ -210,7 +257,11 @@ export function PhotoCapture({ onClose }: { onClose: () => void }) {
                 ))}
               </div>
             )}
-            {camera === 'on' ? (
+            {camera === 'on' && mode === 'mirror' ? (
+              <button type="button" class="cta" onClick={() => void shoot()}>
+                <span class="cta__title">Prendre la photo</span>
+              </button>
+            ) : camera === 'on' ? (
               <button
                 type="button"
                 class="cta"
@@ -238,11 +289,25 @@ export function PhotoCapture({ onClose }: { onClose: () => void }) {
                 e.currentTarget.value = '';
               }}
             />
-            {camera === 'on' && (
-              <button type="button" class="btn btn--small btn--quiet" onClick={() => fileInput.current?.click()}>
-                Choisir une photo déjà prise
-              </button>
-            )}
+            <div class="row capture__extras">
+              {locations.value.length > 0 && (
+                <label class="select-chip capture__place">
+                  <span class="visually-hidden">Lieu de la photo</span>
+                  <select value={place} onChange={(e) => setPlace(e.currentTarget.value)}>
+                    {locations.value.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        Lieu : {l.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {camera === 'on' && (
+                <button type="button" class="btn btn--small btn--quiet" onClick={() => fileInput.current?.click()}>
+                  Choisir une photo
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>

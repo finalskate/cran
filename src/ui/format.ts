@@ -31,6 +31,7 @@ export const CATEGORY_LABEL = {
   legs: 'Jambes',
   knee: 'Genou',
   core: 'Gainage',
+  arms: 'Bras',
   shoulders: 'Épaules',
   warmup: 'Échauffement',
   cooldown: 'Retour au calme',

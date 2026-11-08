@@ -1,20 +1,22 @@
 /**
  * Vue « Corps » du Carnet (J3, SPEC §4.9) : tendance de poids, rythme et projection, courbe,
  * tour de taille, photos de progression, historique des pesées et mesures.
+ * J3b : tours de bras et de poitrine (mensuels), pour voir le muscle gagné.
  *
  * Ce qui est affiché et commenté, c'est la tendance lissée, jamais la pesée du jour (elle
  * apparaît seulement en petits points sur la courbe, et dans l'historique).
  */
 import { signal } from '@preact/signals';
 import { useState } from 'preact/hooks';
-import { GAP_DAYS, PHOTO_POSES, photoDue } from '../../domain/body';
+import { GAP_DAYS, measureChange, monthlyMeasuresDue, PHOTO_POSES, photoDue, type MeasureKind } from '../../domain/body';
 import { addDays, dayKey, dayToDate, daysBetween } from '../../domain/days';
 import { track } from '../../data/usage';
 import { PhotoImg } from '../body/PhotoImg';
+import { MeasuresSheet } from '../body/MeasuresSheet';
 import { WaistSheet } from '../body/WaistSheet';
 import { LineChart, type LinePoint } from '../components/LineChart';
 import { WeighSheet } from '../food/WeighSheet';
-import { measures, photos, removeMeasure, removeWeight, summary, trend, waists } from '../bodyState';
+import { arms, chests, measures, photos, removeMeasure, removeWeight, summary, trend, waists } from '../bodyState';
 import { weights } from '../foodState';
 import { formatApproxDate, formatCm, formatKg, formatMonthLower, formatShortDate, formatSigned } from '../format';
 
@@ -51,6 +53,7 @@ export function BodyView() {
   const series = trend.value;
   const [weighing, setWeighing] = useState(false);
   const [measuring, setMeasuring] = useState(false);
+  const [measuringMonthly, setMeasuringMonthly] = useState(false);
 
   const from = periodStart(series[0]?.day, today, period.value);
   const points: LinePoint[] = series.map((p) => ({ day: p.day, value: p.kg, line: p.trend, gapBefore: p.gapBefore }));
@@ -187,6 +190,28 @@ export function BodyView() {
         </button>
       </section>
 
+      <section class="card" aria-labelledby="muscle-title">
+        <h2 id="muscle-title" class="card__title">
+          Bras et poitrine
+        </h2>
+        {arms.value.length === 0 && chests.value.length === 0 ? (
+          <span class="muted">
+            Une fois par mois, avec les photos. Pendant que la balance descend, ce sont eux qui montrent le muscle gagné.
+          </span>
+        ) : (
+          <div class="measure-rows">
+            <MeasureRow kind="arm" label="Bras (contracté)" />
+            <MeasureRow kind="chest" label="Poitrine" />
+          </div>
+        )}
+        {monthlyMeasuresDue(measures.value, today) && measures.value.some((m) => m.kind !== 'waist') && (
+          <span class="notice-line">C’est le moment des mesures de ce mois-ci.</span>
+        )}
+        <button type="button" class="btn btn--small" onClick={() => setMeasuringMonthly(true)}>
+          Mesurer bras et poitrine
+        </button>
+      </section>
+
       <a class="card card--link" href="#/photos" aria-labelledby="photos-title">
         <div class="row" style={{ minHeight: 0 }}>
           <span id="photos-title" class="card__title">
@@ -210,9 +235,34 @@ export function BodyView() {
 
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
       {measuring && <WaistSheet onClose={() => setMeasuring(false)} />}
+      {measuringMonthly && <MeasuresSheet onClose={() => setMeasuringMonthly(false)} />}
     </>
   );
 }
+
+/** Une ligne « Bras 34,5 cm · +1 cm depuis le 8 nov. » (une hausse est une bonne nouvelle ici). */
+function MeasureRow({ kind, label }: { kind: MeasureKind; label: string }) {
+  const list = kind === 'arm' ? arms.value : chests.value;
+  const last = list.at(-1);
+  const change = measureChange(list, kind);
+  return (
+    <div class="row" style={{ minHeight: 0 }}>
+      <span>{label}</span>
+      <span>
+        {last ? <strong class="num">{formatCm(last.value)}</strong> : <span class="muted">—</span>}
+        {change && change.delta !== 0 && (
+          <span class={`num ${change.delta > 0 ? 'trend-good' : 'muted'}`}>
+            {' '}
+            · {formatSigned(change.delta)} cm depuis le {formatShortDate(dayToDate(change.since))}
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+/** Nom court d'une mesure dans l'historique. */
+const MEASURE_SHORT: Record<MeasureKind, string> = { waist: 'taille', arm: 'bras', chest: 'poitrine' };
 
 /** Phrase sous la tendance : progression depuis le début, projection, ou ce qui manque. */
 function TrendText() {
@@ -248,7 +298,7 @@ function TrendText() {
 function History() {
   const rows = [
     ...weights.value.map((w) => ({ key: `w:${w.day}`, day: w.day, text: formatKg(w.kg), remove: () => removeWeight(w.day) })),
-    ...measures.value.map((m) => ({ key: m.id, day: m.day, text: `taille ${formatCm(m.value)}`, remove: () => removeMeasure(m.id) })),
+    ...measures.value.map((m) => ({ key: m.id, day: m.day, text: `${MEASURE_SHORT[m.kind]} ${formatCm(m.value)}`, remove: () => removeMeasure(m.id) })),
   ].sort((a, b) => b.day.localeCompare(a.day) || a.key.localeCompare(b.key));
 
   return (

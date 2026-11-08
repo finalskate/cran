@@ -185,9 +185,11 @@ export function Settings() {
       </section>
 
       <a class="card card--link" href="#/profil">
-        <span class="card__label">Alimentation</span>
-        <span class="card__title">Profil et cible du jour</span>
-        <span class="muted">Taille, poids, activité, et le détail du calcul. →</span>
+        <span class="card__label">Profil</span>
+        <span class="card__title">Objectifs, priorité et cible du jour</span>
+        <span class="muted">
+          Priorité : {prefs.value.focus === 'upper' ? 'haut du corps' : 'équilibrée'}. Poids visé, activité, et le détail du calcul. →
+        </span>
       </a>
 
       <section class="card" aria-labelledby="storage-title">

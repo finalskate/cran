@@ -58,6 +58,7 @@ export type Category =
   | 'legs'
   | 'knee' // prévention genou, présente dans chaque séance
   | 'core'
+  | 'arms' // biceps, triceps : en fin de séance avec la priorité « haut du corps » (J3b)
   | 'shoulders'
   | 'warmup'
   | 'cooldown'
@@ -123,6 +124,14 @@ export interface Movement {
 }
 
 // ─── Plan de séance ───
+
+/**
+ * Priorité d'entraînement (J3b), choisie dans Profil :
+ *  - balanced : pousser, tirer et jambes à parts égales ;
+ *  - upper : haut du corps (pectoraux, bras, abdos) — une série de plus en pousser et tirer,
+ *    bras en fin de séance, jambes environ 2 fois par semaine (la prévention genou ne change pas).
+ */
+export type TrainingFocus = 'balanced' | 'upper';
 
 /** Durées proposées (SPEC §4.4). 40 = « 40 min et plus ». */
 export type Duration = 10 | 20 | 30 | 40;

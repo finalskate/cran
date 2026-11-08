@@ -4,7 +4,7 @@
  */
 import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { Profile } from '../domain/nutrition';
-import type { Duration } from '../domain/types';
+import type { Duration, TrainingFocus } from '../domain/types';
 import { db, type CranDB } from './db';
 
 /** Niveau d'effets visuels (SPEC §4.1) : halos et flou, ou version sobre. */
@@ -44,6 +44,8 @@ export interface SettingsMap {
   waistSnoozedUntil: string;
   /** Photos de progression floutées jusqu'au toucher (quelqu'un peut regarder l'écran). */
   photoBlur: boolean;
+  /** Priorité d'entraînement (J3b) : équilibrée, ou haut du corps (séance et protéines). */
+  focus: TrainingFocus;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -60,6 +62,7 @@ export const SETTING_DEFAULTS = {
   watchNotify: false,
   watchReminder: true,
   photoBlur: true,
+  focus: 'balanced',
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

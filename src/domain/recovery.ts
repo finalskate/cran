@@ -51,7 +51,8 @@ export const RECOVERY_HOURS = 48;
 /** Charge sur les jambes : délai sans jambes lourdes après une séance imposée « jambes ». */
 export const LEGS_LOAD_HOURS = 24;
 
-const MAIN: readonly Category[] = ['push', 'pull', 'legs'];
+/** Familles écartées d'une 2e séance si travaillées récemment (les bras aussi, J3b). */
+const MAIN: readonly Category[] = ['push', 'pull', 'legs', 'arms'];
 
 /** Une séance de renfo a-t-elle déjà été terminée aujourd'hui (jour local) ? */
 export function sessionDoneToday(workouts: readonly WorkoutRecord[], now: Date): boolean {
@@ -59,7 +60,7 @@ export function sessionDoneToday(workouts: readonly WorkoutRecord[], now: Date):
   return workouts.some((w) => w.entries.some((e) => e.sets.length > 0) && dayKey(new Date(w.endedAt)) === today);
 }
 
-/** Mouvements principaux (pousser, tirer, jambes) travaillés dans les `hours` dernières heures. */
+/** Mouvements principaux (pousser, tirer, jambes) et bras travaillés dans les `hours` dernières heures. */
 export function workedRecently(
   workouts: readonly WorkoutRecord[],
   catalog: readonly Movement[],

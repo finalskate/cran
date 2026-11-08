@@ -22,11 +22,19 @@
  *    (charge : séance imposée « jambes » dans les 24 h) ; la prévention genou reste ;
  *  - volume modulé par le ressenti global de la séance précédente (±1 série, jamais le niveau) ;
  *  - chaque adaptation est expliquée dans `plan.notes` (affichées dans l'aperçu).
+ *
+ * J3b — priorité « haut du corps » (`focus: 'upper'`, choisie dans Profil) :
+ *  - jambes environ 2 fois par semaine : pas de jambes si elles ont été travaillées il y a moins
+ *    de 3 jours, et une seule famille « jambes » par séance (la prévention genou reste, toujours) ;
+ *  - dès 30 min, une série de plus sur les blocs sans jambes (4 au plus) ;
+ *  - dès 20 min, un bloc « Bras » (biceps + triceps) après les mouvements principaux.
+ * Les repères : 10 à 20 séries « dures » par muscle et par semaine suffisent à faire grossir un
+ * muscle, en restant à 1–3 répétitions de l'échec (c'est ce que fait la double progression).
  */
 import { handSupport, resolveVariant, type Context } from './availability';
 import type { LastSession } from './history';
 import { nextPrefill, PAUSE_DAYS } from './progression';
-import type { Category, Duration, Movement, Plan, PlanBlock, PlanItem, Variant } from './types';
+import type { Category, Duration, Movement, Plan, PlanBlock, PlanItem, TrainingFocus, Variant } from './types';
 
 export interface EngineInput {
   catalog: readonly Movement[];
@@ -47,6 +55,8 @@ export interface EngineInput {
   restLegs?: boolean;
   /** Séries en plus ou en moins sur les blocs principaux (ressenti de la séance précédente). */
   volume?: -1 | 0 | 1;
+  /** Priorité d'entraînement (J3b). Absente = équilibrée. */
+  focus?: TrainingFocus;
 }
 
 /** Séries des blocs principaux : jamais moins de 2, jamais plus de 4. */
@@ -78,6 +88,9 @@ const FORMATS: Record<Duration, Format> = {
 
 const MAIN_CATEGORIES: Category[] = ['push', 'pull', 'legs'];
 
+/** Priorité haut du corps : délai minimal entre deux séances avec des jambes (≈ 2 par semaine). */
+export const UPPER_LEGS_INTERVAL_DAYS = 3;
+
 /** Délai minimal entre deux séries longues de pompes. */
 const VOLUME_INTERVAL_DAYS = 7;
 
@@ -102,6 +115,11 @@ export function buildPlan(input: EngineInput): Plan {
 
   blocks.push(...mainBlocks(input, format));
 
+  if (input.focus === 'upper' && input.duration >= 20) {
+    const arms = armsBlock(input);
+    if (arms) blocks.push(arms);
+  }
+
   if (format.extras) {
     const volume = volumeBlock(input);
     if (volume) blocks.push(volume);
@@ -122,6 +140,9 @@ export function buildPlan(input: EngineInput): Plan {
   const notes: string[] = [];
   if (input.exclude?.length) notes.push('2e séance du jour : les mouvements des dernières 48 h sont laissés de côté.');
   if (input.restLegs && input.ctx.kneeScore < 5) notes.push('Jambes au repos : elles ont travaillé il y a moins de 24 h.');
+  else if (input.duration >= 20 && input.ctx.kneeScore < 5 && !legsDue(input)) {
+    notes.push('Priorité haut du corps : pas de jambes aujourd’hui, deux fois par semaine suffisent. La prévention genou reste.');
+  }
   if (input.volume === -1) notes.push('Une série de moins : la dernière séance était trop dure.');
   if (input.volume === 1) notes.push('Une série de plus : la dernière séance était trop facile.');
   const items = blocks.flatMap((b) => b.items).filter((i) => !i.guided);
@@ -209,9 +230,21 @@ function candidates(input: EngineInput, categories: Category[]): Candidate[] {
   return out.sort(byPriority);
 }
 
+/**
+ * Les jambes sont-elles « dues » ? Toujours en priorité équilibrée ; en priorité haut du corps,
+ * seulement si aucune famille de jambes n'a été travaillée depuis UPPER_LEGS_INTERVAL_DAYS jours.
+ */
+function legsDue(input: EngineInput): boolean {
+  if (input.focus !== 'upper') return true;
+  const legs = input.catalog.filter((m) => m.category === 'legs');
+  return legs.every((m) => ageInDays(m.id, input) >= UPPER_LEGS_INTERVAL_DAYS);
+}
+
 /** Choisit les mouvements principaux du jour. */
 export function pickMains(input: EngineInput, count: number): Candidate[] {
-  const noLegs = input.ctx.kneeScore >= 5 || input.restLegs;
+  const noLegs = input.ctx.kneeScore >= 5 || input.restLegs || !legsDue(input);
+  // Priorité haut du corps : une seule famille de jambes par séance, le reste pour le haut.
+  const maxPer = (c: Category) => (input.focus === 'upper' && c === 'legs' ? 1 : 2);
   const allowed = noLegs ? MAIN_CATEGORIES.filter((c) => c !== 'legs') : MAIN_CATEGORIES;
   const excluded = new Set(input.exclude ?? []);
   const pool = candidates(input, allowed).filter((c) => !excluded.has(c.movement.id));
@@ -227,7 +260,7 @@ export function pickMains(input: EngineInput, count: number): Candidate[] {
   // Compléments : les moins récents, 2 par famille au plus.
   for (const cand of pool) {
     if (picked.length >= count) break;
-    if (!picked.includes(cand) && perCategory(cand.movement.category) < 2) picked.push(cand);
+    if (!picked.includes(cand) && perCategory(cand.movement.category) < maxPer(cand.movement.category)) picked.push(cand);
   }
   return picked;
 }
@@ -267,7 +300,9 @@ function mainBlocks(input: EngineInput, format: Format): PlanBlock[] {
   const volume = input.volume ?? 0;
   return pairUp(picked).map((group, i) => {
     const base = i === 0 ? format.firstBlockSets : format.sets;
-    const sets = Math.min(MAX_SETS, Math.max(MIN_SETS, base + volume));
+    // Priorité haut du corps : une série de plus sur les blocs sans jambes, quand le temps le permet.
+    const upperBonus = input.focus === 'upper' && input.duration >= 30 && group.every((p) => p.movement.category !== 'legs') ? 1 : 0;
+    const sets = Math.min(MAX_SETS, Math.max(MIN_SETS, base + volume + upperBonus));
     return {
       kind: group.length > 1 ? 'superset' : 'single',
       title: group.length > 1 ? `Superset ${String.fromCharCode(65 + i)}` : group[0]!.movement.name,
@@ -296,6 +331,27 @@ function kneeBlock(input: EngineInput, format: Format): PlanBlock | null {
   };
 }
 
+/**
+ * Bras (priorité haut du corps) : biceps et triceps en superset, 2 séries à 20 min, 3 au-delà.
+ * Une 2e séance du jour les écarte s'ils ont été travaillés dans les 48 h, comme les principaux.
+ */
+function armsBlock(input: EngineInput): PlanBlock | null {
+  const excluded = new Set(input.exclude ?? []);
+  const picked = candidates(input, ['arms'])
+    .filter((c) => !excluded.has(c.movement.id))
+    .slice(0, 2);
+  if (picked.length === 0) return null;
+  const sets = input.duration === 20 ? 2 : 3;
+  return {
+    kind: picked.length > 1 ? 'superset' : 'single',
+    title: 'Bras',
+    items: picked.map((p) => ({ ...p.item, sets })),
+    restBetween: 15,
+    restAfterRound: 45,
+  };
+}
+
+/** Gainage ou abdos en flexion (le moins récent des deux), plus les épaules à 40 min. */
 function coreBlock(input: EngineInput, format: Format): PlanBlock | null {
   const core = candidates(input, ['core'])[0];
   if (!core) return null;
@@ -304,9 +360,10 @@ function coreBlock(input: EngineInput, format: Format): PlanBlock | null {
     const shoulder = candidates(input, ['shoulders'])[0];
     if (shoulder) items.push({ ...shoulder.item, sets: 2 });
   }
+  const name = core.movement.id === 'abs' ? 'Abdos' : 'Gainage';
   return {
     kind: items.length > 1 ? 'superset' : 'core',
-    title: items.length > 1 ? 'Gainage et épaules' : 'Gainage',
+    title: items.length > 1 ? `${name} et épaules` : name,
     items,
     restBetween: 15,
     restAfterRound: 45,

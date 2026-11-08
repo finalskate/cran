@@ -8,6 +8,8 @@
  * inconnu recopié depuis l’étiquette, modification d’une entrée, pesée depuis l’accueil.
  * Puis carnet (J2) et corps (J3) : historique de pesées espacées injecté, objectif, courbes,
  * tour de taille, photos prises avec la caméra simulée de Chrome (retardateur, calque).
+ * Puis J3b : priorité « haut du corps » (bloc Bras dans l'aperçu), idées de protéines, tours de
+ * bras et de poitrine proposés après les photos, mode miroir.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -512,6 +514,11 @@ try {
   await page.waitForSelector('#pr-goal1');
   await fill('#pr-goal1', '78');
   await fill('#pr-goal2', '75');
+  // J3b : priorité haut du corps (protéines 1,8 g/kg dans le calcul).
+  await click('Haut du corps');
+  await wait(200);
+  if (!(await text()).includes('1,8 g/kg')) throw new Error('protéines de la priorité haut du corps absentes du calcul');
+  await shot('49-profil-priorite', true);
   await click('Enregistrer');
   await wait(300);
 
@@ -557,6 +564,11 @@ try {
   await page.waitForFunction(() => document.body.innerText.includes('Garder'), { timeout: 15000 });
   await click('Garder');
   await page.waitForFunction(() => !document.querySelector('.capture'), { timeout: 5000 });
+  // J3b : les tours de bras et de poitrine sont proposés juste après les photos du mois.
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Tour de bras'), { timeout: 5000 });
+  await wait(300);
+  await shot('55b-mesures-du-mois');
+  await clickIn('Noter');
   await wait(300);
   await shot('56-photos-un-mois', true);
 
@@ -582,8 +594,51 @@ try {
   await page.waitForFunction(() => !!document.querySelector('.capture__ghost'), { timeout: 8000 });
   await wait(400);
   await shot('54c-capture-calque');
+  // Mode miroir : caméra arrière, déclenchement au toucher, calque repris faute de photo « miroir ».
+  await click('Miroir');
+  await page.waitForFunction(() => document.body.innerText.includes('Prendre la photo'), { timeout: 8000 });
+  await wait(400);
+  await shot('54d-capture-miroir');
   await page.click('.capture [aria-label="Fermer"]');
   await wait(200);
+
+  // Carnet › Corps : bras et poitrine notés.
+  await page.goto(`${BASE}#/corps`);
+  await page.waitForFunction(() => document.body.textContent.includes('Bras (contracté)'), { timeout: 5000 });
+  await page.evaluate(() => document.getElementById('muscle-title').scrollIntoView({ block: 'center' }));
+  await wait(200);
+  await shot('56b-corps-bras-poitrine');
+
+  // Idées de protéines depuis l'Assiette, puis une idée choisie (feuille de portion pré-remplie).
+  await page.goto(`${BASE}#/assiette`);
+  await wait(300);
+  await page.evaluate(() => [...document.querySelectorAll('button')].find((b) => /idées/i.test(b.innerText))?.click());
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Thon au naturel'), { timeout: 8000 });
+  await wait(300);
+  await shot('61-idees-proteines');
+  await clickIn('Œufs durs');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('2 œufs (100 g)'), { timeout: 5000 });
+  await wait(200);
+  await shot('62-idee-portion');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
+
+  // Aperçu à la maison, 30 min, priorité haut du corps : un bloc « Bras » après les principaux.
+  await page.goto(BASE);
+  await wait(300);
+  const homeSelects = await page.$$('select');
+  await homeSelects[0].select('home');
+  await homeSelects[1].select('30');
+  await wait(200);
+  // Une séance est déjà faite aujourd'hui : l'accueil propose « Une 2e séance quand même ».
+  await click('2e séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
+  await click('2');
+  await click('Voir la séance');
+  await page.waitForFunction(() => document.body.innerText.includes('Ta séance'));
+  await wait(300);
+  if (!(await page.evaluate(() => document.body.textContent.includes('Curl aux sangles')))) throw new Error('bloc Bras absent de l’aperçu');
+  await shot('63-apercu-haut-du-corps', true);
 
   await page.goto(`${BASE}#/carnet`);
   await wait(200);

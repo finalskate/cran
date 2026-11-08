@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   bodySummary,
+  defaultComparison,
   GAP_DAYS,
+  ghostPhoto,
+  measureChange,
+  monthlyMeasuresDue,
   nextGoal,
   photoDue,
   photoMonths,
@@ -157,5 +161,62 @@ describe('photos', () => {
     expect(trendAt(t, '2025-12-31')).toBeNull();
     expect(trendAt(t, '2026-01-05')).toBe(80);
     expect(trendAt(t, '2026-01-31')).toBe(t[1]!.trend);
+  });
+});
+
+describe('bras et poitrine (J3b)', () => {
+  const m = (kind: MeasureEntry['kind'], day: string, value: number): MeasureEntry => ({
+    id: `${kind}:${day}`,
+    kind,
+    day,
+    at: `${day}T08:00:00Z`,
+    value,
+  });
+
+  it('propose les mesures du mois comme les photos, sans compter le tour de taille', () => {
+    expect(monthlyMeasuresDue([], '2026-01-10')).toBe(true);
+    expect(monthlyMeasuresDue([m('waist', '2026-01-05', 80)], '2026-01-10')).toBe(true);
+    expect(monthlyMeasuresDue([m('arm', '2026-01-05', 34)], '2026-01-25')).toBe(false); // déjà ce mois-ci
+    expect(monthlyMeasuresDue([m('chest', '2026-01-28', 98)], '2026-02-03')).toBe(false); // trop tôt
+    expect(monthlyMeasuresDue([m('chest', '2026-01-28', 98)], '2026-02-18')).toBe(true);
+  });
+
+  it('calcule l’écart depuis la première mesure du même type', () => {
+    const list = [m('arm', '2026-02-01', 34.5), m('arm', '2026-01-01', 33.5), m('chest', '2026-01-01', 99)];
+    expect(measureChange(list, 'arm')).toEqual({ delta: 1, since: '2026-01-01' });
+    expect(measureChange(list, 'chest')).toBeNull();
+  });
+});
+
+describe('photos : mode et lieu (J3b)', () => {
+  const p = (month: string, over: Partial<PhotoMeta> = {}): PhotoMeta => ({ day: `${month}-05`, month, pose: 'front', ...over });
+
+  it('le calque reprend une photo prise de la même façon, sinon la plus récente', () => {
+    const photos = [p('2026-01', { id: 1 }), p('2026-02', { id: 2, mode: 'mirror' }), p('2026-03', { id: 3, mode: 'timer' })];
+    expect(ghostPhoto(photos, 'front', 'mirror')?.id).toBe(2);
+    expect(ghostPhoto(photos, 'front', 'timer')?.id).toBe(3);
+    expect(ghostPhoto([p('2026-01', { id: 1 })], 'front', 'mirror')?.id).toBe(1);
+    expect(ghostPhoto(photos, 'side', 'timer')).toBeUndefined();
+  });
+
+  it('compare par défaut au plus ancien mois pris au même lieu et de la même façon', () => {
+    const photos = [
+      p('2026-01', { locationId: 'home' }),
+      p('2026-02', { locationId: 'away', mode: 'mirror' }),
+      p('2026-03', { locationId: 'away', mode: 'mirror' }),
+    ];
+    expect(defaultComparison(photos, 'front')).toEqual({ before: '2026-02', after: '2026-03' });
+    // Retour à la maison : comparé au point de départ.
+    expect(defaultComparison([...photos, p('2026-04', { locationId: 'home' })], 'front')).toEqual({ before: '2026-01', after: '2026-04' });
+    // Aucune autre photo comparable : la plus ancienne.
+    expect(defaultComparison([p('2026-01', { mode: 'mirror' }), p('2026-02')], 'front')).toEqual({ before: '2026-01', after: '2026-02' });
+    expect(defaultComparison([], 'front')).toBeNull();
+  });
+
+  it('les anciennes photos (sans lieu ni mode) comptent comme prises au retardateur, au même lieu', () => {
+    expect(defaultComparison([p('2026-01'), p('2026-02', { locationId: 'home', mode: 'timer' })], 'front')).toEqual({
+      before: '2026-01',
+      after: '2026-02',
+    });
   });
 });

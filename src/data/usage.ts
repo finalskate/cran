@@ -42,7 +42,8 @@
  *   weight-delete  pesée supprimée depuis l'historique
  *   waist          tour de taille noté ou invitation repoussée (pas la valeur)
  *   goals          objectifs de poids enregistrés : nombre d'étapes (pas les valeurs)
- *   photo          photo de progression prise : pose, caméra ou fichier, retardateur
+ *   measure        tour de bras ou de poitrine noté ou supprimé : type (pas la valeur)
+ *   photo          photo de progression prise : pose, mode (retardateur, miroir), caméra ou fichier, retardateur
  *   photo-delete   photos d'un mois supprimées
  *   photo-reveal   photo dévoilée (floutage)
  *   chart          période de la courbe changée, point touché
@@ -50,6 +51,8 @@
  *   level-stay     « Rester encore à ce niveau » après un déblocage
  *   step-back      retour en arrière accepté (deux séances sous la fourchette)
  *   placement      série du test de placement : niveau testé, valeur, suite (monter, descendre, placé)
+ *   focus          priorité d'entraînement changée (équilibrée, haut du corps)
+ *   protein-ideas  idées de protéines ouvertes, ou une idée choisie (laquelle)
  *   imposed        séance imposée notée : type, jambes, intensité, durée
  *   knee-morning   genou du lendemain : plus mal ou non
  *   workout-delete séance supprimée du carnet

@@ -68,6 +68,7 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
     exclude: sessionDoneToday(workouts, now) ? workedRecently(workouts, CATALOG, now) : [],
     restLegs: legsLoaded(activities.value, now),
     volume: volumeDelta(recall?.feel),
+    focus: prefs.value.focus,
   });
   return {
     ...plan,

@@ -47,6 +47,11 @@ describe('séance du jour', () => {
     const history = [workout(hoursAgo(30), [push.id]), workout(hoursAgo(60), [legs.id])];
     expect(workedRecently(history, CATALOG, NOW)).toEqual([push.id]);
   });
+
+  it('compte aussi les bras (J3b), mais pas la prévention ni le gainage', () => {
+    const history = [workout(hoursAgo(20), ['biceps', 'core', 'knee-wall-sit'])];
+    expect(workedRecently(history, CATALOG, NOW)).toEqual(['biceps']);
+  });
 });
 
 describe('charge sur les jambes', () => {

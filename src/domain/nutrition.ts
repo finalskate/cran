@@ -6,6 +6,7 @@
  * téléphone. Les constantes ci-dessous sont des règles générales.
  */
 import { addDays, dayKey, daysBetween } from './days';
+import type { TrainingFocus } from './types';
 
 // ─── Profil et cible ───
 
@@ -46,6 +47,19 @@ export const KCAL_FLOOR: Record<Sex, number> = { male: 1700, female: 1400 };
 /** Protéines visées par kilo de poids de corps (préserver le muscle pendant le déficit). */
 export const PROTEIN_PER_KG = 1.7;
 
+/**
+ * Priorité haut du corps (J3b) : un peu plus, pour construire du muscle malgré le déficit.
+ * 1,8 g/kg du poids total ≈ 2,2 à 2,4 g/kg de masse maigre tant qu'il reste du gras à perdre :
+ * le haut de la fourchette utile en déficit. Au-delà, le gain est négligeable et l'assiette
+ * devient difficile à remplir.
+ */
+export const PROTEIN_PER_KG_UPPER = 1.8;
+
+/** Protéines visées par kilo selon la priorité d'entraînement. */
+export function proteinPerKg(focus: TrainingFocus = 'balanced'): number {
+  return focus === 'upper' ? PROTEIN_PER_KG_UPPER : PROTEIN_PER_KG;
+}
+
 /** Durée de la phase de calibration (SPEC §4.8 phase A). */
 export const CALIBRATION_DAYS = 14;
 
@@ -69,15 +83,23 @@ export interface Targets {
   floored: boolean;
   /** Cible de protéines (g). */
   protein: number;
+  /** Protéines par kilo utilisées pour le calcul. */
+  proteinPerKg: number;
   /** Poids utilisé pour le calcul (dernière pesée, sinon poids du profil). */
   weightKg: number;
 }
 
 /**
  * Cible du jour. `measuredExpenditure` (dépense retenue lors d'un ajustement adaptatif accepté)
- * remplace alors l'estimation par formule.
+ * remplace alors l'estimation par formule. `perKg` : protéines par kilo (voir proteinPerKg).
  */
-export function computeTargets(profile: Profile, weightKg: number, year: number, measuredExpenditure?: number): Targets {
+export function computeTargets(
+  profile: Profile,
+  weightKg: number,
+  year: number,
+  measuredExpenditure?: number,
+  perKg = PROTEIN_PER_KG,
+): Targets {
   const bmr = Math.round(basalMetabolism(profile, weightKg, year));
   const expenditure = measuredExpenditure ?? Math.round(bmr * ACTIVITY[profile.activity].factor);
   const raw = Math.round((expenditure - DEFICIT_KCAL) / 10) * 10;
@@ -88,7 +110,8 @@ export function computeTargets(profile: Profile, weightKg: number, year: number,
     measured: measuredExpenditure !== undefined,
     kcal: Math.max(raw, floor),
     floored: raw < floor,
-    protein: Math.round(PROTEIN_PER_KG * weightKg),
+    protein: Math.round(perKg * weightKg),
+    proteinPerKg: perKg,
     weightKg,
   };
 }

@@ -5,6 +5,9 @@
  *
  * J3 : objectifs de poids par étapes (ex. une première étape, puis un objectif idéal). La
  * projection de Carnet › Corps vise l'étape suivante.
+ *
+ * J3b : priorité d'entraînement (équilibrée ou haut du corps). Elle change la séance (bras en
+ * fin de séance, jambes 2 fois par semaine) et les protéines visées.
  */
 import { useState } from 'preact/hooks';
 import { adoptedExpenditure } from '../../domain/adaptive';
@@ -13,7 +16,7 @@ import {
   computeTargets,
   DEFICIT_KCAL,
   latestWeight,
-  PROTEIN_PER_KG,
+  proteinPerKg,
   WEIGHT_MAX,
   WEIGHT_MIN,
   type ActivityLevel,
@@ -21,16 +24,27 @@ import {
   type Sex,
 } from '../../domain/nutrition';
 import { track } from '../../data/usage';
+import type { TrainingFocus } from '../../domain/types';
 import { NumberField } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
 import { saveGoals, weightGoals } from '../bodyState';
 import { adjustments, profile, saveProfile, weights } from '../foodState';
 import { formatInt, formatKg, formatLongDate, parseDecimal } from '../format';
 import { go } from '../router';
+import { prefs, setPref } from '../state';
 
 const SEXES: { value: Sex; label: string }[] = [
   { value: 'male', label: 'Homme' },
   { value: 'female', label: 'Femme' },
+];
+
+const FOCUS: { value: TrainingFocus; label: string; hint: string }[] = [
+  { value: 'balanced', label: 'Équilibrée', hint: 'Pousser, tirer et jambes à parts égales.' },
+  {
+    value: 'upper',
+    label: 'Haut du corps',
+    hint: 'Pectoraux, bras, abdos : une série de plus en haut du corps, bras en fin de séance, jambes deux fois par semaine. Un peu plus de protéines.',
+  },
 ];
 
 export function Profile() {
@@ -44,6 +58,7 @@ export function Profile() {
   const [weight, setWeight] = useState(p ? String(p.weightKg).replace('.', ',') : '');
   const [activity, setActivity] = useState<ActivityLevel>(p?.activity ?? 'active');
   const [weighing, setWeighing] = useState(false);
+  const [focus, setFocus] = useState<TrainingFocus>(prefs.value.focus);
   const [goal1, setGoal1] = useState(weightGoals.value[0] ? String(weightGoals.value[0]).replace('.', ',') : '');
   const [goal2, setGoal2] = useState(weightGoals.value[1] ? String(weightGoals.value[1]).replace('.', ',') : '');
 
@@ -59,7 +74,8 @@ export function Profile() {
   // Le calcul utilise la dernière pesée si elle existe (comme la cible du jour).
   const usedWeight = lastWeight?.kg ?? w;
   // Après un ajustement accepté, la dépense mesurée remplace la formule.
-  const t = draft && usedWeight ? computeTargets(draft, usedWeight, year, adoptedExpenditure(adjustments.value)) : null;
+  const t =
+    draft && usedWeight ? computeTargets(draft, usedWeight, year, adoptedExpenditure(adjustments.value), proteinPerKg(focus)) : null;
 
   // Objectifs valides seulement (un champ vide ou hors bornes est ignoré).
   const goals = [goal1, goal2]
@@ -71,6 +87,10 @@ export function Profile() {
     if (!draft || !t) return;
     await saveProfile(draft);
     if (goals.join() !== weightGoals.value.join()) await saveGoals(goals);
+    if (focus !== prefs.value.focus) {
+      await setPref('focus', focus);
+      track('focus', { focus });
+    }
     track('profile', { kcal: t.kcal, floored: t.floored, activity: draft.activity });
     go('food', true);
   }
@@ -129,6 +149,24 @@ export function Profile() {
         </p>
       </section>
 
+      <section class="card" aria-labelledby="focus-title">
+        <span id="focus-title" class="card__label">
+          Priorité
+        </span>
+        <div class="choice-list" role="radiogroup" aria-labelledby="focus-title">
+          {FOCUS.map((f) => (
+            <button key={f.value} type="button" class="choice choice--stack" role="radio" aria-checked={focus === f.value} onClick={() => setFocus(f.value)}>
+              <span class="choice__title">{f.label}</span>
+              <span class="muted choice__hint">{f.hint}</span>
+            </button>
+          ))}
+        </div>
+        <p class="muted calc__note">
+          Perdre du gras et gagner du muscle en même temps, c’est possible quand on reprend : déficit modéré, protéines, et des
+          répétitions qui montent. Les abdos se dessinent surtout avec le gras perdu.
+        </p>
+      </section>
+
       <section class="card" aria-labelledby="act-title">
         <span id="act-title" class="card__label">
           Activité de tous les jours
@@ -164,7 +202,7 @@ export function Profile() {
             <span class="num">{formatInt(DEFICIT_KCAL)} kcal</span>
             <strong>Cible du jour</strong>
             <strong class="num accent">{formatInt(t.kcal)} kcal</strong>
-            <strong>Protéines ({PROTEIN_PER_KG.toLocaleString('fr-FR')} g/kg)</strong>
+            <strong>Protéines ({t.proteinPerKg.toLocaleString('fr-FR')} g/kg)</strong>
             <strong class="num accent">{t.protein} g</strong>
           </div>
           {t.floored && <p class="muted calc__note">La cible est relevée au plancher : descendre plus bas ferait perdre du muscle.</p>}

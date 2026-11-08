@@ -2423,3 +2423,58 @@ h3 {
 .capture__shot {
   background: #0c0a0c;
 }
+
+/* ─── J3b : bras et poitrine, mode miroir ─── */
+.measure-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.measure-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.measure-field + .measure-field {
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+/* Lieu de la photo : puce compacte sous l'aperçu. */
+.capture__place select {
+  min-height: 40px;
+  font-size: 14px;
+}
+
+.capture__extras {
+  min-height: 0;
+  gap: 8px;
+}
+
+.capture__extras .capture__place {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Idées de protéines : le conseil peut passer à la ligne, les valeurs à droite. */
+.protein-ideas .food-row__meta {
+  white-space: normal;
+}
+
+.protein-ideas__values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.protein-tips {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}

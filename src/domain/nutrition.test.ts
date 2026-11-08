@@ -9,6 +9,7 @@ import {
   basalMetabolism,
   calibrationDay,
   computeTargets,
+  proteinPerKg,
   describeHands,
   entryNutrients,
   foodDay,
@@ -81,6 +82,14 @@ describe('cible calorique', () => {
   it('calcule les protéines sur le poids utilisé (1,7 g/kg)', () => {
     expect(computeTargets(PROFILE, 82, 2026).protein).toBe(139);
     expect(computeTargets(PROFILE, 78, 2026).protein).toBe(133);
+  });
+
+  it('vise 1,8 g/kg avec la priorité haut du corps (J3b)', () => {
+    expect(proteinPerKg()).toBe(1.7);
+    expect(proteinPerKg('upper')).toBe(1.8);
+    const t = computeTargets(PROFILE, 80, 2026, undefined, proteinPerKg('upper'));
+    expect(t.protein).toBe(144);
+    expect(t.proteinPerKg).toBe(1.8);
   });
 });
 

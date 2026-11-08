@@ -8,6 +8,9 @@
  *
  * Après la calibration, une carte propose d'ajuster la cible sur la dépense réelle, et chaque
  * journée passée dit si elle compte pour ce calcul (modifiable d'un geste).
+ *
+ * J3b : « Idées de protéines » sous les jauges du jour ; à partir de 14 h, s'il manque encore
+ * de quoi atteindre la cible, la ligne le dit (sans reproche) et propose les idées.
  */
 import { useState } from 'preact/hooks';
 import {
@@ -44,6 +47,7 @@ import { FreeSheet } from '../food/FreeSheet';
 import { HandsSheet } from '../food/HandsSheet';
 import { PortionSheet } from '../food/PortionSheet';
 import { ProductForm } from '../food/ProductForm';
+import { ProteinIdeasSheet } from '../food/ProteinIdeasSheet';
 import { ScanSheet } from '../food/ScanSheet';
 import {
   calibrationStart,
@@ -73,10 +77,15 @@ type Panel =
     }
   | { kind: 'entry'; entry: FoodEntry }
   | { kind: 'why' }
+  | { kind: 'protein' }
   | null;
 
 /** Au-delà de 7 jours en arrière, on n'invite plus à rattraper (bouton ‹ désactivé). */
 const MAX_DAYS_BACK = 7;
+
+/** Rappel des protéines : à partir de cette heure, s'il manque au moins PROTEIN_NUDGE_G. */
+const PROTEIN_NUDGE_HOUR = 14;
+const PROTEIN_NUDGE_G = 20;
 
 export function Food() {
   const today = foodDay(new Date());
@@ -88,6 +97,9 @@ export function Food() {
   const totals = sumEntries(entries ?? []);
   const calib = calibrationStart.value ? calibrationDay(calibrationStart.value, today) : null;
   const pending = usePendingAdjustment();
+  const proteinLeft = targets.value ? Math.max(0, Math.round(targets.value.protein - totals.protein)) : null;
+  const proteinNudge =
+    day === today && proteinLeft !== null && proteinLeft >= PROTEIN_NUDGE_G && new Date().getHours() >= PROTEIN_NUDGE_HOUR;
 
   /** Après la lecture d'un code : base locale d'abord (hors ligne), puis Open Food Facts. */
   async function resolveBarcode(code: string, via: 'camera' | 'typed') {
@@ -176,6 +188,21 @@ export function Food() {
         <DayMeters totals={totals} targets={targets.value} />
         {day < today && entries && entries.length > 0 && targets.value && (
           <DayCountLine day={day} kcal={totals.kcal} expenditure={targets.value.expenditure} />
+        )}
+        {day === today && (
+          <div class="row day-count">
+            <span class="muted">{proteinNudge ? `Encore ${formatInt(proteinLeft!)} g de protéines pour ta journée.` : ''}</span>
+            <button
+              type="button"
+              class="btn btn--small btn--quiet"
+              onClick={() => {
+                track('protein-ideas', { open: proteinNudge ? 'nudge' : 'link' });
+                setPanel({ kind: 'protein' });
+              }}
+            >
+              {proteinNudge ? 'Des idées' : 'Idées de protéines'}
+            </button>
+          </div>
         )}
       </section>
 
@@ -271,6 +298,13 @@ export function Food() {
         />
       )}
       {panel?.kind === 'entry' && <EntrySheet entry={panel.entry} onClose={close} />}
+      {panel?.kind === 'protein' && (
+        <ProteinIdeasSheet
+          remaining={proteinLeft}
+          onClose={close}
+          onPick={(food, unsaved) => setPanel({ kind: 'portion', food, method: 'list', unsaved })}
+        />
+      )}
       {panel?.kind === 'why' && (
         <Sheet open onClose={close} title="Pourquoi tout noter ?" kicker="Calibration">
           <div class="prose">

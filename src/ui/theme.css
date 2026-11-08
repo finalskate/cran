@@ -2581,3 +2581,15 @@ h3 {
   color: var(--text-muted);
   font-size: 13px;
 }
+
+/* « Ensuite » pendant le repos : l'exercice suivant, ses consignes, la fiche et la vidéo. */
+.next-card__cues {
+  font-size: 14px;
+}
+
+.next-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}

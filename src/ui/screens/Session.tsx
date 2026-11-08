@@ -9,6 +9,7 @@
  *    confondre avec le repos (anneau en dégradé qui se vide). 5 s de mise en place, vibration à
  *    l'objectif, et le temps tenu au-delà est compté (+0:05).
  *  - Repos : décompte basé sur l'heure de fin, ±15 s, « Passer », aperçu de la suite.
+ *    L'aperçu « Ensuite » donne les consignes principales, la fiche et la vidéo de l'exercice suivant.
  *    À la fin : vibration, bip, voix et notification (montre) selon les réglages.
  *  - L'écran reste allumé ; quitter ne perd rien (la séance est enregistrée à chaque série).
  *    Seul un chrono d'exercice en cours est perdu si l'appli est fermée : on le relance.
@@ -39,6 +40,7 @@ import {
 } from '../../domain/session';
 import { bandAt, bandLabels } from '../../domain/bands';
 import type { Movement, PlanBlock, PlanItem, Variant } from '../../domain/types';
+import { DemoLink } from '../components/DemoLink';
 import { ExerciseSheet } from '../components/ExerciseSheet';
 import { Sheet } from '../components/Sheet';
 import { SwapPicker } from '../components/SwapPicker';
@@ -182,7 +184,6 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
   const remaining = restRemaining(state, now);
   const total = state.steps[state.index]!.restAfter;
   const next = state.steps[state.index + 1];
-  const nextItem = next ? describeItem(itemOf(state, next)) : null;
   // Anneau : circonférence d'un cercle de rayon 90.
   const C = 2 * Math.PI * 90;
   const ratio = total > 0 ? Math.min(remaining / total, 1) : 0;
@@ -233,15 +234,7 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
         </div>
       </div>
 
-      {next && nextItem && (
-        <section class="card">
-          <span class="card__label">Ensuite</span>
-          <span class="card__title">{nextItem.variant.name}</span>
-          <span class="muted">
-            {next.sets > 1 ? `Série ${next.set} / ${next.sets}` : ''}
-          </span>
-        </section>
-      )}
+      {next && <NextCard state={state} next={next} />}
 
       <div class="bottom-zone">
         <button
@@ -256,6 +249,61 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
         </button>
       </div>
     </>
+  );
+}
+
+/** Nombre de consignes montrées pendant le repos : les principales, la fiche donne le reste. */
+const NEXT_CUES = 3;
+
+/**
+ * « Ensuite » pendant le repos (retour du 08/11) : de quoi se préparer à l'exercice qui suit sans
+ * ouvrir la fiche — objectif, dernière séance, élastique, consignes principales, puis la fiche
+ * complète et la vidéo. Si la suite est le même exercice, on annonce aussi le suivant (« Puis »).
+ */
+function NextCard({ state, next }: { state: SessionState; next: Step }) {
+  const [fiche, setFiche] = useState(false);
+  const item = itemOf(state, next);
+  const { movement, variant } = describeItem(item);
+  const isTime = item.target.kind === 'time';
+  const later = state.steps.slice(state.index + 2).find((s) => s.block !== next.block || s.item !== next.item);
+  const current = state.steps[state.index]!;
+  const sameAsNow = current.block === next.block && current.item === next.item;
+  const meta = [
+    next.sets > 1 ? `Série ${next.set} sur ${next.sets}` : null,
+    item.guided ? null : `objectif ${formatTarget(item.target, item.perSide)}`,
+  ].filter(Boolean);
+
+  return (
+    <section class="card next-card" aria-label="Exercice suivant">
+      <span class="card__label">Ensuite</span>
+      <span class="card__title">{variant.name}</span>
+      {meta.length > 0 && <span class="muted">{meta.join(' · ')}</span>}
+      {item.last && !item.guided && (
+        <span class="muted">
+          Dernière séance : <span class="num">{item.last.map((v) => formatValue(v, isTime)).join(' · ')}</span>
+        </span>
+      )}
+      {item.band && <span class="muted">Élastique {item.band.label}</span>}
+      <ul class="fiche__list next-card__cues">
+        {variant.cues.slice(0, NEXT_CUES).map((c) => (
+          <li key={c}>{c}</li>
+        ))}
+      </ul>
+      <div class="next-card__actions">
+        <button type="button" class="btn btn--small" onClick={() => setFiche(true)}>
+          Fiche complète
+        </button>
+        <DemoLink variant={variant} />
+      </div>
+      {sameAsNow && later && <span class="muted">Puis : {describeItem(itemOf(state, later)).variant.name}</span>}
+      <ExerciseSheet
+        open={fiche}
+        from="rest"
+        onClose={() => setFiche(false)}
+        variants={[variant]}
+        kicker={CATEGORY_LABEL[movement.category]}
+      />
+    </section>
   );
 }
 

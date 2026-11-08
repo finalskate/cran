@@ -136,7 +136,12 @@ try {
     }
 
     if (t.includes('Passer le repos')) {
-      if (!seen.has('rest')) (seen.add('rest'), await shot('08-repos'));
+      if (!seen.has('rest')) {
+        seen.add('rest');
+        // « Ensuite » : consignes de l'exercice suivant et sa fiche, sans quitter le repos.
+        if (!t.includes('Fiche complète')) throw new Error('repos : aperçu de l’exercice suivant incomplet');
+        await shot('08-repos', true);
+      }
       await click('Passer le repos');
     } else if (t.includes('Démarrer le chrono')) {
       // Exercice en durée : la première fois, chrono complet (mise en place, effort, arrêt) ;

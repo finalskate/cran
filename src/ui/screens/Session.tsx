@@ -474,6 +474,12 @@ function WorkHead({ item, movement, variant, block, openFiche }: WorkProps) {
       </div>
       {variant.cues[0] && (
         <button type="button" class="cue-card" onClick={openFiche}>
+          {/* Le mouvement en petit, à côté de la consigne principale (J8). */}
+          {FIGURES[variant.id] && (
+            <span class="cue-card__figure" aria-hidden="true">
+              <Figure anim={FIGURES[variant.id]!} label={variant.name} height={64} />
+            </span>
+          )}
           <span class="cue-card__text">{variant.cues[0]}</span>
           <span class="cue-card__more">Fiche</span>
         </button>

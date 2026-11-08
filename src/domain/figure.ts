@@ -67,10 +67,14 @@ export interface Pose {
   armR: LimbPose;
   legL: LimbPose;
   legR: LimbPose;
+  /** Sac lesté sur le dos. */
+  pack?: boolean;
+  /** Charge (sac) tenue dans une main. */
+  carry?: 'L' | 'R';
 }
 
 /** Matériel autour du mannequin. `to` d'un câble peut viser une main ou un pied. */
-export type Anchor = Vec | 'handL' | 'handR' | 'footL' | 'footR';
+export type Anchor = Vec | 'handL' | 'handR' | 'footL' | 'footR' | 'kneeL' | 'kneeR' | 'ankleL' | 'ankleR';
 export type Prop =
   | { kind: 'box'; min: Vec; max: Vec; tone?: 'wood' | 'wall' | 'soft' }
   | { kind: 'bar'; from: Vec; to: Vec }
@@ -144,10 +148,13 @@ export function trunkFrame(pose: Pick<Pose, 'lean' | 'turn' | 'twist'>): Frame {
 /** Inverse de trunkFrame pour un tronc sans rotation sur son axe : angles qui orientent la colonne selon `d`. */
 export function leanTurnOf(d: Vec): { lean: number; turn: number } {
   const u = norm(d);
-  return {
-    lean: (Math.acos(Math.max(-1, Math.min(1, u[1]))) * 180) / Math.PI,
-    turn: (Math.atan2(-u[2], u[0]) * 180) / Math.PI,
-  };
+  const lean = (Math.acos(Math.max(-1, Math.min(1, u[1]))) * 180) / Math.PI;
+  const turn = (Math.atan2(-u[2], u[0]) * 180) / Math.PI;
+  // Même colonne, mais poitrine de l'autre côté : on préfère une rotation verticale entre −90° et
+  // 90° et une inclinaison négative (vers l'arrière), ce qui garde le dos au sol couché sur le dos.
+  if (turn > 90) return { lean: -lean, turn: turn - 180 };
+  if (turn < -90) return { lean: -lean, turn: turn + 180 };
+  return { lean, turn };
 }
 
 /** Point exprimé dans le repère du tronc (avant, haut, droite), depuis `origin`. */
@@ -198,6 +205,8 @@ export interface Skeleton {
   toeR: Vec;
   /** Plus grande extension demandée à un membre (> 1 : cible hors d'atteinte). */
   maxReach: number;
+  pack: boolean;
+  carry?: 'L' | 'R';
 }
 
 export function skeleton(pose: Pose): Skeleton {
@@ -252,6 +261,8 @@ export function skeleton(pose: Pose): Skeleton {
     toeL: lL.toe,
     toeR: lR.toe,
     maxReach: Math.max(aL.reach, aR.reach, lL.reach, lR.reach),
+    pack: pose.pack ?? false,
+    ...(pose.carry ? { carry: pose.carry } : {}),
   };
 }
 
@@ -285,6 +296,8 @@ export function mixPose(a: Pose, b: Pose, t: number): Pose {
     armR: mixLimb(a.armR, b.armR, t),
     legL: mixLimb(a.legL, b.legL, t),
     legR: mixLimb(a.legR, b.legR, t),
+    ...(a.pack ? { pack: true } : {}),
+    ...(a.carry ? { carry: a.carry } : {}),
   };
 }
 
@@ -338,7 +351,7 @@ export function project(cam: Camera, v: Vec): P2 {
 
 /** Forme à dessiner : fuseau (segment arrondi à deux rayons), disque ou polygone. */
 export type Shape =
-  | { kind: 'limb'; a: P2; b: P2; ra: number; rb: number; depth: number; part: 'body' | 'cord' | 'bar'; tone?: string }
+  | { kind: 'limb'; a: P2; b: P2; ra: number; rb: number; depth: number; part: 'body' | 'cord' | 'bar' | 'load'; tone?: string }
   | { kind: 'disc'; c: P2; r: number; depth: number }
   | { kind: 'poly'; points: P2[]; depth: number; tone: 'top' | 'side' | 'front' | 'floor'; material: string };
 
@@ -386,7 +399,7 @@ const R = {
   neck: [3.0, 3.0],
 } as const;
 
-function limb(cam: Camera, a: Vec, b: Vec, r: readonly [number, number]): Shape {
+function limb(cam: Camera, a: Vec, b: Vec, r: readonly [number, number]): Extract<Shape, { kind: 'limb' }> {
   const pa = project(cam, a);
   const pb = project(cam, b);
   return { kind: 'limb', a: pa, b: pb, ra: r[0], rb: r[1], depth: (pa.z + pb.z) / 2, part: 'body' };
@@ -409,6 +422,15 @@ export function bodyShapes(cam: Camera, s: Skeleton): Shape[] {
       limb(cam, s[`knee${side}`], s[`ankle${side}`], R.shin),
       limb(cam, s[`ankle${side}`], s[`toe${side}`], R.foot),
     );
+  }
+  // Charges : sac sur le dos (dans l'axe du tronc, derrière), ou pendu à une main.
+  if (s.pack) {
+    const back = mul(s.frame.front, -(BODY.chestDepth / 2 + 4));
+    shapes.push({ ...limb(cam, add(add(s.chest, back), mul(s.frame.up, -5)), add(add(s.pelvis, back), mul(s.frame.up, 9)), [6.5, 6]), part: 'load' });
+  }
+  if (s.carry) {
+    const hand = s.carry === 'L' ? s.handL : s.handR;
+    shapes.push({ ...limb(cam, add(hand, [0, -3, 0]), add(hand, [0, -13, 0]), [5, 5.5]), part: 'load' });
   }
   return shapes.sort((a, b) => a.depth - b.depth);
 }
@@ -446,7 +468,18 @@ export interface Scene {
 
 function anchorPoint(s: Skeleton, a: Anchor): Vec {
   if (typeof a !== 'string') return a;
-  return { handL: s.handL, handR: s.handR, footL: s.toeL, footR: s.toeR }[a];
+  // Pied : le milieu de la plante (là où passe un élastique).
+  const mid = (p: Vec, q: Vec): Vec => mul(add(p, q), 0.5);
+  return {
+    handL: s.handL,
+    handR: s.handR,
+    footL: mid(s.ankleL, s.toeL),
+    footR: mid(s.ankleR, s.toeR),
+    kneeL: s.kneeL,
+    kneeR: s.kneeR,
+    ankleL: s.ankleL,
+    ankleR: s.ankleR,
+  }[a];
 }
 
 /** Marge du sol autour du corps et du matériel. */

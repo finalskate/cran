@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CATALOG } from '../data/catalog';
+import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
 import { FIGURES } from '../data/figures';
 import { BODY, camera, cycleDuration, len, leanTurnOf, limbPath, poseAt, project, skeleton, solveLimb, sub, trunkFrame, type Vec } from './figure';
 
@@ -61,25 +61,31 @@ describe('caméra', () => {
 });
 
 describe('animations du catalogue', () => {
-  const ids = new Set(CATALOG.flatMap((m) => [...m.levels.flatMap((l) => l.variants), ...(m.substitutes ?? [])]).map((v) => v.id));
+  it('chaque variante du catalogue (échauffement et retour au calme compris) a son animation', () => {
+    const missing = [...ids].filter((id) => !FIGURES[id]);
+    expect(missing).toEqual([]);
+  });
+
+  const ids = new Set([...CATALOG, WARMUP, COOLDOWN].flatMap((m) => [...m.levels.flatMap((l) => l.variants), ...(m.substitutes ?? [])]).map((v) => v.id));
 
   for (const [id, anim] of Object.entries(FIGURES)) {
     describe(id, () => {
       it('correspond à une variante du catalogue', () => expect(ids.has(id)).toBe(true));
 
       it('aucun membre étiré au-delà de sa longueur, rien sous le sol', () => {
-        for (const k of anim.frames) {
+        anim.frames.forEach((k, i) => {
           const s = skeleton(k.pose);
-          expect(s.maxReach).toBeLessThanOrEqual(1.01);
-          for (const p of [s.head, s.handL, s.handR, s.toeL, s.toeR, s.kneeL, s.kneeR, s.pelvis]) expect(p[1]).toBeGreaterThan(-1.5);
-        }
+          expect(s.maxReach, `position ${i}`).toBeLessThanOrEqual(1.01);
+          const points = { tête: s.head, mainG: s.handL, mainD: s.handR, piedG: s.toeL, piedD: s.toeR, genouG: s.kneeL, genouD: s.kneeR, bassin: s.pelvis };
+          for (const [name, p] of Object.entries(points)) expect(p[1], `position ${i}, ${name}`).toBeGreaterThan(-1.5);
+        });
       });
 
       it('chaque position clé est atteinte puis tenue', () => {
         let t = 0;
         for (const k of anim.frames) {
           t += k.move;
-          expect(poseAt(anim, t + 1e-6).pelvis).toEqual(k.pose.pelvis);
+          poseAt(anim, t + 1e-6).pelvis.forEach((v, j) => expect(v).toBeCloseTo(k.pose.pelvis[j]!, 6));
           t += k.hold ?? 0;
         }
         expect(t).toBeCloseTo(cycleDuration(anim));

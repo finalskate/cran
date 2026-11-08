@@ -2631,3 +2631,14 @@ h3 {
   grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
   gap: 6px;
 }
+
+/* Charge : sac lesté sur le dos ou tenu à la main. */
+.figure__load {
+  fill: #9a5a2c;
+}
+
+/* Écran d'exercice : le mouvement en petit à gauche de la consigne. */
+.cue-card__figure {
+  flex-shrink: 0;
+  width: 92px;
+}

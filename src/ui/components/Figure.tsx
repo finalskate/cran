@@ -123,6 +123,7 @@ export function Figure({ anim, label, height = 170, at }: Props) {
       {sc.body.map((sh, i) => {
         const fill = tone(sh.depth);
         // Liseré couleur du fond : un membre se détache de celui qu'il recouvre.
+        if (sh.kind === 'limb' && sh.part === 'load') return <path key={i} d={limbPath(sh.a, sh.b, sh.ra, sh.rb)} class="figure__part figure__load" />;
         if (sh.kind === 'limb') return <path key={i} d={limbPath(sh.a, sh.b, sh.ra, sh.rb)} fill={fill} class="figure__part" />;
         if (sh.kind === 'disc') return <circle key={i} cx={sh.c.x} cy={sh.c.y} r={sh.r} fill={fill} class="figure__part" />;
         return <polygon key={i} points={points(sh)} fill={fill} />;

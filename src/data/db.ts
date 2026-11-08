@@ -18,10 +18,12 @@
  *  - v5 (J2) : activities (séances imposées ; course et vélotaf au J5).
  *  - v6 (J3) : measures (tour de taille), photos (photos de progression), levelHistory
  *    (changements de niveau, reconstitués depuis le journal d'usage pour le passé).
+ *  - v7 (J4B) : reviews (bilan alimentaire du soir, un par jour).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
 import type { MeasureEntry, PhotoMeta } from '../domain/body';
+import type { DailyReview } from '../domain/habits';
 import type { LevelHistoryEntry } from '../domain/progression';
 import type { Activity, KneeLog } from '../domain/recovery';
 import type { Food, FoodEntry, WeightEntry } from '../domain/nutrition';
@@ -33,7 +35,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 6;
+export const SCHEMA_VERSION = 7;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -101,6 +103,7 @@ export class CranDB extends Dexie {
   measures!: Table<MeasureEntry, string>;
   photos!: Table<PhotoRow, number>;
   levelHistory!: Table<LevelHistoryEntry, number>;
+  reviews!: Table<DailyReview, string>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -155,6 +158,12 @@ export class CranDB extends Dexie {
         levelHistory: '++id, movementId, at',
       })
       .upgrade((tx) => seedLevelHistory(tx));
+
+    // v7 — J4B : bilan du soir. Nouvelle table vide : rien à transformer.
+    //  - reviews : un bilan par jour alimentaire (clé = jour).
+    this.version(7).stores({
+      reviews: '&day',
+    });
 
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.
     this.on('populate', (tx) => seedLocations(tx));

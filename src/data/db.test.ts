@@ -45,6 +45,7 @@ describe('CranDB', () => {
         'locations',
         'measures',
         'photos',
+        'reviews',
         'settings',
         'weights',
         'workouts',
@@ -233,6 +234,42 @@ describe('migration v5 → v6', () => {
       ['pull', 2],
       ['push', 4],
     ]);
+  });
+});
+
+describe('migration v6 → v7', () => {
+  it('conserve les données et ajoute les bilans du soir', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée au J3 (schéma v6).
+    const v6 = new Dexie(name);
+    v6.version(1).stores({ settings: '&key' });
+    v6.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v6.version(3).stores({ events: '++id, at' });
+    v6.version(4).stores({ foods: '&id, barcode', foodLog: '++id, day', weights: '&day' });
+    v6.version(5).stores({ activities: '++id, day, type' });
+    v6.version(6).stores({ measures: '&id, kind, day', photos: '++id, month, pose', levelHistory: '++id, movementId, at' });
+    await v6.table('weights').put({ day: '2026-11-08', kg: 80 });
+    await v6.table('measures').put({ id: 'waist:2026-11-08', kind: 'waist', day: '2026-11-08', value: 85 });
+    await v6.table('settings').put({ key: 'focus', value: 'upper' });
+    v6.close();
+
+    const v7 = new CranDB(name);
+    opened.push(v7);
+    await v7.open();
+    expect(v7.verno).toBe(SCHEMA_VERSION);
+    expect(await v7.weights.count()).toBe(1);
+    expect(await v7.measures.count()).toBe(1);
+    expect(await getSetting('focus', v7)).toBe('upper');
+    expect(await v7.reviews.count()).toBe(0);
+    await v7.reviews.put({ day: '2026-11-08', at: '2026-11-08T20:00:00Z', protein: 'yes', proteinAuto: true, veggies: true, slip: 'none' });
+    expect((await v7.reviews.get('2026-11-08'))?.slip).toBe('none');
   });
 });
 

@@ -115,3 +115,27 @@ export const TREND_START: readonly string[] = [
   'C’est noté. Chaque pesée affine la courbe.',
   'Merci ! La tendance prendra forme au fil des pesées.',
 ];
+
+/** Après un bilan du soir sans écart. */
+export const REVIEW_CLEAN: readonly string[] = [
+  'Journée propre. Ce sont ces journées ordinaires qui font la tendance.',
+  'Rien à signaler : c’est exactement comme ça que ça avance.',
+  'Une journée de plus dans le bon sens. La balance suivra.',
+  'Bien joué. Pas besoin d’être parfait, juste régulier : c’est le cas.',
+  'C’est noté. Demain, même recette.',
+  'Ta semaine se construit un jour après l’autre. Celui-ci compte.',
+  'Bilan fait, journée réussie. Profite de ta soirée.',
+  'Simple et efficace. Ton futur toi te remercie.',
+];
+
+/** Après un bilan avec un écart (jamais de reproche : on regarde le déclencheur, pas la faute). */
+export const REVIEW_SLIP: readonly string[] = [
+  'Noté, sans drame. Un écart ne défait pas une semaine.',
+  'C’est en repérant ce qui déclenche qu’on change les choses. C’est fait.',
+  'Un écart, ça arrive à tout le monde. Ce qui compte, c’est la tendance.',
+  'Merci pour l’honnêteté : c’est elle qui rend le bilan utile.',
+  'Demain est une nouvelle journée. Ton plan est prêt.',
+  'Une journée moins bonne ne change pas la direction. On continue.',
+  'Repéré, donc à moitié réglé. La prochaine fois, ton plan t’attend.',
+  'Rien n’est perdu : quelques centaines de kcal, c’est une goutte dans la semaine.',
+];

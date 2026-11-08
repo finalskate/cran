@@ -2478,3 +2478,63 @@ h3 {
   flex-direction: column;
   gap: 4px;
 }
+
+/* ─── J4B : bilan du soir, plans « si… alors… » ─── */
+.segmented--grid {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.review-q {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.review-auto {
+  margin: 0;
+}
+
+.review-note {
+  font-size: 14px;
+}
+
+.plan-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(251, 146, 60, 0.08);
+  border: 1px solid rgba(251, 146, 60, 0.25);
+}
+
+.plan-text {
+  margin: 0;
+}
+
+.plan-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plan-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.plan-row__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}

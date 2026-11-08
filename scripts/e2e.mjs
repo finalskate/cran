@@ -10,6 +10,8 @@
  * tour de taille, photos prises avec la caméra simulée de Chrome (retardateur, calque).
  * Puis J3b : priorité « haut du corps » (bloc Bras dans l'aperçu), idées de protéines, tours de
  * bras et de poitrine proposés après les photos, mode miroir.
+ * Puis J4B : bilan du jour depuis l'Assiette (écart, déclencheur, plan rappelé), résumé de la
+ * semaine, « Mes plans ».
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -620,6 +622,34 @@ try {
   await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('2 œufs (100 g)'), { timeout: 5000 });
   await wait(200);
   await shot('62-idee-portion');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
+
+  // J4B : bilan du jour depuis l'Assiette (protéines déduites des entrées), écart « soirée » :
+  // le plan correspondant s'affiche au moment du choix du déclencheur.
+  await click('Bilan du jour');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Un écart ?'), { timeout: 5000 });
+  if (!(await page.evaluate(() => document.querySelector('dialog[open]').textContent.includes('D’après ce que tu as noté'))))
+    throw new Error('protéines du bilan non déduites des entrées');
+  await clickIn('Oui');
+  await clickIn('Petit');
+  await clickIn('Soirée');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('le dîner est fini'), { timeout: 3000 });
+  await wait(200);
+  await shot('64-bilan');
+  await clickIn('Noter le bilan');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Bilan noté'), { timeout: 3000 });
+  await wait(200);
+  await shot('65-bilan-note');
+  await clickIn('Fermer');
+  await wait(300);
+  const t65 = await page.evaluate(() => document.body.textContent);
+  if (!t65.includes('Bilan fait ✓') || !t65.includes('soirée (1)')) throw new Error('bilan absent de l’Assiette ou du résumé de la semaine');
+  await shot('66-assiette-semaine', true);
+  await click('Mes plans');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Ajouter un plan'), { timeout: 3000 });
+  await wait(200);
+  await shot('67-mes-plans');
   await page.click('dialog[open] [aria-label="Fermer"]');
   await wait(200);
 

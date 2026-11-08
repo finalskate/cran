@@ -11,6 +11,9 @@
  *
  * J3b : « Idées de protéines » sous les jauges du jour ; à partir de 14 h, s'il manque encore
  * de quoi atteindre la cible, la ligne le dit (sans reproche) et propose les idées.
+ *
+ * J4B : bilan du jour (fait ou à faire) sous les jauges, accessible à tout moment, même pendant
+ * la calibration ; résumé de la semaine (déclencheurs les plus fréquents) et « Mes plans ».
  */
 import { useState } from 'preact/hooks';
 import {
@@ -23,6 +26,7 @@ import {
   type Adjustment,
 } from '../../domain/adaptive';
 import { addDays } from '../../domain/days';
+import { weekSummary } from '../../domain/habits';
 import {
   calibrationDay,
   CALIBRATION_DAYS,
@@ -47,7 +51,11 @@ import { FreeSheet } from '../food/FreeSheet';
 import { HandsSheet } from '../food/HandsSheet';
 import { PortionSheet } from '../food/PortionSheet';
 import { ProductForm } from '../food/ProductForm';
+import { PlansSheet } from '../food/PlansSheet';
 import { ProteinIdeasSheet } from '../food/ProteinIdeasSheet';
+import { ReviewSheet } from '../food/ReviewSheet';
+import { TRIGGER_LABEL } from '../../data/habits';
+import { reviewedDays, reviews } from '../habitsState';
 import { ScanSheet } from '../food/ScanSheet';
 import {
   calibrationStart,
@@ -78,6 +86,8 @@ type Panel =
   | { kind: 'entry'; entry: FoodEntry }
   | { kind: 'why' }
   | { kind: 'protein' }
+  | { kind: 'review' }
+  | { kind: 'plans' }
   | null;
 
 /** Au-delà de 7 jours en arrière, on n'invite plus à rattraper (bouton ‹ désactivé). */
@@ -204,6 +214,12 @@ export function Food() {
             </button>
           </div>
         )}
+        <div class="row day-count">
+          <span class="muted">{reviewedDays.value.has(day) ? 'Bilan fait ✓' : ''}</span>
+          <button type="button" class="btn btn--small btn--quiet" onClick={() => setPanel({ kind: 'review' })}>
+            {reviewedDays.value.has(day) ? 'Revoir le bilan' : day === today ? 'Bilan du jour' : 'Bilan de ce jour'}
+          </button>
+        </div>
       </section>
 
       {day === today && pending?.result.status === 'ready' && (
@@ -248,6 +264,8 @@ export function Food() {
           </section>
         );
       })}
+
+      {day === today && <WeekCard onPlans={() => setPanel({ kind: 'plans' })} />}
 
       <div class="bottom-zone">
         <div class="segmented">
@@ -298,6 +316,8 @@ export function Food() {
         />
       )}
       {panel?.kind === 'entry' && <EntrySheet entry={panel.entry} onClose={close} />}
+      {panel?.kind === 'review' && <ReviewSheet day={day} via="food" onClose={close} />}
+      {panel?.kind === 'plans' && <PlansSheet onClose={close} />}
       {panel?.kind === 'protein' && (
         <ProteinIdeasSheet
           remaining={proteinLeft}
@@ -329,6 +349,44 @@ export function Food() {
         </Sheet>
       )}
     </main>
+  );
+}
+
+/**
+ * Résumé des 7 derniers jours d'après les bilans (J4B) : écarts et leurs déclencheurs les plus
+ * fréquents, légumes. Toujours un accès aux plans « si… alors… ».
+ */
+function WeekCard({ onPlans }: { onPlans: () => void }) {
+  const today = foodDay(new Date());
+  const w = weekSummary(reviews.value, today);
+  const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? 's' : ''}`;
+  return (
+    <section class="card card--quiet" aria-labelledby="week-title">
+      <div class="row" style={{ minHeight: 0 }}>
+        <span id="week-title" class="card__label">
+          Cette semaine
+        </span>
+        <button type="button" class="btn btn--small btn--quiet" onClick={onPlans}>
+          Mes plans si… alors…
+        </button>
+      </div>
+      {w.reviews === 0 ? (
+        <span class="muted">Le bilan du soir (30 s) dira ici ce qui fait craquer, et ce qui marche.</span>
+      ) : (
+        <>
+          <span>
+            {plural(w.reviews, 'bilan')} · {w.slips === 0 ? 'aucun écart' : plural(w.slips, 'écart')} · légumes {w.veggieDays} j sur{' '}
+            {w.reviews}
+          </span>
+          {w.triggers.length > 0 && (
+            <span class="muted">
+              {w.triggers.length > 1 ? 'Déclencheurs' : 'Déclencheur'} :{' '}
+              {w.triggers.map((t) => `${TRIGGER_LABEL[t.trigger].toLowerCase()} (${t.count})`).join(', ')}
+            </span>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 

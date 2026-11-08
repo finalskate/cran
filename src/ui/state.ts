@@ -9,6 +9,7 @@ import { ensurePersistence, type PersistState } from '../data/storage';
 import { toRecord, type SessionState } from '../domain/session';
 import { loadBodyState } from './bodyState';
 import { loadFoodState } from './foodState';
+import { loadHabitsState } from './habitsState';
 import { loadTraining } from './training';
 import type { Location, Plan } from '../domain/types';
 
@@ -75,7 +76,7 @@ export function updateSession(next: SessionState | null): void {
  * (base indisponible, navigateur restrictif), les autres se font quand même.
  */
 export async function initState(): Promise<void> {
-  await Promise.allSettled([loadData(), loadFoodState(), loadBodyState(), loadTraining(), refreshPersistence()]);
+  await Promise.allSettled([loadData(), loadFoodState(), loadBodyState(), loadHabitsState(), loadTraining(), refreshPersistence()]);
   ready.value = true;
 }
 

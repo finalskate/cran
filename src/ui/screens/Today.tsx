@@ -8,6 +8,8 @@
  * raccourci « Imposée » pour noter une séance de sport au travail.
  * J3 : carte « Poids » (tendance, rythme, projection, petite courbe) vers Carnet › Corps,
  * avec un rappel discret des photos du mois.
+ * J4B : bilan du soir proposé dès 19 h, rattrapable le lendemain jusqu'à 11 h (« Et hier ? »),
+ * une fois la calibration terminée (pendant la calibration, il reste accessible dans l'Assiette).
  * L'anneau de la semaine arrive avec le J6.
  */
 import { useState } from 'preact/hooks';
@@ -16,7 +18,8 @@ import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
 import { REST_DAY } from '../../data/messages';
 import { dayKey } from '../../domain/days';
-import { foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
+import { calibrationDay, foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
+import { reviewPrompt } from '../../domain/habits';
 import { dailyMessage } from '../../domain/messages';
 import { photoDue } from '../../domain/body';
 import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
@@ -25,7 +28,9 @@ import { Sparkline } from '../components/SmallCharts';
 import { DayMeters } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
 import { ImposedSheet } from '../journal/ImposedSheet';
-import { profile, targets, useDayEntries, weights } from '../foodState';
+import { ReviewSheet } from '../food/ReviewSheet';
+import { calibrationStart, profile, targets, useDayEntries, weights } from '../foodState';
+import { reviewedDays } from '../habitsState';
 import { photos, summary, trend } from '../bodyState';
 import { formatApproxDate, formatKg, formatLongDate, formatSigned } from '../format';
 import { go } from '../router';
@@ -47,6 +52,10 @@ export function Today() {
   const weighedToday = last?.day === dayKey(now);
   const [weighing, setWeighing] = useState(false);
   const [imposing, setImposing] = useState(false);
+  const [reviewing, setReviewing] = useState<{ day: string; via: 'evening' | 'catch-up' } | null>(null);
+  // Bilan du soir : après la calibration seulement (elle demande déjà de tout noter).
+  const calibrating = !!calibrationStart.value && calibrationDay(calibrationStart.value, foodDay(now)) !== null;
+  const prompt = ready.value && profile.value && !calibrating ? reviewPrompt(now, reviewedDays.value) : null;
   const doneToday = sessionDoneToday(workouts.value, now);
   // Message de récupération : change chaque jour, reste le même toute la journée.
   const restMessage = dailyMessage(REST_DAY, dayKey(now), 'rest-day');
@@ -125,6 +134,18 @@ export function Today() {
         </button>
       )}
 
+      {prompt && (
+        <button
+          type="button"
+          class="card card--link card--button"
+          onClick={() => setReviewing({ day: prompt.day, via: prompt.kind === 'today' ? 'evening' : 'catch-up' })}
+        >
+          <span class="card__label">Bilan du soir · 30 s</span>
+          <span class="card__title">{prompt.kind === 'today' ? 'Comment s’est passée ta journée ?' : 'Et hier, côté assiette ?'}</span>
+          <span class="muted">Légumes, écart éventuel et ce qui l’a déclenché. Les protéines notées sont déjà comptées.</span>
+        </button>
+      )}
+
       <a class="card card--link card--quiet" href="#/assiette">
         <div class="row" style={{ minHeight: 0 }}>
           <span class="card__label">Alimentation</span>
@@ -191,6 +212,7 @@ export function Today() {
 
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
       {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
+      {reviewing && <ReviewSheet day={reviewing.day} via={reviewing.via} onClose={() => setReviewing(null)} />}
     </main>
   );
 }

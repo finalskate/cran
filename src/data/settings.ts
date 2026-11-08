@@ -3,6 +3,7 @@
  * Chaque nouvelle clé se déclare dans SettingsMap : le compilateur vérifie alors le type des valeurs.
  */
 import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
+import type { IfThenPlan } from '../domain/habits';
 import type { Profile } from '../domain/nutrition';
 import type { Duration, TrainingFocus } from '../domain/types';
 import { db, type CranDB } from './db';
@@ -46,6 +47,8 @@ export interface SettingsMap {
   photoBlur: boolean;
   /** Priorité d'entraînement (J3b) : équilibrée, ou haut du corps (séance et protéines). */
   focus: TrainingFocus;
+  /** Plans « si… alors… » de l'utilisateur (J4B). Absent : les plans de départ (src/data/habits.ts). */
+  plans: IfThenPlan[];
 }
 
 export type SettingKey = keyof SettingsMap;

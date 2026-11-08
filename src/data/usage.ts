@@ -53,6 +53,8 @@
  *   placement      série du test de placement : niveau testé, valeur, suite (monter, descendre, placé)
  *   focus          priorité d'entraînement changée (équilibrée, haut du corps)
  *   protein-ideas  idées de protéines ouvertes, ou une idée choisie (laquelle)
+ *   review         bilan du soir noté : d'où (soir, rattrapage, Assiette), écart, déclencheur, protéines (auto ?), légumes
+ *   plan           plan « si… alors… » ajouté, modifié ou supprimé : nombre de plans (pas le texte)
  *   imposed        séance imposée notée : type, jambes, intensité, durée
  *   knee-morning   genou du lendemain : plus mal ou non
  *   workout-delete séance supprimée du carnet

@@ -11,6 +11,14 @@
  */
 import { matchScore, normalize, searchWords, type Food, type Portion } from '../domain/nutrition';
 import { LIQUID_GROUPS, PORTION_RULES, type PortionRule } from './ciqualPortions';
+import { COOKED_FORM, RAW_FORM, RAW_GROUPS } from './phraseWords';
+
+/**
+ * Quand on préfère le cuit : recul d'un aliment cru, avance d'un aliment cuit (pour comparaison,
+ * un mot trouvé en début de mot vaut 3) ; « riz » donne le riz cuit plutôt que le riz cantonais.
+ */
+const RAW_PENALTY = 3;
+const COOKED_BONUS = 2;
 
 /** Une ligne de la table : [code, nom, sous-groupe, kcal/100 g, protéines g/100 g]. */
 export type CiqualRow = readonly [code: number, name: string, group: string, kcal: number, protein: number];
@@ -44,15 +52,23 @@ export function loadCiqual(): Promise<CiqualIndex> {
  */
 const GENERIC = /aliment moyen|sans precision/;
 
-/** Meilleurs résultats pour une recherche (rien si la recherche est vide). */
-export function searchCiqual(index: CiqualIndex, query: string, limit = 25): CiqualRow[] {
+/**
+ * Meilleurs résultats pour une recherche (rien si la recherche est vide).
+ * `preferCooked` (saisie en une phrase, J5b) : dans les sous-groupes où cru / cuit change tout,
+ * la version cuite passe devant, sauf si la recherche dit « cru » ou « sec » (src/data/phraseWords.ts).
+ */
+export function searchCiqual(index: CiqualIndex, query: string, limit = 25, opts: { preferCooked?: boolean } = {}): CiqualRow[] {
   const words = searchWords(query);
   if (words.length === 0) return [];
+  const penalizeRaw = opts.preferCooked && !RAW_FORM.test(normalize(query));
   const scored: { row: CiqualRow; score: number }[] = [];
   index.rows.forEach((row, i) => {
     const hay = index.hay[i]!;
     const s = matchScore(hay, words);
-    if (s > 0) scored.push({ row, score: s + (GENERIC.test(hay) ? 1 : 0) });
+    if (s <= 0) return;
+    // « Pâtes sèches, cuites » est cuit : le mot « cuit » l'emporte sur « sec ».
+    const cooking = penalizeRaw && RAW_GROUPS.includes(row[2]) ? (COOKED_FORM.test(hay) ? COOKED_BONUS : RAW_FORM.test(hay) ? -RAW_PENALTY : 0) : 0;
+    scored.push({ row, score: s + (GENERIC.test(hay) ? 1 : 0) + cooking });
   });
   return scored
     .sort((a, b) => b.score - a.score)

@@ -36,7 +36,9 @@ import {
   saveWeight,
   updateFoodEntry,
 } from '../data/foodRepo';
+import { PHASES } from '../data/phases';
 import { getSetting, setSetting } from '../data/settings';
+import { adaptivePause } from '../domain/phase';
 import { track } from '../data/usage';
 // Import circulaire assumé (state importe aussi ce module) : `prefs` n'est lu que dans `computed`.
 import { prefs } from './state';
@@ -164,8 +166,9 @@ export interface PendingAdjustment {
 
 /**
  * Proposition d'ajustement du jour, ou `null` s'il n'est pas encore temps (calibration en
- * cours, décision prise il y a moins de 14 jours). Recalculée quand le journal, les pesées ou
- * les choix de journées changent.
+ * cours, décision prise il y a moins de 14 jours, phase cantine en cours ou finie depuis moins
+ * de 14 jours : ses estimations fausseraient la dépense). Recalculée quand le journal, les
+ * pesées ou les choix de journées changent.
  */
 export function usePendingAdjustment(): PendingAdjustment | null {
   const [pending, setPending] = useState<PendingAdjustment | null>(null);
@@ -177,7 +180,8 @@ export function usePendingAdjustment(): PendingAdjustment | null {
   const w = weights.value;
   const overrides = dayOverrides.value;
   const today = foodDay(new Date());
-  const period = start ? adjustmentWindow(start, today, last) : null;
+  const pause = adaptivePause(prefs.value.phases, today, PHASES);
+  const period = start && !pause.paused ? adjustmentWindow(start, today, last, pause.resumedAt) : null;
 
   useEffect(() => {
     if (!period || !t || !p) {

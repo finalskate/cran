@@ -196,13 +196,16 @@ export interface AdjustmentRecord {
  * Période à étudier aujourd'hui, ou `null` s'il n'est pas encore temps : 14 jours après le
  * début de la calibration, puis 14 jours après chaque décision. La période se termine hier
  * (aujourd'hui n'est pas fini) et dure 14 jours.
+ * `notBefore` : 1er jour utilisable (retour d'éloignement, J5b) ; il faut 14 jours depuis.
  */
 export function adjustmentWindow(
   calibrationStart: string,
   today: string,
   lastDecision?: string,
+  notBefore?: string,
 ): { from: string; to: string } | null {
-  const since = lastDecision ?? calibrationStart;
+  const base = lastDecision ?? calibrationStart;
+  const since = notBefore && notBefore > base ? notBefore : base;
   if (daysBetween(since, today) < ADJUST_PERIOD_DAYS) return null;
   const to = addDays(today, -1);
   return { from: addDays(to, -(ADJUST_PERIOD_DAYS - 1)), to };

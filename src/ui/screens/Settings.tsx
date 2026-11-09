@@ -11,7 +11,11 @@ import { track } from '../../data/usage';
 import { offlineReady } from '../../pwa/registerSW';
 import { Stepper } from '../components/Stepper';
 import { Toggle } from '../components/Toggle';
-import { WEEK_GOAL_MAX, type WeekGoal } from '../../domain/week';
+import { WEEK_GOAL_MAX } from '../../domain/week';
+import { PHASES } from '../../data/phases';
+import { dayToDate } from '../../domain/days';
+import { PhaseSheet } from '../components/PhaseSheet';
+import { cancelPhaseChange, currentPhase, nextPhase, setWeekGoal } from '../phaseState';
 import { photos } from '../bodyState';
 import {
   notify,
@@ -22,7 +26,7 @@ import {
   voiceAvailable,
 } from '../device/feedback';
 import { exportData } from '../device/exportFile';
-import { formatBytes, formatLongDate } from '../format';
+import { formatBytes, formatLongDate, formatShortDate } from '../format';
 import { persistState, prefs, refreshPersistence, setFx, setPref } from '../state';
 
 const FX_OPTIONS: { value: FxLevel; label: string }[] = [
@@ -58,6 +62,9 @@ export function Settings() {
   const [exporting, setExporting] = useState(false);
   // Photos exclues par défaut (SPEC §4.9) : à cocher à chaque export, jamais mémorisé.
   const [includePhotos, setIncludePhotos] = useState(false);
+  const [choosingPhase, setChoosingPhase] = useState(false);
+  const phase = currentPhase();
+  const scheduled = nextPhase();
   const photoBytes = photos.value.reduce((n, ph) => n + ph.blob.size, 0);
 
   useEffect(() => {
@@ -82,11 +89,6 @@ export function Settings() {
   }
 
   /** Activer la notification demande l'autorisation Android dans la foulée. */
-  async function setWeekGoal(goal: WeekGoal) {
-    await setPref('weekGoal', goal);
-    track('week-goal', { ...goal });
-  }
-
   async function toggleNotify(on: boolean) {
     if (on) setNotifyState(await requestNotifyPermission());
     await setPref('watchNotify', on);
@@ -192,9 +194,35 @@ export function Settings() {
         />
       </section>
 
+      <section class="card" aria-labelledby="phase-title">
+        <span id="phase-title" class="card__label">
+          Phase
+        </span>
+        <span class="card__title">{phase ? PHASES[phase.id].label : 'Aucune phase choisie'}</span>
+        <span class="muted">
+          {phase
+            ? `Depuis le ${formatShortDate(dayToDate(phase.since))} · ${PHASES[phase.id].description}`
+            : 'Choisis-la quand tu commences pour de bon : lieu, objectif, cardio et assiette suivent.'}
+        </span>
+        {scheduled && (
+          <div class="row">
+            <span>
+              Puis {PHASES[scheduled.id].label} le {formatShortDate(dayToDate(scheduled.since))}
+            </span>
+            <button type="button" class="btn btn--small btn--quiet" onClick={() => void cancelPhaseChange()}>
+              Annuler
+            </button>
+          </div>
+        )}
+        <button type="button" class="btn" onClick={() => setChoosingPhase(true)}>
+          Changer de phase
+        </button>
+      </section>
+      {choosingPhase && <PhaseSheet onClose={() => setChoosingPhase(false)} />}
+
       <section class="card" aria-labelledby="goal-title">
         <span id="goal-title" class="card__label">
-          Objectif de la semaine
+          Objectif de la semaine{phase ? ` · ${PHASES[phase.id].label}` : ''}
         </span>
         <div class="row">
           <span>Renfo</span>

@@ -1,24 +1,37 @@
 /**
  * Carte « Prochaine sortie » de l'accueil (J5a, SPEC §4.7) : la suggestion du plan de course,
- * en texte, à programmer soi-même sur la montre si on le souhaite. Sur un lieu équipé d'un vélo
- * (éloignement, base équipée), elle propose la prochaine séance de vélo à la place.
+ * en texte, à programmer soi-même sur la montre si on le souhaite, ou la prochaine séance de
+ * vélo. J5b : le cardio proposé en premier dépend de la phase (vélo en éloignement) et du lieu
+ * (vélo, tapis de course) ; l'autre se montre d'un geste (« Plutôt du vélo ? »).
  * Le bouton ouvre la saisie, pré-remplie avec la suggestion.
  */
+import { useState } from 'preact/hooks';
 import { dayKey, dayToDate } from '../../domain/days';
+import type { CardioChoice } from '../../domain/phase';
 import { bikeAdvice, bikePlan, runAdvice, runPlan, runSlotLabel } from '../../domain/running';
 import { formatShortDate } from '../format';
 import { activities, kneeLogs } from '../training';
 
 interface Props {
-  /** Le lieu choisi a un vélo : suggestion de vélo plutôt que de course. */
-  bike: boolean;
+  /** Cardio proposé (phase et matériel du lieu choisi). */
+  choice: CardioChoice;
   onLog: (type: 'run' | 'bike') => void;
 }
 
-export function CardioCard({ bike, onLog }: Props) {
+const SWITCH_LABEL = { run: 'Plutôt courir ?', bike: 'Plutôt du vélo ?' } as const;
+
+export function CardioCard({ choice, onLog }: Props) {
+  const [switched, setSwitched] = useState(false);
   const now = new Date();
   const today = dayKey(now);
-  if (bike) {
+  const type = switched && choice.alternative ? choice.alternative : choice.primary;
+  const other = type === choice.primary ? choice.alternative : choice.primary;
+  const switchButton = other && (
+    <button type="button" class="btn btn--small btn--quiet cardio-card__switch" onClick={() => setSwitched(!switched)}>
+      {SWITCH_LABEL[other]}
+    </button>
+  );
+  if (type === 'bike') {
     const plan = bikePlan(activities.value, kneeLogs.value, now);
     const advice = bikeAdvice(plan);
     const doneToday = activities.value.some((a) => a.type === 'bike' && a.day === today);
@@ -33,15 +46,18 @@ export function CardioCard({ bike, onLog }: Props) {
             {l}
           </span>
         ))}
-        <button type="button" class="btn btn--small cardio-card__log" onClick={() => onLog('bike')}>
-          Noter une séance de vélo
-        </button>
+        <div class="cardio-card__actions">
+          <button type="button" class="btn btn--small cardio-card__log" onClick={() => onLog('bike')}>
+            Noter une séance de vélo
+          </button>
+          {switchButton}
+        </div>
       </section>
     );
   }
 
   const plan = runPlan(activities.value, kneeLogs.value, now);
-  const advice = runAdvice(plan);
+  const advice = runAdvice(plan, choice.treadmill);
   // Course déjà notée aujourd'hui : la carte montre la suivante, il faut que ça se lise.
   const label = plan.ranToday
     ? plan.next
@@ -61,16 +77,19 @@ export function CardioCard({ bike, onLog }: Props) {
           {l}
         </span>
       ))}
-      {plan.noDownhillUntil && plan.status !== 'week-done' && (
+      {plan.noDownhillUntil && plan.status !== 'week-done' && choice.treadmill !== 'only' && (
         <span class="notice-line">
           {plan.started
             ? `Pas de descente raide jusqu’au ${formatShortDate(dayToDate(plan.noDownhillUntil))}.`
             : 'Pas de descente raide pendant les 6 premières semaines.'}
         </span>
       )}
-      <button type="button" class="btn btn--small cardio-card__log" onClick={() => onLog('run')}>
-        Noter une course
-      </button>
+      <div class="cardio-card__actions">
+        <button type="button" class="btn btn--small cardio-card__log" onClick={() => onLog('run')}>
+          Noter une course
+        </button>
+        {switchButton}
+      </div>
     </section>
   );
 }

@@ -11,8 +11,13 @@
  *    Une 3e sortie, facultative, n'est proposée que si le genou est resté ≤ 2 toute la semaine.
  *  - À partir de la semaine 3 : +5 min sur UNE sortie (la « longue ») si, la semaine d'avant,
  *    la longue a été faite, le genou est resté ≤ 2, et le total prévu ne dépasse pas d'environ
- *    10 % le total réellement couru. Plafond de la longue : 60 min (sorties longues = déclencheur
- *    de la tendinite ; au-delà, à décider ensemble). Les autres sorties restent à 30 min.
+ *    10 % le total réellement couru. Les autres sorties restent à 30 min.
+ *  - Au-delà de 60 min (sorties longues = déclencheur de la tendinite), on monte deux fois moins
+ *    vite : la longue reste au moins 2 semaines à chaque durée, et ne prend +5 min que si, le
+ *    lendemain de la dernière longue, « genou ce matin » a reçu la réponse « pareil » (une
+ *    question restée sans réponse ne vaut pas « pareil »). Plafond : 90 min (décidé le 09/11).
+ *  - Sur tapis de course : même plan, plus un rappel (périostite : le tapis répète la même
+ *    foulée, sans relief ; douleur le long du tibia = on arrête).
  *  - À partir de la semaine 3 : une sortie « jeu » par semaine (accélérations libres de 20 à 60 s).
  *  - Pas de descente raide pendant les 6 premières semaines (rappel).
  *  - Genou du moment ≥ 5 : pas de course conseillée ; 3–4 : sortie courte (20 min) et facile,
@@ -40,7 +45,11 @@ export const EARLY_RUN_MAX_MINUTES = 35;
 /** Progression de la sortie longue, d'une semaine à l'autre. */
 export const RUN_STEP_MINUTES = 5;
 /** Plafond de la sortie longue. */
-export const LONG_RUN_MAX_MINUTES = 60;
+export const LONG_RUN_MAX_MINUTES = 90;
+/** Au-delà de cette durée, la longue progresse plus lentement (voir l'en-tête). */
+export const LONG_SLOW_FROM_MINUTES = 60;
+/** Au-delà de LONG_SLOW_FROM_MINUTES : semaines passées à une même durée avant le +5 suivant. */
+export const LONG_SLOW_HOLD_WEEKS = 2;
 /** Sorties prévues par semaine (une de plus, facultative, si le genou va bien). */
 export const RUNS_PER_WEEK = 2;
 /** Semaine à partir de laquelle la longue progresse et la sortie « jeu » apparaît. */
@@ -91,6 +100,12 @@ function kneeOkDuring(kneeLogs: readonly KneeLog[], monday: string): boolean {
     const d = dayKey(new Date(k.date));
     return d < monday || d > sunday || k.score <= KNEE_OK_MAX;
   });
+}
+
+/** Le lendemain de `day`, « genou ce matin » a-t-il reçu la réponse « pareil » ? */
+function morningSameAfter(kneeLogs: readonly KneeLog[], day: string): boolean {
+  const next = addDays(day, 1);
+  return kneeLogs.some((k) => k.context === 'morning' && !k.worse && dayKey(new Date(k.date)) === next);
 }
 
 /**
@@ -176,7 +191,14 @@ function longByWeek(runs: readonly PlanRun[], kneeLogs: readonly KneeLog[], star
     const total = week.reduce((n, r) => n + r.minutes, 0);
     const proposed = Math.min(prev + RUN_STEP_MINUTES, LONG_RUN_MAX_MINUTES);
     const plannedTotal = proposed + (RUNS_PER_WEEK - 1) * BASE_RUN_MINUTES;
-    const progress = longDone && kneeOkDuring(kneeLogs, monday) && plannedTotal <= total * WEEKLY_TOTAL_CAP;
+    let progress = longDone && kneeOkDuring(kneeLogs, monday) && plannedTotal <= total * WEEKLY_TOTAL_CAP;
+    if (progress && prev >= LONG_SLOW_FROM_MINUTES) {
+      // Zone lente : la durée doit avoir tenu 2 semaines, et le genou du lendemain dit « pareil ».
+      const recent = long.slice(-LONG_SLOW_HOLD_WEEKS);
+      const held = recent.length === LONG_SLOW_HOLD_WEEKS && recent.every((m) => m === prev);
+      const lastLong = week.filter((r) => r.own && r.minutes >= prev - LONG_TOLERANCE_MINUTES).at(-1);
+      progress = held && !!lastLong && morningSameAfter(kneeLogs, lastLong.day);
+    }
     long.push(progress ? proposed : prev);
   }
   return long;
@@ -241,7 +263,13 @@ export interface Advice {
   lines: string[];
 }
 
-export function runAdvice(plan: RunPlan): Advice {
+/**
+ * Tapis de course sur le lieu choisi : `only` = seule façon de courir (éloignement), `maybe` =
+ * possible, à côté du dehors. Ajoute le rappel périostite à la suggestion.
+ */
+export type Treadmill = 'only' | 'maybe';
+
+export function runAdvice(plan: RunPlan, treadmill?: Treadmill): Advice {
   const { next } = plan;
   if (plan.status === 'rest') {
     return {
@@ -265,9 +293,17 @@ export function runAdvice(plan: RunPlan): Advice {
   } else if (next.kind === 'play') {
     lines.push('En aisance, avec quelques accélérations libres de 20 à 60 s, quand tu en as envie. Pas de chrono, pas d’allure.');
   } else {
-    lines.push('Aisance respiratoire : tu peux parler en courant. Terrain plat.');
+    lines.push(treadmill === 'only' ? 'Aisance respiratoire : tu peux parler en courant.' : 'Aisance respiratoire : tu peux parler en courant. Terrain plat.');
     if (plan.week < PROGRESS_FROM_WEEK) lines.push(`Jusqu’à ${EARLY_RUN_MAX_MINUTES} min si tu te sens bien.`);
     if (next.long) lines.push('C’est la sortie longue de la semaine.');
+    if (next.long && next.minutes >= LONG_SLOW_FROM_MINUTES && next.minutes < LONG_RUN_MAX_MINUTES) {
+      lines.push('Demain matin, réponds à « genou ce matin » : au-delà d’une heure, c’est lui qui décide du +5 min.');
+    }
+  }
+  if (treadmill) {
+    lines.push(
+      `${treadmill === 'only' ? 'Sur tapis' : 'Si tu cours sur tapis'} : inclinaison à 1 %, pas plus long que prévu. Une douleur le long du tibia (périostite) : stop, et vélo à la place.`,
+    );
   }
   if (next.optional) lines.push('Facultative : ton genou est resté calme cette semaine.');
   if (plan.restart) lines.push('Reprise après une pause : on repart sur des sorties de 30 min.');

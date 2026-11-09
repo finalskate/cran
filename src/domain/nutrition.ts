@@ -222,7 +222,7 @@ export function formatAmount(n: number): string {
 // ─── Entrées du journal ───
 
 /** Comment l'entrée a été saisie (pour le journal d'usage et, plus tard, les statistiques). */
-export type EntryMethod = 'scan' | 'list' | 'hands' | 'free';
+export type EntryMethod = 'scan' | 'list' | 'hands' | 'free' | 'phrase';
 
 /**
  * Une ligne du journal alimentaire. Les valeurs sont COPIÉES au moment de la saisie : modifier

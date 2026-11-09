@@ -10,6 +10,7 @@ import { toRecord, type SessionState } from '../domain/session';
 import { loadBodyState } from './bodyState';
 import { loadFoodState } from './foodState';
 import { loadHabitsState } from './habitsState';
+import { syncPhase } from './phaseState';
 import { loadTraining } from './training';
 import type { Location, Plan } from '../domain/types';
 
@@ -77,8 +78,15 @@ export function updateSession(next: SessionState | null): void {
  */
 export async function initState(): Promise<void> {
   await Promise.allSettled([loadData(), loadFoodState(), loadBodyState(), loadHabitsState(), loadTraining(), refreshPersistence()]);
+  // Changement de phase programmé arrivé à date : appliqué avant le premier affichage.
+  await syncPhase().catch(() => undefined);
   ready.value = true;
 }
+
+// Appli laissée ouverte (ou en arrière-plan) jusqu'au jour d'un changement de phase programmé.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ready.value) void syncPhase().catch(() => undefined);
+});
 
 async function loadData(): Promise<void> {
   // Premier lancement : on note la date (utile plus tard pour l'onboarding et les statistiques).

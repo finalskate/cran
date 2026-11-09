@@ -800,6 +800,49 @@ try {
   if (!(await text()).includes('Inclure les photos')) throw new Error('option « Inclure les photos » absente de l’export');
   await shot('60-reglages-photos', true);
 
+  // ─── Phases, mode cantine, saisie en une phrase (J5b) ─── (en dernier : le lieu passe à « Éloigné »)
+  await click('Changer de phase');
+  await clickIn('Éloigné');
+  await shot('88-phase', true);
+  await clickIn('Choisir');
+  await wait(300);
+  await page.goto(BASE);
+  await wait(400);
+  const home = await page.evaluate(() => document.body.textContent);
+  for (const t of ['· Éloigné', 'mode cantine', 'vélo']) if (!home.includes(t)) throw new Error(`accueil en éloignement : « ${t} » absent`);
+  if (home.includes('Noter une course')) throw new Error('accueil en éloignement : course proposée sans tapis de course');
+  await shot('89-accueil-eloigne', true);
+  await page.goto(`${BASE}#/assiette`);
+  await wait(400);
+  if (!(await page.evaluate(() => document.body.textContent.includes('Mode cantine')))) throw new Error('assiette : mode cantine absent');
+  await shot('90-assiette-cantine', true);
+  await click('Ajouter');
+  await wait(200);
+  await fill('#food-search', 'wrap poulet + petite frite + coca zéro');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Noter en une fois'), { timeout: 5000 });
+  await shot('91-phrase-recherche');
+  await clickIn('Noter en une fois');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.innerText.includes('Petite frite (80 g)'), { timeout: 5000 });
+  await shot('92-phrase', true);
+  await page.evaluate(() => document.querySelectorAll('dialog[open] .phrase-line .food-row')[1].click());
+  await wait(200);
+  await shot('92b-phrase-ligne', true);
+  await clickIn('Ajouter les 3');
+  await wait(400);
+  if (!(await page.evaluate(() => document.body.textContent.includes('Cola, sans sucres ajoutés')))) throw new Error('phrase : entrées non notées');
+  await shot('93-assiette-apres-phrase', true);
+  // Changement programmé : Vacances demain (la date proposée par défaut).
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  await click('Changer de phase');
+  await clickIn('Vacances');
+  await clickIn('Plus tard');
+  await shot('94a-phase-programmer', true);
+  await clickIn('Programmer');
+  await wait(300);
+  if (!(await page.evaluate(() => document.body.textContent.includes('Puis Vacances le')))) throw new Error('réglages : changement programmé absent');
+  await shot('94-reglages-phase', true);
+
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } catch (e) {
   // Échec : les erreurs JavaScript vues jusque-là aident souvent à comprendre pourquoi.

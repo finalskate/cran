@@ -141,6 +141,14 @@ describe('calendrier des ajustements', () => {
     });
   });
 
+  it('au retour d’éloignement : 14 jours de vraies notes avant le prochain point', () => {
+    const back = addDays(FROM, 40);
+    expect(adjustmentWindow(FROM, addDays(back, 10), addDays(FROM, 14), back)).toBeNull();
+    expect(adjustmentWindow(FROM, addDays(back, 14), addDays(FROM, 14), back)).toEqual({ from: back, to: addDays(back, 13) });
+    // Un retour plus ancien que la dernière décision ne change rien.
+    expect(adjustmentWindow(FROM, addDays(FROM, 28), addDays(FROM, 14), FROM)).toEqual({ from: addDays(FROM, 14), to: addDays(FROM, 27) });
+  });
+
   it('retient la dépense du dernier ajustement accepté', () => {
     const rec = (decision: 'accepted' | 'declined', expenditure: number) => ({
       day: FROM,

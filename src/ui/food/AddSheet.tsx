@@ -6,10 +6,15 @@
  *  3. Open Food Facts en ligne, seulement sur appui (produits de marque, chaînes) ;
  * et, si rien ne convient, « Créer un aliment » (valeurs recopiées d'une étiquette ou du site
  * d'une enseigne). Plus les deux autres façons de noter : estimer à la main, ou saisir des kcal.
+ *
+ * J5b : plusieurs aliments d'un coup (« wrap poulet + petite frite ») : la recherche le repère
+ * et propose « Noter en une fois », qui ouvre la saisie en une phrase (PhraseSheet).
  */
 import { useEffect, useState } from 'preact/hooks';
 import { portionNutrients, searchFoods, type Food } from '../../domain/nutrition';
 import { ciqualFoodId, ciqualToFood, loadCiqual, searchCiqual, type CiqualIndex } from '../../data/ciqual';
+import { looksLikePhrase, splitPhrase } from '../../domain/phrase';
+import { PHRASE_VOCABULARY } from '../../data/phraseWords';
 import { listFoods } from '../../data/foodRepo';
 import { searchOffByName, type NameSearchResult } from '../../data/openFoodFacts';
 import { track } from '../../data/usage';
@@ -25,6 +30,8 @@ interface Props {
   onFree: () => void;
   /** Créer un aliment, nom pré-rempli avec la recherche. */
   onCreate: (name: string) => void;
+  /** Plusieurs aliments tapés d'un coup : saisie en une phrase. */
+  onPhrase: (text: string) => void;
 }
 
 /** Au-delà, la liste devient un mur : la recherche prend le relais. */
@@ -52,7 +59,7 @@ function FoodRow({ food, onClick, meta }: { food: Food; onClick: () => void; met
   );
 }
 
-export function AddSheet({ onClose, onPick, onHands, onFree, onCreate }: Props) {
+export function AddSheet({ onClose, onPick, onHands, onFree, onCreate, onPhrase }: Props) {
   const [foods, setFoods] = useState<Food[] | null>(null);
   const [query, setQuery] = useState('');
   const [ciqual, setCiqual] = useState<CiqualIndex | null>(null);
@@ -63,7 +70,8 @@ export function AddSheet({ onClose, onPick, onHands, onFree, onCreate }: Props) 
   }, []);
 
   const q = query.trim();
-  const searching = q.length >= 2;
+  const phrase = looksLikePhrase(q, PHRASE_VOCABULARY);
+  const searching = q.length >= 2 && !phrase;
 
   // La table Ciqual n'est chargée qu'à la première recherche.
   useEffect(() => {
@@ -102,14 +110,22 @@ export function AddSheet({ onClose, onPick, onHands, onFree, onCreate }: Props) 
         <input
           id="food-search"
           type="search"
-          placeholder="Chercher un aliment (ex. wrap poulet)"
+          placeholder="Chercher (ou : wrap poulet + petite frite)"
           autoComplete="off"
           value={query}
           onInput={(e) => setQuery(e.currentTarget.value)}
         />
       </div>
 
-      {!searching && (
+      {phrase && (
+        <button type="button" class="card card--link card--button phrase-cta" onClick={() => onPhrase(q)}>
+          <span class="card__label">Plusieurs aliments</span>
+          <span class="card__title">Noter en une fois</span>
+          <span class="muted">{splitPhrase(q, PHRASE_VOCABULARY).join(' · ')}</span>
+        </button>
+      )}
+
+      {!searching && !phrase && (
         <div class="food-list">
           {mine.map((f) => (
             <FoodRow key={f.id} food={f} onClick={() => onPick(f, 'mine')} />

@@ -14,6 +14,10 @@
  *
  * J4B : bilan du jour (fait ou à faire) sous les jauges, accessible à tout moment, même pendant
  * la calibration ; résumé de la semaine (déclencheurs les plus fréquents) et « Mes plans ».
+ *
+ * J5b : en phase « cantine » (éloignement), l'assiette type et ses repères, sans rappel de
+ * protéines ni ajustement de la cible ; « Ajouter » accepte une phrase (« wrap poulet + petite
+ * frite ») qui devient plusieurs entrées.
  */
 import { useState } from 'preact/hooks';
 import {
@@ -50,6 +54,7 @@ import { EntrySheet } from '../food/EntrySheet';
 import { FreeSheet } from '../food/FreeSheet';
 import { HandsSheet } from '../food/HandsSheet';
 import { PortionSheet } from '../food/PortionSheet';
+import { PhraseSheet } from '../food/PhraseSheet';
 import { ProductForm } from '../food/ProductForm';
 import { PlansSheet } from '../food/PlansSheet';
 import { ProteinIdeasSheet } from '../food/ProteinIdeasSheet';
@@ -68,6 +73,10 @@ import {
   usePendingAdjustment,
 } from '../foodState';
 import { formatInt, MEAL_LABEL, relativeDayLabel } from '../format';
+import { CantinePlate } from '../food/CantinePlate';
+import { PHASES } from '../../data/phases';
+import { cantineOn } from '../../domain/phase';
+import { prefs } from '../state';
 
 /** Panneau ouvert (un seul à la fois). */
 type Panel =
@@ -76,6 +85,7 @@ type Panel =
   | { kind: 'hands' }
   | { kind: 'free' }
   | { kind: 'portion'; food: FoodItem; method: 'scan' | 'list'; unsaved?: boolean }
+  | { kind: 'phrase'; text: string }
   | {
       kind: 'product';
       barcode?: string;
@@ -107,8 +117,11 @@ export function Food() {
   const totals = sumEntries(entries ?? []);
   const calib = calibrationStart.value ? calibrationDay(calibrationStart.value, today) : null;
   const pending = usePendingAdjustment();
+  // Mode cantine (J5b) : le jour affiché tombe dans une phase « cantine » (éloignement).
+  const cantine = cantineOn(prefs.value.phases, day, PHASES);
   const proteinLeft = targets.value ? Math.max(0, Math.round(targets.value.protein - totals.protein)) : null;
   const proteinNudge =
+    !cantine &&
     day === today && proteinLeft !== null && proteinLeft >= PROTEIN_NUDGE_G && new Date().getHours() >= PROTEIN_NUDGE_HOUR;
 
   /** Après la lecture d'un code : base locale d'abord (hors ligne), puis Open Food Facts. */
@@ -186,6 +199,19 @@ export function Food() {
           <span class="card__title">Calcule ta cible du jour</span>
           <span class="muted">Taille, poids, activité : une minute. Tu peux déjà noter sans. →</span>
         </a>
+      )}
+
+      {cantine && (
+        <section class="card" aria-labelledby="cantine-title">
+          <span id="cantine-title" class="card__label">
+            Mode cantine · l’assiette type
+          </span>
+          <CantinePlate tips />
+          <span class="muted">
+            Pas besoin de tout noter : le bilan du soir suffit. L’ajustement de ta cible attend ton retour, puis 14 jours de
+            notes.
+          </span>
+        </section>
       )}
 
       <section class="card" aria-label="Total du jour">
@@ -285,8 +311,10 @@ export function Food() {
           onHands={() => setPanel({ kind: 'hands' })}
           onFree={() => setPanel({ kind: 'free' })}
           onCreate={(name) => setPanel({ kind: 'product', reason: 'create', initialName: name })}
+          onPhrase={(text) => setPanel({ kind: 'phrase', text })}
         />
       )}
+      {panel?.kind === 'phrase' && <PhraseSheet text={panel.text} day={day} onClose={close} />}
       {panel?.kind === 'scan' && <ScanSheet onClose={close} resolve={resolveBarcode} />}
       {panel?.kind === 'hands' && <HandsSheet day={day} onClose={close} />}
       {panel?.kind === 'free' && <FreeSheet day={day} onClose={close} />}

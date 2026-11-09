@@ -32,7 +32,8 @@
  *   update         mise à jour de l'appli acceptée ou reportée
  *   export         export des données
  *   profile        profil enregistré : cible calculée, plancher appliqué ou non (pas les mensurations)
- *   food-add       aliment noté : méthode (scan, liste, main, libre), repas, jour passé ou non, provenance
+ *   food-add       aliment noté : méthode (scan, liste, main, libre, phrase), repas, jour passé ou non, provenance
+ *   food-phrase    saisie en une phrase notée : morceaux, notés, corrigés à la main, trouvés en élargissant (pas le texte)
  *   food-search    recherche en ligne par nom : résultat (trouvé, hors ligne, saturé), nombre (pas les mots)
  *   food-create    aliment créé sans code-barres : valeurs pour 100 g ou par pièce
  *   food-edit      entrée modifiée ou supprimée
@@ -63,7 +64,8 @@
  *   bike           séance de vélo notée : durée, type (aisance, fractionné), ressenti, jour
  *   commute        vélotaf noté : nombre de trajets, jour
  *   cardio-sheet   feuille « course · vélo » ouverte : d'où (accueil, carte, calendrier), suggestion affichée
- *   week-goal      objectif de la semaine changé : renfos, cardio
+ *   week-goal      objectif de la semaine changé : renfos, cardio, phase en cours
+ *   phase          phase choisie (dès aujourd'hui, programmée), changement annulé, ou appliquée à date : phase
  *   knee-morning   genou du lendemain : plus mal ou non
  *   workout-delete séance supprimée du carnet
  *   activity-delete activité supprimée (séance imposée, course, vélo, vélotaf) : type

@@ -23,7 +23,8 @@ export type EquipmentTag =
   | 'step' // marche, escalier
   | 'wall' // mur dégagé
   | 'backpack' // sac à dos lestable
-  | 'bike'; // vélo (cardio, jalon J5)
+  | 'bike' // vélo (cardio, jalon J5)
+  | 'treadmill'; // tapis de course (J5b : la course en intérieur)
 
 /**
  * Espace disponible, du plus petit au plus grand :

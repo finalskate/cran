@@ -4,6 +4,7 @@
  */
 import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { IfThenPlan } from '../domain/habits';
+import type { PhaseEntry, PhaseId } from '../domain/phase';
 import type { Profile } from '../domain/nutrition';
 import type { Duration, TrainingFocus } from '../domain/types';
 import { DEFAULT_WEEK_GOAL, type WeekGoal } from '../domain/week';
@@ -58,6 +59,14 @@ export interface SettingsMap {
   weekGoal: WeekGoal;
   /** Dernier cardio noté (la feuille « course · vélo » s'ouvre dessus). */
   lastCardio: 'run' | 'bike';
+  /** Phases choisies (J5b), triées par premier jour ; une entrée future = changement programmé. */
+  phases: PhaseEntry[];
+  /** Clé (phaseKey) de la phase dont les choix par défaut ont été appliqués (lieu, objectif). */
+  phaseApplied: string;
+  /** Clé de la phase dont l'annonce a été vue sur l'accueil. */
+  phaseSeen: string;
+  /** Objectif de la semaine modifié dans une phase : il revient avec elle. */
+  phaseGoals: Partial<Record<PhaseId, WeekGoal>>;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -79,6 +88,10 @@ export const SETTING_DEFAULTS = {
   bands: [],
   weekGoal: DEFAULT_WEEK_GOAL,
   lastCardio: 'run',
+  phases: [],
+  phaseApplied: '',
+  phaseSeen: '',
+  phaseGoals: {},
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

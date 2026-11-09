@@ -11,6 +11,7 @@ import {
   bikePlan,
   currentKnee,
   LONG_RUN_MAX_MINUTES,
+  LONG_SLOW_FROM_MINUTES,
   runAdvice,
   runPlan,
   runSlotLabel,
@@ -138,12 +139,48 @@ describe('suggestion de course : 3 semaines simulées', () => {
     expect(runPlan(acts, [], at(addDays(MONDAY, 14), 17)).next).toMatchObject({ minutes: 30 });
   });
 
-  it('la sortie longue plafonne à 60 min', () => {
+  it('sans réponse « genou ce matin », la sortie longue s’arrête à 60 min', () => {
     const days = Array.from({ length: 12 }, (_, n) => week(n)).flat();
     const seen = simulate(days);
     const longs = seen.filter((s) => s.plan.next?.long).map((s) => s.plan.next!.minutes);
-    expect(Math.max(...longs)).toBe(LONG_RUN_MAX_MINUTES);
+    expect(Math.max(...longs)).toBe(LONG_SLOW_FROM_MINUTES);
     expect(longs.slice(0, 6)).toEqual([35, 40, 45, 50, 55, 60]);
+  });
+
+  it('au-delà de 60 min : +5 toutes les 2 semaines si le genou du lendemain dit « pareil », plafond 90', () => {
+    // Chaque lendemain de course, réponse « pareil » à 8 h.
+    const pareil = (day: string): KneeLog => ({ date: at(addDays(day, 1), 8).toISOString(), score: 0, context: 'morning', worse: false });
+    const days = Array.from({ length: 22 }, (_, n) => week(n)).flat();
+    const seen = simulate(days, () => 0, [], days.map(pareil));
+    const longs = seen.filter((s) => s.plan.next?.long).map((s) => s.plan.next!.minutes);
+    expect(longs).toEqual([35, 40, 45, 50, 55, 60, 60, 65, 65, 70, 70, 75, 75, 80, 80, 85, 85, 90, 90, 90]);
+    expect(Math.max(...longs)).toBe(LONG_RUN_MAX_MINUTES);
+  });
+
+  it('au-delà de 60 min : « plus mal » le lendemain de la longue bloque le +5', () => {
+    const days = Array.from({ length: 10 }, (_, n) => week(n)).flat();
+    const logs = days.map((day): KneeLog => {
+      // Le lendemain de la longue de la semaine 9 (2e semaine à 60), « plus mal ».
+      const worse = day === week(8)[0];
+      return { date: at(addDays(day, 1), 8).toISOString(), score: worse ? 3 : 0, context: 'morning', worse };
+    });
+    const longs = simulate(days, () => 0, [], logs).filter((s) => s.plan.next?.long).map((s) => s.plan.next!.minutes);
+    // Semaines 8 et 9 à 60 : sans le « plus mal », la semaine 10 passerait à 65.
+    expect(longs.slice(5)).toEqual([60, 60, 60]);
+  });
+
+  it('suggestion au-delà de 60 min : rappel du genou du lendemain ; tapis : rappel périostite', () => {
+    const plan: RunPlan = {
+      week: 9, restart: false, started: true, status: 'go', done: 0, target: 2, longMinutes: 65,
+      kneeOkThisWeek: true, knee: 0, ranToday: false, noDownhillUntil: null,
+      next: { minutes: 65, kind: 'easy', long: true, optional: false },
+    };
+    expect(runAdvice(plan).lines.join(' ')).toContain('genou ce matin');
+    expect(runAdvice(plan).lines.join(' ')).not.toContain('périostite');
+    const onTreadmill = runAdvice(plan, 'only').lines.join(' ');
+    expect(onTreadmill).toContain('Sur tapis');
+    expect(onTreadmill).not.toContain('Terrain plat');
+    expect(runAdvice(plan, 'maybe').lines.join(' ')).toContain('Si tu cours sur tapis');
   });
 
   it('une course imposée compte dans la semaine mais ne démarre pas le plan', () => {

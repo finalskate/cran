@@ -19,6 +19,7 @@ export const EQUIPMENT: { tag: EquipmentTag; label: string; hint?: string }[] = 
   { tag: 'wall', label: 'Mur dégagé' },
   { tag: 'backpack', label: 'Sac à dos lestable' },
   { tag: 'bike', label: 'Vélo' },
+  { tag: 'treadmill', label: 'Tapis de course' },
 ];
 
 /**
@@ -76,7 +77,7 @@ export const DEFAULT_LOCATIONS: Location[] = [
   {
     id: 'equipped',
     name: 'Base équipée',
-    equipment: ['pullup-bar', 'dip-bars', 'straps', 'bands', 'mini-bands', 'bench', 'step', 'wall', 'backpack', 'bike'],
+    equipment: ['pullup-bar', 'dip-bars', 'straps', 'bands', 'mini-bands', 'bench', 'step', 'wall', 'backpack', 'bike', 'treadmill'],
     space: 'large',
     order: 5,
   },

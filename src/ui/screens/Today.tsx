@@ -13,6 +13,8 @@
  * J5a : la semaine (7 pastilles + objectif renfo / cardio, vers le Carnet), la carte « Prochaine
  * sortie » (suggestion de course, ou de vélo sur un lieu équipé d'un vélo), raccourcis
  * « Course · vélo » et « Vélotaf ». Le raccourci « Lieux » est passé dans Réglages.
+ * J5b : la phase en cours dans l'en-tête, l'annonce d'une phase qui commence (changement
+ * programmé), le cardio proposé selon la phase et le lieu, et en mode cantine l'assiette type.
  */
 import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
@@ -27,12 +29,16 @@ import { photoDue } from '../../domain/body';
 import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
 import { progress } from '../../domain/session';
 import { Sparkline } from '../components/SmallCharts';
-import { DayMeters } from '../food/common';
+import { DayMeters, NutrientsLine } from '../food/common';
 import { WeighSheet } from '../food/WeighSheet';
 import { ImposedSheet } from '../journal/ImposedSheet';
 import { CardioSheet } from '../journal/CardioSheet';
 import { CommuteSheet } from '../journal/CommuteSheet';
 import { CardioCard } from '../components/CardioCard';
+import { CantinePlate } from '../food/CantinePlate';
+import { PHASES } from '../../data/phases';
+import { cardioChoice } from '../../domain/phase';
+import { currentPhaseInfo, dismissPhaseNotice, phaseChanges, phaseNotice } from '../phaseState';
 import { GoalLine, WeekStrip } from '../components/WeekStrip';
 import { weekOf } from '../../domain/week';
 import { track } from '../../data/usage';
@@ -64,7 +70,9 @@ export function Today() {
   const [cardio, setCardio] = useState<{ type?: 'run' | 'bike' } | null>(null);
   const [commuting, setCommuting] = useState(false);
   const location = locations.value.find((l) => l.id === p.lastLocationId);
-  const hasBike = location?.equipment.includes('bike') ?? false;
+  const phase = currentPhaseInfo(now);
+  const notice = ready.value ? phaseNotice(now) : null;
+  const cardioFor = cardioChoice(phase, location?.equipment ?? []);
   const week = weekOf(dayKey(now), renfoDays.value, activities.value);
 
   function openCardio(type: 'run' | 'bike' | undefined, from: 'shortcut' | 'card') {
@@ -89,7 +97,10 @@ export function Today() {
   return (
     <main class="screen screen--calm">
       <header class="screen-header">
-        <span class="screen-header__kicker">{formatLongDate(new Date())}</span>
+        <span class="screen-header__kicker">
+          {formatLongDate(now)}
+          {phase && ` · ${phase.label}`}
+        </span>
         <h1 class="screen-header__title">Aujourd'hui</h1>
       </header>
 
@@ -107,6 +118,24 @@ export function Today() {
               Reprendre
             </button>
           </div>
+        </section>
+      )}
+
+      {notice && (
+        <section class="card" aria-labelledby="phase-notice">
+          <span class="card__label">Nouvelle phase</span>
+          <span id="phase-notice" class="card__title">
+            {PHASES[notice.id].label} · c’est parti
+          </span>
+          <ul class="phase-changes">
+            {phaseChanges(notice.id).map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          <span class="muted">Tout reste modifiable : lieu et durée en bas, objectif et phase dans Réglages.</span>
+          <button type="button" class="btn btn--small" onClick={() => void dismissPhaseNotice(notice)}>
+            Compris
+          </button>
         </section>
       )}
 
@@ -175,15 +204,27 @@ export function Today() {
         </button>
       )}
 
-      {ready.value && <CardioCard bike={hasBike} onLog={(type) => openCardio(type, 'card')} />}
+      {ready.value && <CardioCard choice={cardioFor} onLog={(type) => openCardio(type, 'card')} />}
 
-      <a class="card card--link card--quiet" href="#/assiette">
-        <div class="row" style={{ minHeight: 0 }}>
-          <span class="card__label">Alimentation</span>
-          <span class="muted">{profile.value ? 'Noter →' : 'Calculer ma cible →'}</span>
-        </div>
-        <DayMeters totals={sumEntries(entries ?? [])} targets={targets.value} />
-      </a>
+      {phase?.cantine ? (
+        // Mode cantine : on ne compte plus ; l'assiette type, et un simple total si on a noté (pas de cible).
+        <a class="card card--link card--quiet" href="#/assiette">
+          <div class="row" style={{ minHeight: 0 }}>
+            <span class="card__label">Assiette · mode cantine</span>
+            <span class="muted">Ouvrir →</span>
+          </div>
+          <CantinePlate />
+          {entries && entries.length > 0 && <NutrientsLine value={sumEntries(entries)} />}
+        </a>
+      ) : (
+        <a class="card card--link card--quiet" href="#/assiette">
+          <div class="row" style={{ minHeight: 0 }}>
+            <span class="card__label">Alimentation</span>
+            <span class="muted">{profile.value ? 'Noter →' : 'Calculer ma cible →'}</span>
+          </div>
+          <DayMeters totals={sumEntries(entries ?? [])} targets={targets.value} />
+        </a>
+      )}
 
       {last && <BodyCard />}
 

@@ -102,13 +102,13 @@ export function PlanList({ plan, goal, cardio }: { plan: WeekPlan; goal: { stren
     <div class="plan-list" aria-label="Planning des jours qui restent">
       <span class="card__label">Planning</span>
       {upcoming.map((d) => (
-        <button key={d.day} type="button" class={`plan-row plan-row--${d.kind}`} onClick={() => setOpen(d)}>
-          <span class="plan-row__day">{formatShortDate(dayToDate(d.day))}</span>
-          <span class="plan-row__what">
+        <button key={d.day} type="button" class={`planday-row planday-row--${d.kind}`} onClick={() => setOpen(d)}>
+          <span class="planday-row__day">{formatShortDate(dayToDate(d.day))}</span>
+          <span class="planday-row__what">
             {planDayLabel(d, plan)}
-            {d.chosen && <span class="plan-row__chosen"> · réglé</span>}
+            {d.chosen && <span class="planday-row__chosen"> · réglé</span>}
           </span>
-          <span class="plan-row__go" aria-hidden="true">
+          <span class="planday-row__go" aria-hidden="true">
             ›
           </span>
         </button>

@@ -906,14 +906,14 @@ try {
   if (!(await page.evaluate(() => /Aujourd’hui :|Demain :/.test(document.body.textContent)))) throw new Error('accueil : ligne du planning absente');
   await shot('95-accueil-planning', true);
   await page.evaluate(() => document.querySelector('.week-card')?.click());
-  await page.waitForFunction(() => document.querySelector('.plan-row'), { timeout: 5000 });
-  const rows = await page.$$('.plan-row');
+  await page.waitForFunction(() => document.querySelector('.planday-row'), { timeout: 5000 });
+  const rows = await page.$$('.planday-row');
   if (rows.length > 0) {
-    await page.evaluate(() => document.querySelector('.plan-row').click());
+    await page.evaluate(() => document.querySelector('.planday-row').click());
     await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Pas dispo'));
     await shot('96-planning-jour');
     await page.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((b) => b.textContent === 'Pas dispo').click());
-    await page.waitForFunction(() => document.querySelector('.plan-row')?.textContent.includes('Pas dispo'), { timeout: 5000 });
+    await page.waitForFunction(() => document.querySelector('.planday-row')?.textContent.includes('Pas dispo'), { timeout: 5000 });
     await shot('97-planning-reglé', true);
   }
 

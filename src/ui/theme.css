@@ -349,7 +349,9 @@ h3 {
   left: calc(-1 * var(--gutter));
   right: calc(-1 * var(--gutter));
   top: -24px;
-  bottom: -14px;
+  /* Jusqu'au bas de l'écran (retour du 09/11 : une fine bande transparente restait tout en bas) :
+     exactement la marge basse de l'écran (20 px + zone système), sans rallonger la page. */
+  bottom: calc(-20px - env(safe-area-inset-bottom));
   z-index: -1;
   background: linear-gradient(to bottom, rgba(18, 11, 18, 0), var(--zone-bg, var(--bg)) 22px);
   pointer-events: none;
@@ -2987,7 +2989,7 @@ button.week-strip__day {
   margin-top: 4px;
 }
 
-.plan-row {
+.planday-row {
   display: grid;
   grid-template-columns: 92px 1fr auto;
   align-items: center;
@@ -3003,30 +3005,30 @@ button.week-strip__day {
   cursor: pointer;
 }
 
-.plan-row__day {
+.planday-row__day {
   color: var(--text-muted);
   font-size: 14px;
 }
 
-.plan-row--strength .plan-row__what {
+.planday-row--strength .planday-row__what {
   color: var(--accent-soft);
 }
 
-.plan-row--cardio .plan-row__what {
+.planday-row--cardio .planday-row__what {
   color: var(--accent-2);
 }
 
-.plan-row--off .plan-row__what,
-.plan-row--rest .plan-row__what {
+.planday-row--off .planday-row__what,
+.planday-row--rest .planday-row__what {
   color: var(--text-muted);
 }
 
-.plan-row__chosen {
+.planday-row__chosen {
   font-size: 13px;
   color: var(--text-muted);
 }
 
-.plan-row__go {
+.planday-row__go {
   color: var(--text-muted);
   font-size: 18px;
 }

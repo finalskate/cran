@@ -54,7 +54,7 @@ export default defineConfig({
 
       workbox: {
         // « Précache tout » : après la première visite, l'appli fonctionne entièrement hors ligne.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2,webmanifest}'],
+        globPatterns: ['**/*.{js,css,html,svg,png,jpg,ico,woff2,webmanifest}'],
         // Routage par hash : toutes les navigations retombent sur index.html.
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,

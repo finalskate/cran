@@ -6,6 +6,7 @@
 import { CATALOG } from '../../data/catalog';
 import { dayKey } from '../../domain/days';
 import { longestRun, PUSHUP_MAX_SET, variantRecords, type VariantRecord } from '../../domain/records';
+import { bestTest } from '../../domain/pushupTest';
 import { formatTinyDate } from '../format';
 import { movementById } from '../planner';
 import { activities, workouts } from '../training';
@@ -32,7 +33,8 @@ export function RecordsCard() {
   const pushups = records.find((r) => r.variantId === PUSHUP_MAX_SET && !r.band);
   const run = longestRun(activities.value);
   const regular = weekRegularity().summary;
-  if (records.length === 0 && !run && regular.total === 0) return null;
+  const tests = [bestTest(activities.value, 'home'), bestTest(activities.value, 'pro')].filter((t) => t !== null);
+  if (records.length === 0 && !run && regular.total === 0 && tests.length === 0) return null;
 
   // Par mouvement, dans l'ordre du catalogue ; dans un mouvement, la variante la plus récente d'abord.
   const byMovement = CATALOG.map((m) => ({
@@ -54,6 +56,14 @@ export function RecordsCard() {
           </span>
         </div>
       )}
+      {tests.map((t) => (
+        <div key={t.format} class="row records__row">
+          <span>Test pompes · {t.format === 'pro' ? 'pro' : 'maison'}</span>
+          <span>
+            <span class="num records__value">{t.reps}</span> <span class="muted">· {formatTinyDate(t.day)}</span>
+          </span>
+        </div>
+      ))}
       {pushups && (
         <div class="row records__row">
           <span>Série de pompes</span>

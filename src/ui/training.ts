@@ -25,6 +25,7 @@ import {
   type CommuteActivity,
   type ImposedActivity,
   type KneeLog,
+  type PushupTestActivity,
   type RunActivity,
 } from '../domain/recovery';
 import { chooseLevel, levels, levelSince } from './state';
@@ -78,6 +79,13 @@ export async function logRun(run: RunActivity): Promise<void> {
 export async function logBike(bike: BikeActivity): Promise<void> {
   await addActivity(bike);
   track('bike', { minutes: bike.minutes, kind: bike.kind, feel: bike.feel, day: bike.day });
+  await loadTraining();
+}
+
+/** Note un test pompes (J6b). */
+export async function logPushupTest(test: PushupTestActivity): Promise<void> {
+  await addActivity(test);
+  track('pushup-test', { format: test.format, reps: test.reps });
   await loadTraining();
 }
 

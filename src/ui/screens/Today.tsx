@@ -18,6 +18,7 @@
  * J6a : dans la carte de la semaine, le planning (points creux, « Aujourd'hui : … » ou le soir
  * « Demain : … ») et les semaines réussies ; en pause, une carte « En pause » et l'objectif
  * suspendu (pas de suggestion de cardio) ; un rappel de sauvegarde discret après 7 jours sans export.
+ * J6b : le bilan du dimanche (dès 17 h, rattrapable lundi midi) et le test pompes du mois.
  */
 import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
@@ -47,6 +48,8 @@ import { weekOf } from '../../domain/week';
 import { track } from '../../data/usage';
 import { openCalendar } from './Journal';
 import { PlanLine, RegularityLine } from '../components/WeekPlanView';
+import { lastTestText, PushupTestSheet } from '../components/PushupTestSheet';
+import { pushupTestNow, snoozePushupTest, weekReviewNow } from '../prideState';
 import { currentPause, currentWeekPlan, exportDue, nextWeekPlan, resume, runExport, snoozeExport, weekRegularity } from '../weekState';
 import { ReviewSheet } from '../food/ReviewSheet';
 import { calibrationStart, profile, targets, useDayEntries, weights } from '../foodState';
@@ -84,6 +87,9 @@ export function Today() {
   const plan = ready.value && !pause ? currentWeekPlan(now) : null;
   const regular = weekRegularity(now).summary;
   const backup = ready.value ? exportDue(now) : null;
+  const reviewWeek = ready.value ? weekReviewNow(now) : null;
+  const pushupTest = ready.value && !pause ? pushupTestNow(now) : null;
+  const [testing, setTesting] = useState(false);
 
   function openCardio(type: 'run' | 'bike' | undefined, from: 'shortcut' | 'card') {
     track('cardio-sheet', { from, type });
@@ -160,6 +166,14 @@ export function Today() {
             Compris
           </button>
         </section>
+      )}
+
+      {reviewWeek && (
+        <a class="card card--link review-card" href="#/bilan-semaine">
+          <span class="card__label">Bilan de la semaine · 1 min</span>
+          <span class="card__title">Ta semaine en un coup d’œil</span>
+          <span class="muted">Ce que tu as fait, ce dont être fier, et l’objectif de la semaine prochaine. →</span>
+        </a>
       )}
 
       {ready.value && !levelsChosen && (
@@ -255,6 +269,24 @@ export function Today() {
 
       {last && <BodyCard />}
 
+      {pushupTest && !active && (
+        <section class="card test-card" aria-labelledby="test-title">
+          <span class="card__label">Test pompes du mois</span>
+          <span id="test-title" class="card__title">
+            Un essai, le plus possible
+          </span>
+          <span class="muted">{lastTestText(pushupTest.last)}</span>
+          <div class="segmented">
+            <button type="button" class="btn btn--quiet" onClick={() => void snoozePushupTest()}>
+              Plus tard
+            </button>
+            <button type="button" class="btn btn--accent" onClick={() => setTesting(true)}>
+              Faire le test
+            </button>
+          </div>
+        </section>
+      )}
+
       {backup && <BackupCard since={backup.since} />}
 
       <section class="card" aria-label="Raccourcis">
@@ -318,6 +350,7 @@ export function Today() {
       {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
       {cardio && <CardioSheet {...(cardio.type ? { type: cardio.type } : {})} onClose={() => setCardio(null)} />}
       {commuting && <CommuteSheet onClose={() => setCommuting(false)} />}
+      {testing && <PushupTestSheet onClose={() => setTesting(false)} />}
       {reviewing && <ReviewSheet day={reviewing.day} via={reviewing.via} onClose={() => setReviewing(null)} />}
     </main>
   );

@@ -2,7 +2,7 @@
  * Historique des séances : format d'enregistrement et lectures utiles au moteur.
  * Fonctions pures (l'historique est passé en paramètre, lu depuis la base par l'appelant).
  */
-import type { BandChoice } from './types';
+import type { BandChoice, Category, Movement } from './types';
 
 /** Ressenti d'une série (SPEC §4.4). */
 export type Feel = 'easy' | 'ok' | 'hard';
@@ -93,6 +93,34 @@ export function lastSetsByVariant(workouts: readonly WorkoutRecord[]): Record<st
     }
   }
   return Object.fromEntries(Object.entries(latest).map(([id, { sets }]) => [id, sets]));
+}
+
+/** Familles comptées dans « séries de la semaine » (la prévention genou et l'échauffement à part). */
+export const SET_FAMILIES: readonly Category[] = ['push', 'pull', 'legs', 'arms', 'core'];
+
+/**
+ * Séries faites par famille de mouvement sur la semaine du lundi `monday` (J6b). Repère : 10 à
+ * 20 séries par muscle et par semaine, proches de l'échec, font grossir un muscle ; c'est ce que
+ * vise la double progression. La série longue de pompes compte pour « pousser ».
+ */
+export function setsByFamily(
+  workouts: readonly WorkoutRecord[],
+  catalog: readonly Movement[],
+  monday: string,
+  sunday: string,
+  dayOf: (iso: string) => string,
+): Partial<Record<Category, number>> {
+  const out: Partial<Record<Category, number>> = {};
+  for (const w of workouts) {
+    const day = dayOf(w.endedAt);
+    if (day < monday || day > sunday) continue;
+    for (const e of w.entries) {
+      const category = catalog.find((m) => m.id === e.movementId)?.category;
+      const family = category === 'volume' ? 'push' : category;
+      if (family && SET_FAMILIES.includes(family)) out[family] = (out[family] ?? 0) + e.sets.length;
+    }
+  }
+  return out;
 }
 
 /** Ressenti global de la séance la plus récente, si elle en a un (sinon rien : pas de rappel). */

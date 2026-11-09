@@ -85,6 +85,13 @@ function withBand(item: PlanItem): PlanItem {
   return { ...item, band, ...(reset ? { prefill: variant.target.min } : {}), ...(last?.band ? { lastBand: last.band.label } : {}) };
 }
 
+/** Le test pompes du mois vaut la série longue de la semaine (J6b) : le moteur ne la repropose pas. */
+function withPushupTest(lastDone: Record<string, string>): Record<string, string> {
+  const test = activities.value.filter((a) => a.type === 'pushup-test').at(-1);
+  const prev = lastDone['pushup-volume'];
+  return test && (!prev || test.at > prev) ? { ...lastDone, 'pushup-volume': test.at } : lastDone;
+}
+
 export async function makePlan(location: Location, duration: Duration, kneeScore: number): Promise<Plan> {
   await loadTraining();
   const workouts = allWorkouts.value;
@@ -101,7 +108,7 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
     ctx: contextFor(location, knee),
     duration,
     levels: levels.value,
-    lastDone: lastDoneByMovement(workouts),
+    lastDone: withPushupTest(lastDoneByMovement(workouts)),
     lastSession: lastSessions,
     now,
     // 2e séance du jour : les mouvements des 48 dernières heures sont écartés.

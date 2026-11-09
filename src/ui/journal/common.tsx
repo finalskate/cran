@@ -96,5 +96,7 @@ function describeActivity(a: Activity): [string, string, string] {
       return ['Vélo', `${a.minutes} min`, `${BIKE_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()}`];
     case 'commute':
       return ['Vélotaf', COMMUTE_LABEL[a.trips], ''];
+    case 'pushup-test':
+      return ['Test pompes', `${a.reps} pompes`, a.format === 'pro' ? 'format pro · cale' : 'maison · poitrine au sol'];
   }
 }

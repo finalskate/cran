@@ -9,9 +9,10 @@
  * renfo et « cardio et imposées » (le vélotaf n'est pas une séance) ; une 2e courbe montre les
  * minutes de course et de vélo par semaine (SPEC §4.10), dès qu'il y en a.
  * J6a : les records en tête (régularité, série de pompes, plus longue course, chaque exercice).
+ * J6b : badges et puzzle de poids avant les records ; séries de la semaine par famille.
  */
 import { weeklyCounts } from '../../domain/calendar';
-import { weeklyCardioMinutes } from '../../domain/week';
+import { activityGoal, weeklyCardioMinutes } from '../../domain/week';
 import { dayKey, dayToDate } from '../../domain/days';
 import type { WorkoutRecord } from '../../domain/history';
 import type { Activity } from '../../domain/recovery';
@@ -20,6 +21,7 @@ import { activities, renfoDays, workouts } from '../training';
 import { WeeksChart } from '../components/SmallCharts';
 import { ActivityLine, WorkoutLines } from './common';
 import { RecordsCard } from './RecordsCard';
+import { BadgesCard, PuzzleCard, WeekSetsCard } from '../components/PrideCards';
 
 /** Semaines montrées dans la courbe des séances. */
 const WEEKS_SHOWN = 12;
@@ -46,7 +48,7 @@ export function SessionsView() {
   const today = dayKey(new Date());
   const weeks = weeklyCounts(
     renfoDays.value,
-    activities.value.filter((a) => a.type !== 'commute').map((a) => a.day),
+    activities.value.filter((a) => activityGoal(a) !== null).map((a) => a.day),
     today,
     WEEKS_SHOWN,
   );
@@ -55,7 +57,10 @@ export function SessionsView() {
 
   return (
     <>
+      <BadgesCard />
+      <PuzzleCard />
       <RecordsCard />
+      <WeekSetsCard />
       <section class="card" aria-labelledby="weeks-title">
         <div class="row" style={{ minHeight: 0 }}>
           <h2 id="weeks-title" class="card__title">

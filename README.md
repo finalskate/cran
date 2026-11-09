@@ -118,6 +118,8 @@ docs/       documentation (docs/private/ est local et n'est jamais versionné)
   par `node scripts/build-ciqual.mjs`. Il est versionné : le build ne dépend pas du réseau. Le script ne sert qu'à
   passer à une nouvelle édition de la table. Les portions types par catégorie sont dans `src/data/ciqualPortions.ts`.
 - **Open Food Facts** (licence ODbL) : interrogé seulement par code-barres, ou par nom sur demande explicite.
+- **Image du puzzle** : `public/puzzle/fuji.jpg`, « Mount Fuji at sunset, March 2025 » (Wikimedia Commons, CC0),
+  réduite à 960 px. Précachée avec le reste (les `.jpg` sont dans `globPatterns`).
 
 ## 5. Confidentialité
 

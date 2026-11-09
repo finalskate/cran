@@ -9,9 +9,9 @@
 import { useState } from 'preact/hooks';
 import { dayToDate } from '../../domain/days';
 import type { Regularity } from '../../domain/regularity';
-import { nextPlanned, type CardioSlot, type DayChoice, type PlanDay, type WeekPlan } from '../../domain/weekPlan';
+import { choiceWarning, nextPlanned, type CardioSlot, type DayChoice, type PlanDay, type WeekPlan } from '../../domain/weekPlan';
 import { formatLongDate, formatShortDate } from '../format';
-import { setDayChoice } from '../weekState';
+import { currentWeekPlan, setDayChoice } from '../weekState';
 import { Sheet } from './Sheet';
 
 /** L'objectif de la semaine est déjà atteint : les jours restants sont libres. */
@@ -132,11 +132,29 @@ const CHOICES: { value: DayChoice; label: (cardio: 'run' | 'bike') => string }[]
   { value: 'off', label: () => 'Pas dispo' },
 ];
 
-/** Régler un jour d'un geste. */
+/**
+ * Régler un jour d'un geste. Un choix qui enfreint une règle (deux renfos d'affilée…) est
+ * respecté, mais la feuille reste ouverte pour le dire (J6b).
+ */
 function PlanDaySheet({ day, cardio, onClose }: { day: PlanDay; cardio: 'run' | 'bike'; onClose: () => void }) {
+  const [warning, setWarning] = useState<string | null>(null);
   async function pick(choice: DayChoice | null) {
     await setDayChoice(day.day, choice);
-    onClose();
+    // Le reste vient d'être réarrangé : on vérifie le choix face au nouveau planning.
+    const message = choice ? choiceWarning(currentWeekPlan(), day.day, choice, cardio) : null;
+    if (message) setWarning(message);
+    else onClose();
+  }
+  if (warning) {
+    return (
+      <Sheet open onClose={onClose} title={formatLongDate(dayToDate(day.day))} kicker="Planning">
+        <p style={{ margin: 0 }}>C’est noté.</p>
+        <p class="notice-line">{warning}</p>
+        <button type="button" class="btn" onClick={onClose}>
+          Compris
+        </button>
+      </Sheet>
+    );
   }
   return (
     <Sheet open onClose={onClose} title={formatLongDate(dayToDate(day.day))} kicker="Planning">

@@ -74,6 +74,9 @@
  *   export-reminder rappel de sauvegarde : export lancé ou « Plus tard »
  *   import         sauvegarde importée : version du schéma du fichier, photos incluses ou non
  *   record         record battu au bilan de séance : variante, ancien et nouveau
+ *   pushup-test    test pompes noté (format, répétitions), ou « Plus tard »
+ *   badge          badges gagnés : identifiants (pas les valeurs de poids)
+ *   week-review    bilan du dimanche ouvert ou confirmé : semaine, objectif suivant
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

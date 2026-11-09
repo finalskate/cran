@@ -77,6 +77,12 @@ export interface SettingsMap {
   pauses: PauseEntry[];
   /** Jours réglés à la main dans le planning de la semaine (clé = jour). */
   planChoices: Record<string, DayChoice>;
+  /** Badges gagnés (J6b) : identifiant → jour du franchissement. Jamais retirés. */
+  badges: Record<string, string>;
+  /** Lundi de la dernière semaine dont le bilan du dimanche a été confirmé. */
+  weekReviewDone: string;
+  /** Test pompes du mois repoussé (« Plus tard ») jusqu'à ce jour inclus. */
+  pushupTestSnoozed: string;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -105,6 +111,9 @@ export const SETTING_DEFAULTS = {
   weekGoals: [],
   pauses: [],
   planChoices: {},
+  badges: {},
+  weekReviewDone: '',
+  pushupTestSnoozed: '',
   // Dates : vides tant qu'elles n'ont pas été écrites (installedAt l'est au 1er lancement).
   installedAt: '',
   lastExportAt: '',

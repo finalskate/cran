@@ -18,6 +18,7 @@ import { Session } from './screens/Session';
 import { Settings } from './screens/Settings';
 import { Summary } from './screens/Summary';
 import { Today } from './screens/Today';
+import { WeekReview } from './screens/WeekReview';
 
 const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   today: Today,
@@ -31,6 +32,7 @@ const SCREENS: Record<RouteName, () => preact.JSX.Element | null> = {
   preview: Preview,
   session: Session,
   summary: Summary,
+  'week-review': WeekReview,
   food: Food,
   profile: Profile,
   figures: Figures,

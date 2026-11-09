@@ -389,7 +389,7 @@ export function Settings() {
         {/* Mentions exigées par les licences des bases d'aliments. */}
         <p class="muted calc__note">
           Aliments génériques : table Ciqual 2025 de l’Anses (licence ouverte Etalab 2.0). Produits scannés : Open Food
-          Facts (licence ODbL).
+          Facts (licence ODbL). Photo du puzzle : mont Fuji, Wikimedia Commons (CC0).
         </p>
       </section>
     </main>

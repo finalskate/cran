@@ -19,6 +19,7 @@ export type RouteName =
   | 'preview' // aperçu de la séance proposée
   | 'session' // séance en cours
   | 'summary' // séance terminée
+  | 'week-review' // bilan du dimanche (J6b)
   | 'food' // journal alimentaire du jour
   | 'profile' // profil et cible calorique
   | 'figures'; // revue des animations du mannequin (sans lien dans la navigation)
@@ -40,6 +41,7 @@ const PATHS: Record<string, RouteName> = {
   apercu: 'preview',
   seance: 'session',
   bravo: 'summary',
+  'bilan-semaine': 'week-review',
   assiette: 'food',
   profil: 'profile',
   mannequin: 'figures',

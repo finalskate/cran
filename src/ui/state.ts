@@ -3,7 +3,8 @@
  * Les valeurs persistantes sont relues depuis IndexedDB au démarrage puis réécrites à chaque changement.
  */
 import { effect, signal } from '@preact/signals';
-import { finishWorkout, getLevels, listLocations, loadActiveSession, saveActiveSession, setLevel } from '../data/repo';
+import { finishWorkout, getLevels, listLevelHistory, listLocations, loadActiveSession, saveActiveSession, setLevel } from '../data/repo';
+import type { LevelHistoryEntry } from '../domain/progression';
 import { getSetting, setSetting, SETTING_DEFAULTS, type FxLevel, type SettingsMap } from '../data/settings';
 import { ensurePersistence, type PersistState } from '../data/storage';
 import { toRecord, type SessionState } from '../domain/session';
@@ -45,6 +46,9 @@ export const levels = signal<Record<string, number>>({});
 /** Date du dernier changement de niveau, par mouvement (la progression compte depuis). */
 export const levelSince = signal<Record<string, string>>({});
 
+/** Changements de niveau, du plus ancien au plus récent (badges, bilan du dimanche). */
+export const levelHistory = signal<LevelHistoryEntry[]>([]);
+
 /** Séance en cours (null = aucune). Enregistrée à chaque changement pour pouvoir la reprendre. */
 export const session = signal<SessionState | null>(null);
 
@@ -62,6 +66,7 @@ export async function chooseLevel(movementId: string, level: number): Promise<vo
   levels.value = { ...levels.value, [movementId]: level };
   const at = await setLevel(movementId, level);
   levelSince.value = { ...levelSince.value, [movementId]: at };
+  levelHistory.value = [...levelHistory.value, { movementId, level, at }];
 }
 
 /** Met à jour la séance en cours et l'enregistre (sans attendre l'écriture : l'UI reste fluide). */
@@ -101,7 +106,8 @@ async function loadData(): Promise<void> {
   }
   prefs.value = loaded;
 
-  const [locs, lvls, active] = await Promise.all([listLocations(), getLevels(), loadActiveSession()]);
+  const [locs, lvls, active, history] = await Promise.all([listLocations(), getLevels(), loadActiveSession(), listLevelHistory()]);
+  levelHistory.value = history;
   locations.value = locs;
   levels.value = lvls.levels;
   levelSince.value = lvls.since;

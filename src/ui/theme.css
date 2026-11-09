@@ -338,6 +338,27 @@ h3 {
   bottom: calc(env(safe-area-inset-bottom) + 12px);
 }
 
+/*
+ * Fond opaque derrière la zone du bas (retour du 09/11 : les cartes qui défilaient se lisaient
+ * entre les boutons). Il déborde jusqu'aux bords de l'écran et jusqu'à la barre de navigation,
+ * avec un fondu vers le haut pour que le contenu disparaisse en douceur.
+ */
+.bottom-zone::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--gutter));
+  right: calc(-1 * var(--gutter));
+  top: -24px;
+  bottom: -14px;
+  z-index: -1;
+  background: linear-gradient(to bottom, rgba(18, 11, 18, 0), var(--zone-bg, var(--bg)) 22px);
+  pointer-events: none;
+}
+
+.screen--session {
+  --zone-bg: var(--bg-session);
+}
+
 .bottom-zone .btn,
 .bottom-zone .select-chip select {
   background: var(--surface-solid);
@@ -3077,4 +3098,234 @@ button.week-strip__day {
 .record-card {
   border: 2px solid var(--accent-2);
   background: linear-gradient(135deg, rgba(190, 24, 93, 0.2), rgba(194, 65, 12, 0.16)), var(--surface);
+}
+
+/* ─── J6b : badges, puzzle, séries de la semaine, test pompes, bilan du dimanche ─── */
+.card__hint {
+  font-size: 13px;
+}
+
+/* Bilan du soir fait : le petit point de l'assiette passe au vert. */
+.cal__mark--reviewed {
+  background: var(--ok);
+}
+
+.badges {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 8px;
+}
+
+.badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.badge__label {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.badge--todo .badge__label {
+  color: var(--text-muted);
+}
+
+.medal {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 700;
+  border: 2px solid var(--accent);
+  color: var(--accent-soft);
+  background: radial-gradient(circle, rgba(251, 146, 60, 0.25), rgba(251, 146, 60, 0.05));
+}
+
+.medal--ok {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: radial-gradient(circle, rgba(134, 239, 172, 0.22), rgba(134, 239, 172, 0.04));
+}
+
+.medal--pink {
+  border-color: var(--accent-2);
+  color: #f9a8d4;
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.22), rgba(244, 114, 182, 0.04));
+}
+
+.medal--todo {
+  border: 2px dashed var(--border-strong);
+  color: var(--text-muted);
+  background: none;
+}
+
+/* Puzzle : une grille de cases, chacune avec son morceau de photo ou vide. */
+.puzzle {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg);
+}
+
+.puzzle__cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  background: rgba(255, 255, 255, 0.03);
+  outline: 1.5px dashed var(--border-strong);
+  outline-offset: -4px;
+}
+
+.puzzle__cell--placed {
+  outline: none;
+  background-repeat: no-repeat;
+}
+
+.puzzle__at {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.sets-row {
+  display: grid;
+  grid-template-columns: 76px 1fr 28px;
+  align-items: center;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.sets-row__bar {
+  position: relative;
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+/* Zone 10–20 séries (moitié droite de la barre, graduée jusqu'à 20). */
+.sets-row__zone {
+  position: absolute;
+  left: 50%;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(134, 239, 172, 0.12);
+}
+
+.sets-row__fill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-radius: 99px;
+  background: var(--accent);
+}
+
+.sets-row__fill--ok {
+  background: var(--ok);
+}
+
+.sets-row__n {
+  text-align: right;
+  font-weight: 700;
+}
+
+.test-cues {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.test-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 18px 12px;
+  border-radius: 18px;
+  border: 1px solid var(--border-strong);
+  text-align: center;
+}
+
+.test-result--record {
+  border: 2px solid var(--accent-2);
+  background: linear-gradient(135deg, rgba(190, 24, 93, 0.22), rgba(194, 65, 12, 0.16));
+}
+
+.test-result__n {
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.test-goal {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.test-goal__bar {
+  display: block;
+  height: 10px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.test-goal__bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+.test-card {
+  border: 1px solid var(--accent);
+}
+
+.review-card {
+  border: 1px solid var(--accent-2);
+}
+
+.review-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  text-align: center;
+}
+
+.review-stats > div {
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+}
+
+.review-stats__n {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.review-trigger {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
 }

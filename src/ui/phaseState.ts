@@ -121,9 +121,13 @@ async function saveWeekGoal(goal: WeekGoal, day: string): Promise<void> {
   await setPref('weekGoal', goal);
 }
 
-/** Objectif de la semaine changé dans Réglages : gardé aussi pour la phase en cours. */
-export async function setWeekGoal(goal: WeekGoal, now = new Date()): Promise<void> {
-  await saveWeekGoal(goal, dayKey(now));
+/**
+ * Objectif de la semaine changé dans Réglages (ou au bilan du dimanche) : gardé aussi pour la
+ * phase en cours. `since` : jour où il prend effet (le bilan du dimanche le fait partir du lundi,
+ * pour que la semaine qui s'achève reste jugée sur son propre objectif).
+ */
+export async function setWeekGoal(goal: WeekGoal, now = new Date(), since = dayKey(now)): Promise<void> {
+  await saveWeekGoal(goal, since);
   const current = currentPhase(now);
   if (current) await setPref('phaseGoals', { ...prefs.value.phaseGoals, [current.id]: goal });
   track('week-goal', { ...goal, phase: current?.id });

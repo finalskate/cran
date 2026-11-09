@@ -56,6 +56,7 @@ export function activityGoal(a: Activity): 'strength' | 'cardio' | null {
     case 'bike':
       return 'cardio';
     case 'commute':
+    case 'pushup-test':
       return null;
   }
 }

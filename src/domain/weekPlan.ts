@@ -85,6 +85,8 @@ export interface PlanDay {
   chosen?: boolean;
   /** Aujourd'hui, genou ≥ 3 : repos ou mobilité. */
   kneeRest?: boolean;
+  /** Jour vécu : ce qui a été fait (pour vérifier un choix manuel du lendemain). */
+  done?: DayDone;
 }
 
 export interface WeekPlan {
@@ -222,7 +224,7 @@ export function planWeek(input: WeekPlanInput): WeekPlan {
 
   const planDays: PlanDay[] = days.map((day, i) => {
     if (day < today || (day === today && !todayFree)) {
-      return { day, status: active(doneOf(day)) ? 'done' : 'past' };
+      return { day, status: active(doneOf(day)) ? 'done' : 'past', done: doneOf(day) };
     }
     if (day === today && kneeRestToday) return { day, status: 'planned', kind: 'rest', kneeRest: true };
     const kind = chosen.get(day) ?? 'rest';
@@ -307,6 +309,31 @@ function scorePlan(input: WeekPlanInput, days: readonly string[], kinds: Readonl
   if (longDay && !isWeekend(input.monday, longDay) && days.slice(5).some((d) => kinds.has(d))) score += P_LONG_WEEKDAY;
   score += P_MISSING * (Math.max(0, remaining.strength - strength) + Math.max(0, remaining.cardio - cardio));
   return score;
+}
+
+/**
+ * Un choix manuel enfreint-il une règle du planning ? Le choix reste respecté (« l'appli décide,
+ * l'utilisateur peut choisir ») ; on le dit seulement, sans dramatiser. `null` : rien à signaler.
+ * La veille du lundi n'est pas connue ici : le lundi n'est vérifié que vers l'avant.
+ */
+export function choiceWarning(plan: WeekPlan, day: string, choice: DayChoice, cardio: 'run' | 'bike'): string | null {
+  const i = plan.days.findIndex((d) => d.day === day);
+  const look = (j: number) => {
+    const d = plan.days[j];
+    if (!d) return { strength: false, run: false, legs: false };
+    if (d.status !== 'planned') return { strength: !!d.done?.strength, run: !!d.done?.run, legs: !!d.done?.legs };
+    const run = d.kind === 'cardio' && cardio === 'run';
+    return { strength: d.kind === 'strength', run, legs: run || (d.kind === 'strength' && !d.noLegs) };
+  };
+  const prev = look(i - 1);
+  const next = look(i + 1);
+  if (choice === 'strength' && (prev.strength || next.strength)) {
+    return 'Deux renfos d’affilée : c’est possible, mais le 2e sera moins bon, les muscles n’auront pas récupéré.';
+  }
+  if (choice === 'cardio' && cardio === 'run' && (prev.run || prev.legs)) {
+    return 'Une course au lendemain d’une journée qui a chargé les jambes : vas-y doucement, et écoute ton genou.';
+  }
+  return null;
 }
 
 /** À partir de cette heure, l'accueil parle de demain (si aujourd'hui n'a plus rien de prévu). */

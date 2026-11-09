@@ -20,7 +20,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { mondayOf, monthGrid, monthOf, shiftMonth } from '../../domain/calendar';
 import { addDays, dayKey, dayToDate } from '../../domain/days';
-import { trainingWeek } from '../../domain/week';
+import { activityGoal, trainingWeek } from '../../domain/week';
 import { sumEntries, type FoodEntry } from '../../domain/nutrition';
 import type { WorkoutRecord } from '../../domain/history';
 import type { Activity } from '../../domain/recovery';
@@ -30,6 +30,7 @@ import { foodTick } from '../foodState';
 import { GoalLine, WeekStrip } from '../components/WeekStrip';
 import { formatInt, formatLongDate, formatMonth, formatShortDate } from '../format';
 import { prefs } from '../state';
+import { reviewedDays } from '../habitsState';
 import { activities, removeActivity, removeWorkout, renfoDays, workouts } from '../training';
 import { CardioSheet } from './CardioSheet';
 import { ActivityLine, WorkoutLines } from './common';
@@ -112,7 +113,7 @@ export function CalendarView() {
           </span>
           {weeks.map((week) => {
             const count = week.reduce(
-              (n, d) => n + workoutsOn(w, d).length + activitiesOn(a, d).filter((x) => x.type !== 'commute').length,
+              (n, d) => n + workoutsOn(w, d).length + activitiesOn(a, d).filter((x) => activityGoal(x) !== null).length,
               0,
             );
             return [
@@ -123,6 +124,7 @@ export function CalendarView() {
                 const cardio = acts.some((x) => x.type === 'run' || x.type === 'bike');
                 const commute = acts.reduce((n, x) => n + (x.type === 'commute' ? x.trips : 0), 0);
                 const noted = (food[d]?.length ?? 0) > 0;
+                const reviewed = reviewedDays.value.has(d);
                 const future = d > today;
                 const label = [
                   formatLongDate(dayToDate(d)),
@@ -131,6 +133,7 @@ export function CalendarView() {
                   imposed.length > 0 && 'séance imposée',
                   commute > 0 && 'vélotaf',
                   noted && 'journée notée',
+                  reviewed && 'bilan du soir fait',
                 ]
                   .filter(Boolean)
                   .join(', ');
@@ -150,7 +153,7 @@ export function CalendarView() {
                       {imposed.length > 0 && (
                         <span class={`cal__mark cal__mark--imposed${imposed.some((x) => x.kind === 'run') ? ' cal__mark--imposed-run' : ''}`} />
                       )}
-                      {noted && <span class="cal__mark cal__mark--food" />}
+                      {(noted || reviewed) && <span class={`cal__mark cal__mark--food${reviewed ? ' cal__mark--reviewed' : ''}`} />}
                     </span>
                     <span class="cal__commute" aria-hidden="true">
                       {commute > 0 && <span class={`cal__dash${commute > 1 ? ' cal__dash--double' : ''}`} />}
@@ -185,6 +188,9 @@ export function CalendarView() {
           </span>
           <span>
             <span class="cal__mark cal__mark--food" /> assiette notée
+          </span>
+          <span>
+            <span class="cal__mark cal__mark--food cal__mark--reviewed" /> bilan du soir fait
           </span>
         </div>
       </section>
@@ -289,6 +295,7 @@ const ACTIVITY_NAME: Record<Activity['type'], string> = {
   run: 'cette course',
   bike: 'cette séance de vélo',
   commute: 'ce vélotaf',
+  'pushup-test': 'ce test pompes',
 };
 
 /**

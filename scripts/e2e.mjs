@@ -14,6 +14,7 @@
  * semaine, « Mes plans ».
  * Puis J6a : planning de la semaine (un jour réglé à la main), pause, records, rappel de
  * sauvegarde, et un vrai aller-retour export → données effacées → import.
+ * Puis J6b : test pompes du mois, badges et puzzle, bilan du dimanche (horloge avancée).
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -22,7 +23,8 @@
  *   CHROME_PATH  chemin de Chrome (défaut : installation Windows standard)
  *   E2E_SIZE     taille d'écran, ex. « 360x640 » (défaut : 390x844)
  */
-import { mkdir } from 'node:fs/promises';
+import { mkdir, readdir, rm } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import puppeteer from 'puppeteer-core';
 import { preview } from 'vite';
 
@@ -49,6 +51,12 @@ try {
     if (m.type() === 'error' && !m.location()?.url?.includes('openfoodfacts.org')) errors.push(`console: ${m.text()}`);
   });
   page.on('dialog', (d) => d.accept()); // confirmations (poignet, abandon…)
+  // Exports téléchargés dans .e2e/downloads (sinon ils s'empilent dans le dossier Téléchargements).
+  const downloads = resolve(OUT, 'downloads');
+  await rm(downloads, { recursive: true, force: true });
+  await mkdir(downloads, { recursive: true });
+  const cdp = await page.target().createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
 
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const shot = (name, fullPage = false) => page.screenshot({ path: `${OUT}/${name}.png`, fullPage });
@@ -949,13 +957,7 @@ try {
   await page.waitForFunction(() => !document.body.textContent.includes('Dernière sauvegarde'), { timeout: 5000 });
 
   // Import : export réel (téléchargement), données effacées, puis import du fichier → tout revient.
-  const { resolve } = await import('node:path');
-  const { readdir, rm } = await import('node:fs/promises');
-  const downloads = resolve(OUT, 'downloads');
-  await rm(downloads, { recursive: true, force: true });
-  await mkdir(downloads, { recursive: true });
-  const cdp = await page.target().createCDPSession();
-  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
+  const already = new Set(await readdir(downloads));
   await page.goto(`${BASE}#/reglages`);
   await wait(300);
   await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { value: undefined }));
@@ -963,7 +965,7 @@ try {
   let exported;
   for (let i = 0; i < 50 && !exported; i++) {
     await wait(100);
-    exported = (await readdir(downloads)).find((f) => f.endsWith('.json'));
+    exported = (await readdir(downloads)).find((f) => f.endsWith('.json') && !already.has(f));
   }
   if (!exported) throw new Error('import : le fichier exporté n’a pas été téléchargé');
   const before = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
@@ -988,6 +990,64 @@ try {
   const after = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
   if (JSON.stringify(after) !== JSON.stringify(before)) throw new Error(`import : ${JSON.stringify(after)} au lieu de ${JSON.stringify(before)}`);
   await shot('102-apres-import', true);
+
+  // ─── J6b : test pompes, badges et puzzle, bilan du dimanche ───
+  // Test pompes du mois : la carte est sur l'accueil (aucun test ce mois-ci, pas de pompes hier).
+  await page.goto(BASE);
+  await page.waitForFunction(() => document.body.textContent.includes('Test pompes du mois'), { timeout: 5000 });
+  await shot('103-accueil-test-pompes', true);
+  await click('Faire le test');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('poitrine au sol'));
+  await shot('104-test-pompes');
+  await clickIn('Noter');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Tes tests'), { timeout: 5000 });
+  await shot('105-test-resultat');
+  await clickIn('Terminer');
+  await wait(300);
+  if (await page.evaluate(() => document.body.textContent.includes('Test pompes du mois'))) throw new Error('accueil : le test du mois reste proposé');
+
+  // Carnet › Séances : badges, puzzle (étapes de poids du parcours), séries de la semaine.
+  await page.goto(`${BASE}#/carnet`);
+  await wait(300);
+  await click('Séances');
+  await page.waitForFunction(() => document.body.textContent.includes('Badges'), { timeout: 5000 });
+  await shot('106-fierte', true);
+
+  // Bilan du dimanche : même appli, horloge avancée au dimanche suivant 18 h.
+  const sunday = await page.evaluate(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + ((7 - d.getDay()) % 7));
+    d.setHours(18, 0, 0, 0);
+    return d.getTime();
+  });
+  const later = await browser.newPage();
+  await later.setViewport({ width, height, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+  later.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));
+  await later.evaluateOnNewDocument((target) => {
+    const Real = Date;
+    const offset = target - Real.now();
+    class Fake extends Real {
+      constructor(...args) {
+        if (args.length === 0) super(Real.now() + offset);
+        else super(...args);
+      }
+      static now() {
+        return Real.now() + offset;
+      }
+    }
+    globalThis.Date = Fake;
+  }, sunday);
+  await later.goto(BASE, { waitUntil: 'networkidle0' });
+  await later.waitForFunction(() => document.body.textContent.includes('Bilan de la semaine'), { timeout: 5000 });
+  await later.screenshot({ path: `${OUT}/107-accueil-bilan-dimanche.png`, fullPage: true });
+  await later.evaluate(() => document.querySelector('.review-card').click());
+  await later.waitForFunction(() => document.body.textContent.includes('La semaine prochaine'), { timeout: 5000 });
+  await later.screenshot({ path: `${OUT}/108-bilan-dimanche.png`, fullPage: true });
+  await later.evaluate(() => [...document.querySelectorAll('button')].find((b) => b.textContent.includes('c’est parti')).click());
+  await later.waitForFunction(() => location.hash === '' || location.hash === '#/', { timeout: 5000 });
+  await new Promise((r) => setTimeout(r, 300));
+  if (await later.evaluate(() => document.body.textContent.includes('Bilan de la semaine'))) throw new Error('bilan du dimanche : toujours proposé après confirmation');
+  await later.close();
 
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } catch (e) {

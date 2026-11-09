@@ -71,8 +71,11 @@ function doneDays(monday: string, today: string): Record<string, DayDone> {
   return out;
 }
 
-/** Planning de la semaine qui commence au lundi `monday` (la semaine en cours, ou la suivante). */
-export function weekPlanFor(monday: string, now = new Date()): WeekPlan {
+/**
+ * Planning de la semaine qui commence au lundi `monday` (la semaine en cours, ou la suivante).
+ * `goal` : un autre objectif que celui des réglages (aperçu au bilan du dimanche).
+ */
+export function weekPlanFor(monday: string, now = new Date(), goal = prefs.value.weekGoal): WeekPlan {
   const today = dayKey(now);
   const location = locations.value.find((l) => l.id === prefs.value.lastLocationId);
   const cardio = cardioChoice(currentPhaseInfo(now), location?.equipment ?? []).primary;
@@ -86,7 +89,7 @@ export function weekPlanFor(monday: string, now = new Date()): WeekPlan {
     today,
     hour: now.getHours(),
     done: doneDays(monday, today),
-    goal: prefs.value.weekGoal,
+    goal,
     cardio,
     runSlots: slots,
     knee,

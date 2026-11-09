@@ -73,11 +73,28 @@ export interface CommuteActivity {
   trips: 1 | 2;
 }
 
+/** Format du test pompes (J6b) : à la maison poitrine au sol, ou format pro poitrine sur la cale. */
+export type PushupFormat = 'home' | 'pro';
+
+/**
+ * Test pompes mensuel (J6b, SPEC §4.10) : le plus de pompes possible, main à plat, noté après
+ * coup. Un record par format (la cale et le sol ne se comparent pas). Ne compte pas dans
+ * l'objectif de la semaine ; vaut la série longue de pompes de la semaine.
+ */
+export interface PushupTestActivity {
+  id?: number;
+  type: 'pushup-test';
+  day: string;
+  at: string;
+  format: PushupFormat;
+  reps: number;
+}
+
 /**
  * Activité notée à part des séances de renfo (table `activities`, indexée par jour et type).
  * Ajouter un type ici ne demande pas de migration : les champs non indexés sont libres.
  */
-export type Activity = ImposedActivity | RunActivity | BikeActivity | CommuteActivity;
+export type Activity = ImposedActivity | RunActivity | BikeActivity | CommuteActivity | PushupTestActivity;
 
 /**
  * Une activité charge-t-elle les jambes (genou) ? Une course toujours ; une séance imposée si

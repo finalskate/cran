@@ -135,17 +135,39 @@ try {
       continue;
     }
 
-    if (t.includes('Passer le repos')) {
+    if (t.includes('Passer le repos') || t.includes('Je suis en place')) {
       if (!seen.has('rest')) {
         seen.add('rest');
         // « Ensuite » : consignes de l'exercice suivant et sa fiche, sans quitter le repos.
         if (!t.includes('Fiche complète')) throw new Error('repos : aperçu de l’exercice suivant incomplet');
         await shot('08-repos', true);
       }
-      await click('Passer le repos');
+      // Série chronométrée arrêtée d'un geste : elle se corrige pendant le repos (retouche du 09/11).
+      if (!seen.has('noted') && (await page.evaluate(() => !!document.querySelector('.noted')))) {
+        seen.add('noted');
+        await page.evaluate(() => [...document.querySelectorAll('.noted button')].find((b) => b.textContent === 'Dur')?.click());
+        await wait(200);
+        if (!(await page.evaluate(() => document.querySelector('.noted [aria-checked="true"]')?.textContent === 'Dur'))) {
+          throw new Error('repos : le ressenti de la série notée ne se corrige pas');
+        }
+        await shot('10e-serie-notee', true);
+      }
+      if (t.includes('Je suis en place') && !seen.has('settle')) {
+        seen.add('settle');
+        await shot('10f-repos-avant-chrono');
+      }
+      await click(t.includes('Je suis en place') ? 'Je suis en place' : 'Passer le repos');
+    } else if (t.includes('J’arrête')) {
+      // Chrono lancé seul par la fin du repos : on arrive directement dans l'effort.
+      if (!seen.has('auto')) {
+        seen.add('auto');
+        if (!t.includes('Pas prêt')) throw new Error('chrono automatique : « Pas prêt » absent');
+        await shot('10g-chrono-auto');
+      }
+      await click('J’arrête');
     } else if (t.includes('Démarrer le chrono')) {
-      // Exercice en durée : la première fois, chrono complet (mise en place, effort, arrêt) ;
-      // ensuite « Noter sans chrono » pour aller vite.
+      // Exercice en durée sans repos avant : la première fois, chrono complet (mise en place,
+      // effort, arrêt) ; ensuite « Noter sans chrono » pour aller vite.
       if (!seen.has('timed')) {
         seen.add('timed');
         await shot('10a-chrono-pret');
@@ -156,10 +178,12 @@ try {
         await shot('10c-chrono-effort');
         await click('J’arrête');
         await shot('10d-chrono-tenu');
+        // Un repos suit : la série est déjà notée. Sinon, écran « tenu » à valider.
+        if ((await text()).includes('Valider la série')) await click('Valider la série');
       } else {
         await click('Noter sans chrono');
+        await click('Valider la série');
       }
-      await click('Valider la série');
     } else if (t.includes('Valider la série')) {
       if (!seen.has('work')) {
         seen.add('work');
@@ -763,8 +787,9 @@ try {
   await wait(300);
   // On passe les blocs jusqu'au curl.
   for (let i = 0; i < 24 && !(await page.evaluate(() => document.querySelector('.work__name')?.textContent.includes('Curl'))); i++) {
-    if ((await text()).includes('Passer le repos')) {
-      await click('Passer le repos');
+    const t = await text();
+    if (t.includes('Passer le repos') || t.includes('Je suis en place')) {
+      await click(t.includes('Je suis en place') ? 'Je suis en place' : 'Passer le repos');
       await wait(200);
       continue;
     }

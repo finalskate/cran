@@ -39,10 +39,23 @@ export interface SessionState {
   /** Résultat de chaque étape (null = passée sans saisie). */
   results: (SetResult | null)[];
   startedAt: number;
+  /**
+   * Départ du chrono d'effort de l'étape `index`, quand le repos qui la précède a servi de mise en
+   * place (retouche du 09/11) : la fin du repos lance le chrono, sans autre geste. Stocké comme une
+   * heure (ms) pour la même raison que `restEndsAt`. Absent = départ à la main (« Démarrer le chrono »).
+   */
+  effortFrom?: { index: number; at: number };
 }
 
 /** Repos minimal après la dernière série d'un bloc, avant de passer au suivant. */
 const BLOCK_CHANGE_REST = 30;
+
+/**
+ * Retard toléré entre la fin du repos et sa prise en compte pour lancer le chrono tout seul.
+ * Au-delà (appli figée en arrière-plan, écran éteint), on ne sait pas si l'utilisateur est en place :
+ * le chrono attend « Démarrer ».
+ */
+export const AUTO_START_GRACE_MS = 3000;
 
 /** Déroule le plan en étapes. */
 export function buildSteps(plan: Plan): Step[] {
@@ -102,16 +115,61 @@ export function completeStep(state: SessionState, result: SetResult | null, now:
   if (!step || state.phase !== 'work') return state;
   const results = state.results.slice();
   results[state.index] = result;
-  const next = { ...state, results };
+  // Le départ automatique ne valait que pour l'étape qu'on quitte.
+  const { effortFrom: _, ...rest } = state;
+  const next = { ...rest, results };
   if (state.index >= state.steps.length - 1) return { ...next, phase: 'done', restEndsAt: null };
   if (step.restAfter > 0) return { ...next, phase: 'rest', restEndsAt: now + step.restAfter * 1000 };
   return { ...next, index: state.index + 1, phase: 'work', restEndsAt: null };
 }
 
-/** Termine le repos (fin du minuteur ou « Passer ») : on passe à l'étape suivante. */
-export function endRest(state: SessionState): SessionState {
+/** Vrai si l'étape est une série chronométrée qu'on saisit (pas un mouvement guidé). */
+export function isTimedStep(state: SessionState, index: number): boolean {
+  const step = state.steps[index];
+  if (!step) return false;
+  const item = itemOf(state, step);
+  return item.target.kind === 'time' && !item.guided;
+}
+
+/** Vrai si valider l'étape en cours lance un repos (et non l'étape suivante ou la fin de séance). */
+export function restFollows(state: SessionState): boolean {
+  const step = currentStep(state);
+  return !!step && step.restAfter > 0 && state.index < state.steps.length - 1;
+}
+
+/**
+ * Termine le repos (fin du minuteur ou « Passer ») : on passe à l'étape suivante.
+ *
+ * Si `now` est donné et que la suite est une série chronométrée, le repos a servi de mise en place :
+ * le chrono d'effort part à la fin du repos (ou tout de suite si l'utilisateur dit « Je suis en place »).
+ * Pas de départ automatique si la fin du repos est passée depuis plus de `AUTO_START_GRACE_MS`.
+ */
+export function endRest(state: SessionState, now?: number): SessionState {
   if (state.phase !== 'rest') return state;
-  return { ...state, index: state.index + 1, phase: 'work', restEndsAt: null };
+  const next: SessionState = { ...state, index: state.index + 1, phase: 'work', restEndsAt: null };
+  if (now === undefined || !isTimedStep(state, state.index + 1)) return next;
+  const end = state.restEndsAt ?? now;
+  if (now - end > AUTO_START_GRACE_MS) return next;
+  return { ...next, effortFrom: { index: state.index + 1, at: Math.min(now, end) } };
+}
+
+/** « Pas prêt » : le chrono lancé par la fin du repos est annulé, il attendra « Démarrer ». */
+export function cancelAutoStart(state: SessionState): SessionState {
+  if (!state.effortFrom) return state;
+  const { effortFrom: _, ...rest } = state;
+  return rest;
+}
+
+/**
+ * Corrige la série qu'on vient de noter, pendant le repos qui la suit (temps ou ressenti) :
+ * « J'arrête » enregistre tout de suite, le ressenti se change ensuite sans se presser.
+ */
+export function amendLastResult(state: SessionState, patch: Partial<SetResult>): SessionState {
+  const current = state.results[state.index];
+  if (state.phase !== 'rest' || !current) return state;
+  const results = state.results.slice();
+  results[state.index] = { ...current, ...patch, value: Math.max(0, patch.value ?? current.value) };
+  return { ...state, results };
 }
 
 /** Secondes de repos restantes (arrondies au supérieur, jamais négatives). */

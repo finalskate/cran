@@ -347,6 +347,22 @@ h3 {
   background: var(--surface-session);
 }
 
+/* Deux boutons côte à côte (« Pas prêt » | « J'arrête ») : le secondaire à sa largeur, le principal prend le reste. */
+.bottom-zone--pair {
+  flex-direction: row;
+  align-items: stretch;
+}
+
+.bottom-zone--pair > .btn {
+  flex: 0 0 auto;
+  padding-inline: 18px;
+}
+
+.bottom-zone--pair > .cta {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ─── Barre de navigation ─── */
 .nav {
   position: fixed;
@@ -820,6 +836,33 @@ h3 {
   align-items: center;
   justify-content: center;
   font-size: 56px;
+  font-weight: 700;
+}
+
+/* « Série notée » pendant le repos (série chronométrée arrêtée d'un geste) : temps ±5 s et ressenti. */
+.noted {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.noted__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.noted__time {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.noted__value {
+  min-width: 52px;
+  text-align: center;
+  font-size: 20px;
   font-weight: 700;
 }
 

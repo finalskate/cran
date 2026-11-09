@@ -6,13 +6,19 @@
  *    la dernière séance, puis la saisie : répétitions en + / −, ou chrono pour un exercice en durée.
  *    Les actions rares (remplacer, sauter, passer le bloc) sont rangées dans le menu « ⋯ ».
  *  - Chrono d'exercice : anneau « Effort » orange qui se REMPLIT, à graduations, pour ne pas le
- *    confondre avec le repos (anneau en dégradé qui se vide). 5 s de mise en place, vibration à
- *    l'objectif, et le temps tenu au-delà est compté (+0:05).
- *  - Repos : décompte basé sur l'heure de fin, ±15 s, « Passer », aperçu de la suite.
+ *    confondre avec le repos (anneau en dégradé qui se vide). Vibration à l'objectif, et le temps
+ *    tenu au-delà est compté (+0:05).
+ *    Retouche du 09/11 (« la pause sert aussi à se mettre en place ») : après un repos, le chrono
+ *    part SEUL à la fin du repos (bips 3-2-1 avant) ; « Pas prêt » l'annule pendant 10 s. Sans repos
+ *    avant (1re série), « Démarrer le chrono » garde ses 5 s de mise en place. « J'arrête » note la
+ *    série et lance le repos : temps et ressenti se corrigent pendant le repos. 1 geste par série.
+ *  - Repos : décompte basé sur l'heure de fin, ±15 s, « Passer » (« Je suis en place » si la suite
+ *    est chronométrée), aperçu de la suite.
  *    L'aperçu « Ensuite » donne les consignes principales, la fiche et la vidéo de l'exercice suivant.
  *    À la fin : vibration, bip, voix et notification (montre) selon les réglages.
  *  - L'écran reste allumé ; quitter ne perd rien (la séance est enregistrée à chaque série).
- *    Seul un chrono d'exercice en cours est perdu si l'appli est fermée : on le relance.
+ *    Seul un chrono d'exercice lancé à la main est perdu si l'appli est fermée (on le relance) ;
+ *    celui lancé par la fin du repos repart de son heure de départ.
  */
 import type { ComponentChildren } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
@@ -24,13 +30,17 @@ import { compareWithLast, type Feel, type SetResult } from '../../domain/history
 import { nthMessage } from '../../domain/messages';
 import {
   adjustRest,
+  amendLastResult,
   blockProgress,
+  cancelAutoStart,
   completeStep,
   currentStep,
   endRest,
+  isTimedStep,
   itemOf,
   previousResults,
   replaceItem,
+  restFollows,
   restRemaining,
   setItemBand,
   setsOfItem,
@@ -93,9 +103,10 @@ export function Session() {
     if (restRemaining(state, now) > 0 || restFired.current === state.index) return;
     restFired.current = state.index;
     const next = state.steps[state.index + 1];
-    track('rest-end', { planned: state.steps[state.index]!.restAfter, by: 'timer' });
-    signalEnd(next ? stepLabel(state, next) : undefined);
-    updateSession(endRest(state));
+    const after = endRest(state, Date.now());
+    track('rest-end', { planned: state.steps[state.index]!.restAfter, by: 'timer', ...(after.effortFrom ? { autoStart: true } : {}) });
+    signalEnd(next ? stepLabel(state, next) : undefined, after.effortFrom ? 'C’est parti' : undefined);
+    updateSession(after);
   }, [state, now]);
 
   // Séance terminée : enregistrement dans l'historique, puis écran de bilan.
@@ -189,6 +200,17 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
   // Anneau : circonférence d'un cercle de rayon 90.
   const C = 2 * Math.PI * 90;
   const ratio = total > 0 ? Math.min(remaining / total, 1) : 0;
+  // Suite chronométrée : le repos sert de mise en place, le chrono partira seul à 0:00.
+  const nextTimed = isTimedStep(state, state.index + 1);
+  const settling = nextTimed && remaining <= SETTLE_S;
+
+  // Bips 3-2-1 avant le départ du chrono (un seul par seconde, même si l'écran rafraîchit plus vite).
+  const lastBeep = useRef<number | null>(null);
+  useEffect(() => {
+    if (!nextTimed || remaining < 1 || remaining > 3 || lastBeep.current === remaining) return;
+    lastBeep.current = remaining;
+    if (prefs.value.beep) beep(1);
+  }, [remaining, nextTimed]);
 
   function adjust(delta: number) {
     track('rest-adjust', { delta });
@@ -198,7 +220,7 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
   return (
     <>
       <div class="rest">
-        <span class="card__label">Repos</span>
+        <span class={`card__label ${settling ? 'accent' : ''}`}>{settling ? 'Mets-toi en place' : 'Repos'}</span>
         <div class="rest__ring">
           <svg width="220" height="220" viewBox="0 0 220 220" aria-hidden="true">
             <circle cx="110" cy="110" r="90" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="12" />
@@ -236,6 +258,8 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
         </div>
       </div>
 
+      {isTimedStep(state, state.index) && <NotedCard state={state} />}
+
       {next && <NextCard state={state} next={next} />}
 
       <div class="bottom-zone">
@@ -243,14 +267,50 @@ function RestView({ state, now }: { state: SessionState; now: number }) {
           type="button"
           class="cta"
           onClick={() => {
-            track('rest-end', { planned: total, by: 'skip', remaining });
-            updateSession(endRest(state));
+            track('rest-end', { planned: total, by: 'skip', remaining, ...(nextTimed ? { autoStart: true } : {}) });
+            updateSession(endRest(state, Date.now()));
           }}
         >
-          <span class="cta__title">Passer le repos</span>
+          <span class="cta__title">{nextTimed ? 'Je suis en place' : 'Passer le repos'}</span>
+          {nextTimed && <span class="cta__sub">sinon le chrono démarre seul à la fin du repos</span>}
         </button>
       </div>
     </>
+  );
+}
+
+/** Dernières secondes du repos annoncées « Mets-toi en place » quand la suite est chronométrée. */
+const SETTLE_S = 5;
+
+/**
+ * « Série notée » : la série chronométrée qu'on vient d'arrêter, corrigeable pendant le repos
+ * (±5 s, ressenti). « J'arrête » a enregistré le ressenti de la série d'avant (OK par défaut).
+ */
+function NotedCard({ state }: { state: SessionState }) {
+  const result = state.results[state.index];
+  if (!result) return null;
+
+  function amend(patch: Partial<SetResult>) {
+    track('set-amend', { set: state.steps[state.index]!.set, ...patch });
+    updateSession(amendLastResult(state, patch));
+  }
+
+  return (
+    <section class="card noted" aria-label="Série notée">
+      <div class="noted__row">
+        <span class="card__label">Série notée</span>
+        <div class="noted__time">
+          <button type="button" class="btn btn--small" aria-label="5 secondes de moins" onClick={() => amend({ value: result.value - 5 })}>
+            −5
+          </button>
+          <span class="num noted__value">{formatClock(result.value)}</span>
+          <button type="button" class="btn btn--small" aria-label="5 secondes de plus" onClick={() => amend({ value: result.value + 5 })}>
+            +5
+          </button>
+        </div>
+      </div>
+      <FeelPicker feel={result.feel ?? 'ok'} onChange={(feel) => amend({ feel })} />
+    </section>
   );
 }
 
@@ -701,13 +761,18 @@ function EffortRing({
 
 type TimedPhase = 'ready' | 'countdown' | 'running' | 'held';
 
+/** Pendant ces premières secondes d'effort, « Pas prêt » remet le chrono à zéro. */
+const NOT_READY_S = 10;
+
 function TimedWork(props: WorkProps) {
-  const { item, variant, step, lastInSession, validate } = props;
+  const { state, item, variant, step, lastInSession, validate } = props;
   const [goal, setGoal] = useState(lastInSession?.value ?? item.prefill);
-  const [phase, setPhase] = useState<TimedPhase>('ready');
+  // Chrono lancé par la fin du repos (retouche du 09/11) : on arrive directement dans l'effort.
+  const autoAt = state.effortFrom?.index === state.index ? state.effortFrom.at : null;
+  const [phase, setPhase] = useState<TimedPhase>(autoAt !== null ? 'running' : 'ready');
   // Début de la phase en cours (mise en place ou effort), en ms : le temps se calcule par
   // différence avec l'horloge, il reste juste même si l'écran rafraîchit irrégulièrement.
-  const [t0, setT0] = useState(0);
+  const [t0, setT0] = useState(autoAt ?? 0);
   const [held, setHeld] = useState(0);
   const [feel, setFeel] = useState<Feel>(lastInSession?.feel ?? 'ok');
   const reached = useRef(false);
@@ -726,9 +791,17 @@ function TimedWork(props: WorkProps) {
     }
   }, [now, phase]);
 
+  // Un repos suit : « J'arrête » note la série tout de suite, la correction se fait pendant le repos.
+  // Sinon (dernière série de la séance, enchaînement sans repos) : écran « tenu » avec ressenti.
+  const quick = restFollows(state);
+
   function stop() {
     const s = Math.round((Date.now() - t0) / 1000);
-    track('timer', { variantId: variant.id, goal, held: s, reachedGoal: s >= goal });
+    track('timer', { variantId: variant.id, goal, held: s, reachedGoal: s >= goal, ...(autoAt !== null ? { auto: true } : {}) });
+    if (quick) {
+      validate({ value: s, feel });
+      return;
+    }
     setHeld(s);
     setPhase('held');
   }
@@ -736,6 +809,7 @@ function TimedWork(props: WorkProps) {
   function restart() {
     reached.current = false;
     setPhase('ready');
+    if (state.effortFrom) updateSession(cancelAutoStart(state));
   }
 
   return (
@@ -808,10 +882,25 @@ function TimedWork(props: WorkProps) {
               <span class="effort__sub">continue si tu peux</span>
             </EffortRing>
           )}
-          <div class="bottom-zone">
+          {/* « Pas prêt » à côté de « J'arrête » (pas au-dessus) : l'anneau reste visible sur un petit écran. */}
+          <div class={`bottom-zone ${elapsed < NOT_READY_S ? 'bottom-zone--pair' : ''}`}>
+            {elapsed < NOT_READY_S && (
+              <button
+                type="button"
+                class="btn"
+                onClick={() => {
+                  track('timer-not-ready', { variantId: variant.id, auto: autoAt !== null });
+                  restart();
+                }}
+              >
+                Pas prêt
+              </button>
+            )}
             <button type="button" class="cta cta--outline" onClick={stop}>
               <span class="cta__title">J’arrête</span>
-              <span class="cta__sub">note {formatClock(elapsed)} tenues</span>
+              <span class="cta__sub">
+                note {formatClock(elapsed)} tenues{quick ? `, puis repos ${formatClock(step.restAfter)}` : ''}
+              </span>
             </button>
           </div>
         </>

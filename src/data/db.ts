@@ -7,6 +7,9 @@
  * 3. Si des données existantes doivent être transformées, ajouter un `.upgrade(tx => …)`.
  * 4. Mettre à jour SCHEMA_VERSION (elle est écrite dans les exports JSON, SPEC §4.11).
  * 5. Ajouter un test de migration dans db.test.ts (ouvrir l'ancienne version, la remplir, rouvrir).
+ * 6. Une migration qui transforme ou crée des données doit avoir son équivalent pour l'import
+ *    d'un ancien export (`upgradeTables`, src/data/backup.ts) : un fichier de la v5 importé dans
+ *    la v7 doit donner le même résultat que la base v5 migrée.
  *
  * Seuls les champs indexés figurent dans `stores()` ; les autres champs sont stockés librement.
  *
@@ -181,20 +184,26 @@ async function seedLocations(tx: Transaction): Promise<void> {
  * mouvement s'il diffère du dernier changement retrouvé (ou si rien n'a été retrouvé).
  */
 async function seedLevelHistory(tx: Transaction): Promise<void> {
-  const entries: LevelHistoryEntry[] = [];
   const events = (await tx.table('events').toArray()) as EventRow[];
-  for (const e of events.sort((a, b) => a.at - b.at)) {
+  const levels = (await tx.table('levels').toArray()) as LevelRow[];
+  await tx.table('levelHistory').bulkAdd(levelHistoryFrom(events, levels));
+}
+
+/** Historique des niveaux reconstitué (migration v6, et import d'un export antérieur à la v6). */
+export function levelHistoryFrom(events: readonly EventRow[], levels: readonly LevelRow[]): LevelHistoryEntry[] {
+  const entries: LevelHistoryEntry[] = [];
+  for (const e of [...events].sort((a, b) => a.at - b.at)) {
     const movementId = e.data?.movementId;
     const level = e.type === 'level-stay' ? e.data?.level : e.type === 'level' || e.type === 'level-up' ? e.data?.to : undefined;
     if (typeof movementId === 'string' && typeof level === 'number') {
       entries.push({ movementId, level, at: new Date(e.at).toISOString() });
     }
   }
-  for (const row of (await tx.table('levels').toArray()) as LevelRow[]) {
+  for (const row of levels) {
     const last = entries.filter((h) => h.movementId === row.movementId).at(-1);
     if (last?.level !== row.level) entries.push({ movementId: row.movementId, level: row.level, at: row.updatedAt });
   }
-  await tx.table('levelHistory').bulkAdd(entries);
+  return entries;
 }
 
 /** Instance partagée par toute l'appli. */

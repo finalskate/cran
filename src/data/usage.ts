@@ -69,6 +69,11 @@
  *   knee-morning   genou du lendemain : plus mal ou non
  *   workout-delete séance supprimée du carnet
  *   activity-delete activité supprimée (séance imposée, course, vélo, vélotaf) : type
+ *   pause          mode pause : début (avec ou sans date de fin), reprise
+ *   plan-day       jour du planning réglé à la main : choix (renfo, cardio, repos, pas dispo, auto), jour de la semaine, jours d'avance
+ *   export-reminder rappel de sauvegarde : export lancé ou « Plus tard »
+ *   import         sauvegarde importée : version du schéma du fichier, photos incluses ou non
+ *   record         record battu au bilan de séance : variante, ancien et nouveau
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

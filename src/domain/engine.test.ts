@@ -164,6 +164,13 @@ describe('récupération et charge (J2)', () => {
     expect(plan.notes).toContain('Jambes au repos : elles ont travaillé il y a moins de 24 h.');
   });
 
+  it('garde les jambes fraîches la veille d’une course prévue', () => {
+    const plan = buildPlan(input({ duration: 20, runTomorrow: true }));
+    expect(mainItems(plan).some((i) => categoryOf(i.movementId) === 'legs')).toBe(false);
+    expect(plan.blocks.some((b) => b.kind === 'knee')).toBe(true);
+    expect(plan.notes?.some((n) => n.includes('course est prévue demain'))).toBe(true);
+  });
+
   it('module le volume selon le ressenti, entre 2 et 4 séries', () => {
     const sets = (volume: -1 | 0 | 1) =>
       buildPlan(input({ duration: 20, volume })).blocks.find((b) => b.kind === 'superset')!.items[0]!.sets;

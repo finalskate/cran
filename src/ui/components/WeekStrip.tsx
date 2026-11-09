@@ -5,9 +5,13 @@
  * pas de « jour manqué » (SPEC §2.3).
  *
  * Sur l'accueil, la carte entière mène au Carnet ; dans le calendrier, chaque jour se touche.
+ *
+ * J6a : les jours à venir montrent ce que le planning prévoit, en points creux (orange = renfo,
+ * rose = cardio) ; rien pour un jour de repos.
  */
 import { dayToDate } from '../../domain/days';
 import type { TrainingWeek, WeekGoal } from '../../domain/week';
+import type { WeekPlan } from '../../domain/weekPlan';
 import { formatLongDate } from '../format';
 
 const LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -34,13 +38,16 @@ interface Props {
   today: string;
   /** Jours touchables (calendrier) : ouvre le détail du jour. */
   onDay?: (day: string) => void;
+  /** Planning de la semaine : ce qui est prévu les jours à venir. */
+  plan?: WeekPlan;
 }
 
-export function WeekStrip({ week, today, onDay }: Props) {
+export function WeekStrip({ week, today, onDay, plan }: Props) {
   return (
     <div class="week-strip" role={onDay ? undefined : 'img'} aria-label={onDay ? undefined : stripLabel(week)}>
       {week.days.map((d, i) => {
         const future = d.day > today;
+        const planned = plan?.days[i]?.status === 'planned' ? plan.days[i]!.kind : undefined;
         const marks = (
           <>
             <span class="week-strip__letter" aria-hidden="true">
@@ -49,6 +56,8 @@ export function WeekStrip({ week, today, onDay }: Props) {
             <span class="week-strip__dots" aria-hidden="true">
               {d.strength && <span class="cal__mark cal__mark--renfo" />}
               {d.cardio && <span class="cal__mark cal__mark--cardio" />}
+              {planned === 'strength' && <span class="cal__mark cal__mark--planned cal__mark--planned-renfo" />}
+              {planned === 'cardio' && <span class="cal__mark cal__mark--planned cal__mark--planned-cardio" />}
             </span>
             <span class="week-strip__commute" aria-hidden="true">
               {d.commute > 0 && <span class={`cal__dash${d.commute > 1 ? ' cal__dash--double' : ''}`} />}

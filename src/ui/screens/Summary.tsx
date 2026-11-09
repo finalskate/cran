@@ -9,9 +9,15 @@
  *
  * Titre et ouvertures des cartes sont tirés des messages d'encouragement (src/data/messages.ts),
  * numérotés par séance : deux séances qui se suivent n'ont jamais le même.
+ *
+ * J6a : les records battus pendant la séance sont fêtés (jamais une 1re fois, qui n'est qu'un
+ * point de départ).
  */
 import { useEffect, useState } from 'preact/hooks';
-import { LEVEL_UP, SESSION_DONE, STEP_BACK } from '../../data/messages';
+import { LEVEL_UP, RECORD, SESSION_DONE, STEP_BACK } from '../../data/messages';
+import { newRecords } from '../../domain/records';
+import { formatRecord, variantInfo } from '../journal/RecordsCard';
+import { workouts } from '../training';
 import { setWorkoutFeel } from '../../data/repo';
 import { track } from '../../data/usage';
 import type { SessionFeel } from '../../domain/history';
@@ -29,8 +35,11 @@ export function Summary() {
   const last = lastRecord.value;
   const [feel, setFeel] = useState<SessionFeel | undefined>(last?.record.sessionFeel);
 
+  // Records battus : calculés une fois (l'historique relu après la séance la contient déjà).
+  const [records] = useState(() => (last ? newRecords(last.record, workouts.value) : []));
   useEffect(() => {
     if (!last) go('today', true);
+    else for (const r of records) track('record', { variantId: r.variantId, from: r.previous, to: r.value });
   }, [last]);
   if (!last) return null;
 
@@ -65,6 +74,24 @@ export function Summary() {
       {last.unlocks.map((c) => (
         <LevelUpCard key={c.movementId} change={c} n={record.id ?? 0} />
       ))}
+      {records.length > 0 && (
+        <section class="card record-card" aria-label="Records battus">
+          <span class="card__label">{records.length > 1 ? 'Nouveaux records' : 'Nouveau record'}</span>
+          <p style={{ margin: 0 }}>{nthMessage(RECORD, record.id ?? 0, 'record')}</p>
+          {records.map((r) => (
+            <div key={`${r.variantId}|${r.band ?? ''}`} class="row records__row">
+              <span class="records__name">
+                {variantInfo(r.movementId, r.variantId).name}
+                {r.band && <span class="muted"> · élastique {r.band}</span>}
+              </span>
+              <span>
+                <span class="num records__value">{formatRecord(r)}</span>{' '}
+                <span class="muted">(avant {formatRecord({ ...r, value: r.previous })})</span>
+              </span>
+            </div>
+          ))}
+        </section>
+      )}
       {last.stepBacks.map((c) => (
         <StepBackCard key={c.movementId} change={c} n={record.id ?? 0} />
       ))}

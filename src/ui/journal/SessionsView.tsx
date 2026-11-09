@@ -8,6 +8,7 @@
  * J5a : les courses, le vélo et le vélotaf rejoignent le carnet ; la courbe des séances empile
  * renfo et « cardio et imposées » (le vélotaf n'est pas une séance) ; une 2e courbe montre les
  * minutes de course et de vélo par semaine (SPEC §4.10), dès qu'il y en a.
+ * J6a : les records en tête (régularité, série de pompes, plus longue course, chaque exercice).
  */
 import { weeklyCounts } from '../../domain/calendar';
 import { weeklyCardioMinutes } from '../../domain/week';
@@ -18,6 +19,7 @@ import { formatShortDate, SESSION_FEEL_LABEL } from '../format';
 import { activities, renfoDays, workouts } from '../training';
 import { WeeksChart } from '../components/SmallCharts';
 import { ActivityLine, WorkoutLines } from './common';
+import { RecordsCard } from './RecordsCard';
 
 /** Semaines montrées dans la courbe des séances. */
 const WEEKS_SHOWN = 12;
@@ -53,6 +55,7 @@ export function SessionsView() {
 
   return (
     <>
+      <RecordsCard />
       <section class="card" aria-labelledby="weeks-title">
         <div class="row" style={{ minHeight: 0 }}>
           <h2 id="weeks-title" class="card__title">

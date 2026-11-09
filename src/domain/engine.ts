@@ -23,6 +23,8 @@
  *  - volume modulé par le ressenti global de la séance précédente (±1 série, jamais le niveau) ;
  *  - chaque adaptation est expliquée dans `plan.notes` (affichées dans l'aperçu).
  *
+ * J6a : une course prévue demain au planning de la semaine écarte aussi les jambes (`runTomorrow`).
+ *
  * J3b — priorité « haut du corps » (`focus: 'upper'`, choisie dans Profil) :
  *  - jambes environ 2 fois par semaine : pas de jambes si elles ont été travaillées il y a moins
  *    de 3 jours, et une seule famille « jambes » par séance (la prévention genou reste, toujours) ;
@@ -53,6 +55,11 @@ export interface EngineInput {
   exclude?: readonly string[];
   /** Jambes à ménager (charge) : pas de mouvement de jambes dans les blocs principaux. */
   restLegs?: boolean;
+  /**
+   * Course prévue demain au planning de la semaine (J6a) : pas de jambes aujourd'hui non plus,
+   * pour courir sur des jambes fraîches (SPEC §4.4). La prévention genou reste.
+   */
+  runTomorrow?: boolean;
   /** Séries en plus ou en moins sur les blocs principaux (ressenti de la séance précédente). */
   volume?: -1 | 0 | 1;
   /** Priorité d'entraînement (J3b). Absente = équilibrée. */
@@ -140,6 +147,7 @@ export function buildPlan(input: EngineInput): Plan {
   const notes: string[] = [];
   if (input.exclude?.length) notes.push('2e séance du jour : les mouvements des dernières 48 h sont laissés de côté.');
   if (input.restLegs && input.ctx.kneeScore < 5) notes.push('Jambes au repos : elles ont travaillé il y a moins de 24 h.');
+  else if (input.runTomorrow && input.ctx.kneeScore < 5) notes.push('Jambes au repos : une course est prévue demain, garde-les fraîches. La prévention genou reste.');
   else if (input.duration >= 20 && input.ctx.kneeScore < 5 && !legsDue(input)) {
     notes.push('Priorité haut du corps : pas de jambes aujourd’hui, deux fois par semaine suffisent. La prévention genou reste.');
   }
@@ -242,7 +250,7 @@ function legsDue(input: EngineInput): boolean {
 
 /** Choisit les mouvements principaux du jour. */
 export function pickMains(input: EngineInput, count: number): Candidate[] {
-  const noLegs = input.ctx.kneeScore >= 5 || input.restLegs || !legsDue(input);
+  const noLegs = input.ctx.kneeScore >= 5 || input.restLegs || input.runTomorrow || !legsDue(input);
   // Priorité haut du corps : une seule famille de jambes par séance, le reste pour le haut.
   const maxPer = (c: Category) => (input.focus === 'upper' && c === 'legs' ? 1 : 2);
   const allowed = noLegs ? MAIN_CATEGORIES.filter((c) => c !== 'legs') : MAIN_CATEGORIES;

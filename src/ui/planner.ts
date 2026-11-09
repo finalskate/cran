@@ -1,6 +1,6 @@
 /**
  * Relie le moteur pur (src/domain/engine.ts) aux données de l'appli : lit l'historique,
- * les niveaux, le lieu, la charge et le genou, puis construit le plan du jour.
+ * les niveaux, le lieu, la charge, le genou et le planning de la semaine, puis construit le plan du jour.
  */
 import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
 import { alternatives, handSupport, resolveVariant, variantHere, type Context, type Resolved } from '../domain/availability';
@@ -13,6 +13,7 @@ import type { Duration, Location, Movement, Plan, PlanItem, Variant } from '../d
 import { track } from '../data/usage';
 import { levels, locations, prefs, setPref } from './state';
 import { activities, kneeLogs, loadTraining, workouts as allWorkouts } from './training';
+import { runPlannedTomorrow } from './weekState';
 
 const ALL: Movement[] = [...CATALOG, WARMUP, COOLDOWN];
 
@@ -106,6 +107,8 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
     // 2e séance du jour : les mouvements des 48 dernières heures sont écartés.
     exclude: sessionDoneToday(workouts, now) ? workedRecently(workouts, CATALOG, now) : [],
     restLegs: legsLoaded(activities.value, now),
+    // Planning de la semaine (J6a) : course prévue demain → jambes fraîches.
+    runTomorrow: runPlannedTomorrow(now),
     volume: volumeDelta(recall?.feel),
     focus: prefs.value.focus,
   });

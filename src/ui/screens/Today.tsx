@@ -15,13 +15,16 @@
  * « Course · vélo » et « Vélotaf ». Le raccourci « Lieux » est passé dans Réglages.
  * J5b : la phase en cours dans l'en-tête, l'annonce d'une phase qui commence (changement
  * programmé), le cardio proposé selon la phase et le lieu, et en mode cantine l'assiette type.
+ * J6a : dans la carte de la semaine, le planning (points creux, « Aujourd'hui : … » ou le soir
+ * « Demain : … ») et les semaines réussies ; en pause, une carte « En pause » et l'objectif
+ * suspendu (pas de suggestion de cardio) ; un rappel de sauvegarde discret après 7 jours sans export.
  */
 import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
 import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
 import { REST_DAY } from '../../data/messages';
-import { dayKey } from '../../domain/days';
+import { dayKey, dayToDate } from '../../domain/days';
 import { calibrationDay, foodDay, latestWeight, sumEntries } from '../../domain/nutrition';
 import { reviewPrompt } from '../../domain/habits';
 import { dailyMessage } from '../../domain/messages';
@@ -43,11 +46,14 @@ import { GoalLine, WeekStrip } from '../components/WeekStrip';
 import { weekOf } from '../../domain/week';
 import { track } from '../../data/usage';
 import { openCalendar } from './Journal';
+import { PlanLine, RegularityLine } from '../components/WeekPlanView';
+import { currentPause, currentWeekPlan, exportDue, nextWeekPlan, resume, runExport, snoozeExport, weekRegularity } from '../weekState';
 import { ReviewSheet } from '../food/ReviewSheet';
 import { calibrationStart, profile, targets, useDayEntries, weights } from '../foodState';
 import { reviewedDays } from '../habitsState';
 import { photos, summary, trend } from '../bodyState';
-import { formatApproxDate, formatKg, formatLongDate, formatSigned } from '../format';
+import { formatApproxDate, formatKg, formatLongDate, formatShortDate, formatSigned } from '../format';
+import type { WeekPlan } from '../../domain/weekPlan';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
 import { activities, answerMorningKnee, kneeLogs, renfoDays, workouts } from '../training';
@@ -74,6 +80,10 @@ export function Today() {
   const notice = ready.value ? phaseNotice(now) : null;
   const cardioFor = cardioChoice(phase, location?.equipment ?? []);
   const week = weekOf(dayKey(now), renfoDays.value, activities.value);
+  const pause = currentPause(now);
+  const plan = ready.value && !pause ? currentWeekPlan(now) : null;
+  const regular = weekRegularity(now).summary;
+  const backup = ready.value ? exportDue(now) : null;
 
   function openCardio(type: 'run' | 'bike' | undefined, from: 'shortcut' | 'card') {
     track('cardio-sheet', { from, type });
@@ -118,6 +128,19 @@ export function Today() {
               Reprendre
             </button>
           </div>
+        </section>
+      )}
+
+      {pause && (
+        <section class="card pause-card" aria-labelledby="pause-title">
+          <span class="card__label">Mode pause</span>
+          <span id="pause-title" class="card__title">
+            {pause.until ? `En pause jusqu’au ${formatShortDate(dayToDate(pause.until))}` : 'En pause'}
+          </span>
+          <span class="muted">L’objectif de la semaine est suspendu, rien n’est perdu. Une séance reste possible quand tu veux.</span>
+          <button type="button" class="btn btn--small" onClick={() => void resume()}>
+            Reprendre
+          </button>
         </section>
       )}
 
@@ -198,13 +221,17 @@ export function Today() {
         <button type="button" class="card card--link card--button card--quiet week-card" onClick={() => openCalendar()}>
           <div class="row" style={{ minHeight: 0 }}>
             <span class="card__label">Cette semaine</span>
-            <GoalLine week={week} goal={p.weekGoal} />
+            {pause ? <span class="muted">Objectif suspendu</span> : <GoalLine week={week} goal={p.weekGoal} />}
           </div>
-          <WeekStrip week={week} today={dayKey(now)} />
+          <WeekStrip week={week} today={dayKey(now)} {...(plan ? { plan } : {})} />
+          {plan && (
+            <PlanLine plan={plan} {...nextWeekProp(now)} today={dayKey(now)} hour={now.getHours()} goal={p.weekGoal} />
+          )}
+          <RegularityLine summary={regular} />
         </button>
       )}
 
-      {ready.value && <CardioCard choice={cardioFor} onLog={(type) => openCardio(type, 'card')} />}
+      {ready.value && !pause && <CardioCard choice={cardioFor} onLog={(type) => openCardio(type, 'card')} />}
 
       {phase?.cantine ? (
         // Mode cantine : on ne compte plus ; l'assiette type, et un simple total si on a noté (pas de cible).
@@ -227,6 +254,8 @@ export function Today() {
       )}
 
       {last && <BodyCard />}
+
+      {backup && <BackupCard since={backup.since} />}
 
       <section class="card" aria-label="Raccourcis">
         <div class="shortcuts shortcuts--grid">
@@ -291,6 +320,47 @@ export function Today() {
       {commuting && <CommuteSheet onClose={() => setCommuting(false)} />}
       {reviewing && <ReviewSheet day={reviewing.day} via={reviewing.via} onClose={() => setReviewing(null)} />}
     </main>
+  );
+}
+
+/** Le dimanche, le planning de la semaine suivante sert à « Demain : … ». */
+function nextWeekProp(now: Date): { next?: WeekPlan } {
+  const next = nextWeekPlan(now);
+  return next ? { next } : {};
+}
+
+/**
+ * Rappel de sauvegarde (SPEC §4.11) : discret, un geste pour exporter, « Plus tard » le fait
+ * taire 3 jours. Les photos ne partent pas d'ici (choix à faire dans Réglages).
+ */
+function BackupCard({ since }: { since: number | null }) {
+  const [busy, setBusy] = useState(false);
+  async function save() {
+    setBusy(true);
+    try {
+      await runExport(false, 'reminder');
+    } catch (e) {
+      alert(`L’export a échoué : ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section class="card card--quiet" aria-labelledby="backup-title">
+      <span class="card__label">Sauvegarde</span>
+      <span id="backup-title" class="card__title">
+        {since === null ? 'Pas encore de sauvegarde' : `Dernière sauvegarde il y a ${since} jours`}
+      </span>
+      <span class="muted">Un export vers OneDrive, et rien ne se perd si le téléphone lâche.</span>
+      <div class="segmented">
+        <button type="button" class="btn btn--quiet" onClick={() => void snoozeExport()}>
+          Plus tard
+        </button>
+        <button type="button" class="btn btn--accent" disabled={busy} onClick={() => void save()}>
+          {busy ? 'Préparation…' : 'Exporter'}
+        </button>
+      </div>
+    </section>
   );
 }
 

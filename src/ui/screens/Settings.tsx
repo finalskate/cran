@@ -2,12 +2,14 @@
  * Écran « Réglages ». Au J0 : effets visuels, état du stockage persistant (SPEC §3.1), version.
  * Retouches J1 : export complet des données (sauvegarde et journal d'usage, SPEC §4.11).
  * J5a : objectif de la semaine (renfos et cardio) ; lien vers les lieux (sorti de l'accueil).
+ * J6a : mode pause ; import d'une sauvegarde (validée, puis remplacement complet après accord).
  */
 import { useEffect, useState } from 'preact/hooks';
 import { SCHEMA_VERSION } from '../../data/db';
-import { getSetting, setSetting, type FxLevel } from '../../data/settings';
+import { parseBackup, type ExportFile } from '../../data/backup';
+import { db } from '../../data/db';
+import type { FxLevel } from '../../data/settings';
 import { getStorageInfo, type StorageInfo } from '../../data/storage';
-import { track } from '../../data/usage';
 import { offlineReady } from '../../pwa/registerSW';
 import { Stepper } from '../components/Stepper';
 import { Toggle } from '../components/Toggle';
@@ -25,7 +27,9 @@ import {
   unlockAudio,
   voiceAvailable,
 } from '../device/feedback';
-import { exportData } from '../device/exportFile';
+import { ImportSheet } from '../components/ImportSheet';
+import { PauseSheet } from '../components/PauseSheet';
+import { currentPause, resume, runExport } from '../weekState';
 import { formatBytes, formatLongDate, formatShortDate } from '../format';
 import { persistState, prefs, refreshPersistence, setFx, setPref } from '../state';
 
@@ -58,8 +62,12 @@ export function Settings() {
 
   const p = prefs.value;
   const [notifyState, setNotifyState] = useState(notifyPermission());
-  const [lastExport, setLastExport] = useState<string | undefined>(undefined);
+  const lastExport = p.lastExportAt;
   const [exporting, setExporting] = useState(false);
+  const [pausing, setPausing] = useState(false);
+  const [importing, setImporting] = useState<ExportFile | null>(null);
+  const [importError, setImportError] = useState('');
+  const pause = currentPause();
   // Photos exclues par défaut (SPEC §4.9) : à cocher à chaque export, jamais mémorisé.
   const [includePhotos, setIncludePhotos] = useState(false);
   const [choosingPhase, setChoosingPhase] = useState(false);
@@ -67,25 +75,26 @@ export function Settings() {
   const scheduled = nextPhase();
   const photoBytes = photos.value.reduce((n, ph) => n + ph.blob.size, 0);
 
-  useEffect(() => {
-    void getSetting('lastExportAt').then(setLastExport);
-  }, []);
-
-  async function runExport() {
+  async function exportNow() {
     setExporting(true);
     try {
-      const outcome = await exportData({ includePhotos });
-      track('export', { outcome, photos: includePhotos });
-      if (outcome !== 'cancelled') {
-        const at = new Date().toISOString();
-        await setSetting('lastExportAt', at);
-        setLastExport(at);
-      }
+      await runExport(includePhotos, 'settings');
     } catch (e) {
       alert(`L’export a échoué : ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setExporting(false);
     }
+  }
+
+  /** Fichier choisi pour l'import : lu et validé en entier avant de montrer quoi que ce soit. */
+  async function pickBackup(input: HTMLInputElement) {
+    const file = input.files?.[0];
+    input.value = ''; // le même fichier pourra être choisi de nouveau
+    if (!file) return;
+    setImportError('');
+    const parsed = parseBackup(await file.text(), db);
+    if (parsed.ok) setImporting(parsed.file);
+    else setImportError(parsed.error);
   }
 
   /** Activer la notification demande l'autorisation Android dans la foulée. */
@@ -253,6 +262,36 @@ export function Settings() {
         </p>
       </section>
 
+      <section class="card" aria-labelledby="pause-title">
+        <span id="pause-title" class="card__label">
+          Mode pause
+        </span>
+        {pause ? (
+          <>
+            <span class="card__title">
+              En pause {pause.until ? `jusqu’au ${formatShortDate(dayToDate(pause.until))}` : 'jusqu’à nouvel ordre'}
+            </span>
+            <span class="muted">L’objectif de la semaine est suspendu depuis le {formatShortDate(dayToDate(pause.from))}</span>
+            <div class="segmented">
+              <button type="button" class="btn" onClick={() => setPausing(true)}>
+                Changer la fin
+              </button>
+              <button type="button" class="btn btn--accent" onClick={() => void resume()}>
+                Reprendre
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span class="muted">Malade, blessé, une semaine impossible : l’objectif est suspendu, rien n’est perdu.</span>
+            <button type="button" class="btn" onClick={() => setPausing(true)}>
+              Faire une pause
+            </button>
+          </>
+        )}
+      </section>
+      {pausing && <PauseSheet onClose={() => setPausing(false)} />}
+
       <a class="card card--link" href="#/lieux">
         <span class="card__label">Lieux</span>
         <span class="card__title">Lieux, matériel et élastiques</span>
@@ -300,13 +339,30 @@ export function Settings() {
             onChange={setIncludePhotos}
           />
         )}
-        <button type="button" class="btn" disabled={exporting} onClick={() => void runExport()}>
+        <button type="button" class="btn" disabled={exporting} onClick={() => void exportNow()}>
           {exporting ? 'Préparation…' : 'Exporter mes données'}
         </button>
         <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
           Tout dans un fichier : séances, niveaux, alimentation, pesées, réglages et journal d’usage. Partage-le vers OneDrive pour
           le garder à l’abri (et me le faire lire).
           {lastExport ? ` Dernier export : ${formatLongDate(new Date(lastExport)).toLowerCase()}.` : ' Aucun export pour l’instant.'}
+        </p>
+        <label class="btn btn--quiet file-btn">
+          Importer une sauvegarde
+          <input
+            type="file"
+            accept=".json,.txt,application/json,text/plain"
+            class="visually-hidden"
+            onChange={(e) => void pickBackup(e.currentTarget)}
+          />
+        </label>
+        {importError && (
+          <p class="notice-line" role="alert" style={{ margin: 0 }}>
+            {importError}
+          </p>
+        )}
+        <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
+          Nouveau téléphone, ou appli réinstallée : choisis un export (.json ou .txt). Rien n’est remplacé avant ton accord.
         </p>
         <div class="row">
           <span>Mode avion</span>
@@ -315,6 +371,8 @@ export function Settings() {
           </span>
         </div>
       </section>
+
+      {importing && <ImportSheet file={importing} onClose={() => setImporting(null)} />}
 
       <section class="card" aria-labelledby="about-title">
         <span id="about-title" class="card__label">

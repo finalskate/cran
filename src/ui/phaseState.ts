@@ -20,6 +20,7 @@ import {
   type PhaseId,
   type PhaseInfo,
 } from '../domain/phase';
+import { recordGoalChange } from '../domain/regularity';
 import type { Location } from '../domain/types';
 import type { WeekGoal } from '../domain/week';
 import { locations, prefs, setPref } from './state';
@@ -71,7 +72,8 @@ export async function syncPhase(now = new Date()): Promise<void> {
 async function applyDefaults(entry: PhaseEntry): Promise<void> {
   const info = PHASES[entry.id];
   if (locations.value.some((l) => l.id === info.locationId)) await setPref('lastLocationId', info.locationId);
-  await setPref('weekGoal', phaseGoal(entry.id));
+  // L'objectif de la phase vaut à partir de son 1er jour (même si l'appli s'ouvre plus tard).
+  await saveWeekGoal(phaseGoal(entry.id), entry.since);
   await setPref('lastCardio', info.cardio);
   await setPref('phaseApplied', phaseKey(entry));
   track('phase', { action: 'applied', phase: entry.id });
@@ -108,9 +110,20 @@ export async function dismissPhaseNotice(entry: PhaseEntry): Promise<void> {
   await setPref('phaseSeen', phaseKey(entry));
 }
 
+/**
+ * Enregistre l'objectif de la semaine et garde la trace du changement (J6a) : les semaines
+ * passées restent jugées sur l'objectif qu'elles avaient.
+ */
+async function saveWeekGoal(goal: WeekGoal, day: string): Promise<void> {
+  const before = prefs.value.weekGoal;
+  if (before.strength === goal.strength && before.cardio === goal.cardio) return;
+  await setPref('weekGoals', recordGoalChange(prefs.value.weekGoals, day, goal, before));
+  await setPref('weekGoal', goal);
+}
+
 /** Objectif de la semaine changé dans Réglages : gardé aussi pour la phase en cours. */
 export async function setWeekGoal(goal: WeekGoal, now = new Date()): Promise<void> {
-  await setPref('weekGoal', goal);
+  await saveWeekGoal(goal, dayKey(now));
   const current = currentPhase(now);
   if (current) await setPref('phaseGoals', { ...prefs.value.phaseGoals, [current.id]: goal });
   track('week-goal', { ...goal, phase: current?.id });

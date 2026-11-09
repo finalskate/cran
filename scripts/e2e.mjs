@@ -12,6 +12,8 @@
  * bras et de poitrine proposés après les photos, mode miroir.
  * Puis J4B : bilan du jour depuis l'Assiette (écart, déclencheur, plan rappelé), résumé de la
  * semaine, « Mes plans ».
+ * Puis J6a : planning de la semaine (un jour réglé à la main), pause, records, rappel de
+ * sauvegarde, et un vrai aller-retour export → données effacées → import.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -867,6 +869,125 @@ try {
   await wait(300);
   if (!(await page.evaluate(() => document.body.textContent.includes('Puis Vacances le')))) throw new Error('réglages : changement programmé absent');
   await shot('94-reglages-phase', true);
+
+  // ─── J6a : planning de la semaine, pause, records, rappel de sauvegarde, import ───
+  /** Lit ou écrit la base de l'appli depuis la page (les captures montrent ensuite l'effet). */
+  const idb = (fn, arg) =>
+    page.evaluate(
+      async (src, arg) => {
+        const db = await new Promise((ok, ko) => {
+          const r = indexedDB.open('cran');
+          r.onsuccess = () => ok(r.result);
+          r.onerror = () => ko(r.error);
+        });
+        try {
+          return await new Function('db', 'arg', `return (${src})(db, arg)`)(db, arg);
+        } finally {
+          db.close();
+        }
+      },
+      fn.toString(),
+      arg,
+    );
+  const count = (store) =>
+    idb((db, store) => new Promise((ok) => (db.transaction(store).objectStore(store).count().onsuccess = (e) => ok(e.target.result))), store);
+
+  // Planning : l'accueil annonce le prochain jour, le Carnet liste les jours qui restent.
+  await page.goto(BASE);
+  await wait(400);
+  if (!(await page.evaluate(() => /Aujourd’hui :|Demain :/.test(document.body.textContent)))) throw new Error('accueil : ligne du planning absente');
+  await shot('95-accueil-planning', true);
+  await page.evaluate(() => document.querySelector('.week-card')?.click());
+  await page.waitForFunction(() => document.querySelector('.plan-row'), { timeout: 5000 });
+  const rows = await page.$$('.plan-row');
+  if (rows.length > 0) {
+    await page.evaluate(() => document.querySelector('.plan-row').click());
+    await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Pas dispo'));
+    await shot('96-planning-jour');
+    await page.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((b) => b.textContent === 'Pas dispo').click());
+    await page.waitForFunction(() => document.querySelector('.plan-row')?.textContent.includes('Pas dispo'), { timeout: 5000 });
+    await shot('97-planning-reglé', true);
+  }
+
+  // Pause : depuis Réglages, l'accueil la montre et suspend l'objectif ; reprise d'un geste.
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  await click('Faire une pause');
+  await clickIn('Mettre en pause');
+  await wait(300);
+  await page.goto(BASE);
+  await page.waitForFunction(() => document.body.textContent.includes('Objectif suspendu'), { timeout: 5000 });
+  await shot('98-accueil-pause', true);
+  // Le bouton de la carte pause (pas celui de la séance en cours, qui porte le même nom).
+  await page.evaluate(() => document.querySelector('.pause-card .btn').click());
+  await page.waitForFunction(() => !document.body.textContent.includes('Objectif suspendu'), { timeout: 5000 });
+
+  // Records : en tête de Carnet › Séances.
+  await page.goto(`${BASE}#/carnet`);
+  await wait(300);
+  await click('Séances');
+  await page.waitForFunction(() => document.body.textContent.includes('Records'), { timeout: 5000 });
+  await page.evaluate(() => document.querySelector('.records__details')?.setAttribute('open', ''));
+  await wait(200);
+  await shot('99-records', true);
+
+  // Rappel de sauvegarde : dernier export il y a 10 jours → carte sur l'accueil, « Plus tard » la range.
+  await idb(
+    (db, at) =>
+      new Promise((ok) => {
+        const tx = db.transaction('settings', 'readwrite');
+        tx.objectStore('settings').put({ key: 'lastExportAt', value: at });
+        tx.oncomplete = ok;
+      }),
+    new Date(Date.now() - 10 * 86_400_000).toISOString(),
+  );
+  await page.goto(BASE);
+  await page.reload();
+  await page.waitForFunction(() => document.body.textContent.includes('Dernière sauvegarde il y a 10 jours'), { timeout: 5000 });
+  await shot('100-accueil-sauvegarde', true);
+  await click('Plus tard');
+  await page.waitForFunction(() => !document.body.textContent.includes('Dernière sauvegarde'), { timeout: 5000 });
+
+  // Import : export réel (téléchargement), données effacées, puis import du fichier → tout revient.
+  const { resolve } = await import('node:path');
+  const { readdir, rm } = await import('node:fs/promises');
+  const downloads = resolve(OUT, 'downloads');
+  await rm(downloads, { recursive: true, force: true });
+  await mkdir(downloads, { recursive: true });
+  const cdp = await page.target().createCDPSession();
+  await cdp.send('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: downloads });
+  await page.goto(`${BASE}#/reglages`);
+  await wait(300);
+  await page.evaluate(() => Object.defineProperty(navigator, 'canShare', { value: undefined }));
+  await click('Exporter mes données');
+  let exported;
+  for (let i = 0; i < 50 && !exported; i++) {
+    await wait(100);
+    exported = (await readdir(downloads)).find((f) => f.endsWith('.json'));
+  }
+  if (!exported) throw new Error('import : le fichier exporté n’a pas été téléchargé');
+  const before = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
+  await idb(
+    (db) =>
+      new Promise((ok) => {
+        const tx = db.transaction(['workouts', 'weights'], 'readwrite');
+        tx.objectStore('workouts').clear();
+        tx.objectStore('weights').clear();
+        tx.oncomplete = ok;
+      }),
+  );
+  await page.reload();
+  await wait(400);
+  const input = await page.$('input[type=file]');
+  await input.uploadFile(resolve(downloads, exported));
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Cette sauvegarde'), { timeout: 5000 });
+  await shot('101-import', true);
+  await page.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((b) => b.textContent.includes('Remplacer')).click());
+  await page.waitForNavigation({ timeout: 5000 }).catch(() => undefined);
+  await wait(800);
+  const after = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
+  if (JSON.stringify(after) !== JSON.stringify(before)) throw new Error(`import : ${JSON.stringify(after)} au lieu de ${JSON.stringify(before)}`);
+  await shot('102-apres-import', true);
 
   console.log(`Parcours terminé en ${n} actions. Captures dans ${OUT}/`);
 } catch (e) {

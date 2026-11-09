@@ -512,7 +512,8 @@ h3 {
 /* ─── Sélecteurs lieu / durée (natifs : grande liste plein écran sur Android) ─── */
 .select-chip select,
 .field select,
-.field input[type='text'] {
+.field input[type='text'],
+.field input[type='date'] {
   width: 100%;
   min-height: var(--tap);
   padding: 0 14px;
@@ -527,7 +528,8 @@ h3 {
 }
 
 .field select,
-.field input[type='text'] {
+.field input[type='text'],
+.field input[type='date'] {
   border-radius: var(--radius-btn);
   text-align: left;
   font-weight: 400;
@@ -2906,4 +2908,173 @@ button.week-strip__day {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* ─── J6a : planning de la semaine, semaines réussies, pause, records, sauvegarde ─── */
+
+/* Jour prévu au planning : point creux (orange = renfo, rose = cardio). */
+.cal__mark--planned {
+  background: transparent;
+  border: 1.5px solid var(--accent);
+}
+
+.cal__mark--planned-cardio {
+  border-color: var(--accent-2);
+}
+
+/* Les jours à venir restent lisibles : c'est le planning qui s'y affiche. */
+.week-strip__day--future {
+  opacity: 0.75;
+}
+
+.plan-line {
+  display: block;
+  font-size: 15px;
+}
+
+.plan-line__when {
+  font-weight: 600;
+  color: var(--accent-soft);
+}
+
+.plan-line__note {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.regularity-line {
+  font-size: 14px;
+  color: var(--ok);
+  font-weight: 600;
+}
+
+/* Semaine réussie dans le calendrier du mois. */
+.cal__week--done {
+  color: var(--ok);
+}
+
+.cal__week-check {
+  margin-left: 1px;
+  font-size: 11px;
+}
+
+.plan-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.plan-row {
+  display: grid;
+  grid-template-columns: 92px 1fr auto;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--tap);
+  padding: 0 4px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plan-row__day {
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.plan-row--strength .plan-row__what {
+  color: var(--accent-soft);
+}
+
+.plan-row--cardio .plan-row__what {
+  color: var(--accent-2);
+}
+
+.plan-row--off .plan-row__what,
+.plan-row--rest .plan-row__what {
+  color: var(--text-muted);
+}
+
+.plan-row__chosen {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.plan-row__go {
+  color: var(--text-muted);
+  font-size: 18px;
+}
+
+.plan-list__hint {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.plan-choices {
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.pause-card {
+  border: 1px solid var(--border-strong);
+}
+
+.pause-card .btn {
+  align-self: flex-start;
+}
+
+/* Sélecteur de fichier présenté comme un bouton (le champ natif est masqué). */
+.file-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.import-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.btn--block {
+  width: 100%;
+}
+
+.records {
+  gap: 4px;
+}
+
+.records__row {
+  min-height: 36px;
+  gap: 12px;
+}
+
+.records__name {
+  min-width: 0;
+}
+
+.records__value {
+  font-weight: 700;
+}
+
+/* Valeur et date d'un record restent ensemble, à droite. */
+.records__row > span:last-child {
+  white-space: nowrap;
+}
+
+.records__group {
+  display: flex;
+  flex-direction: column;
+  margin-top: 8px;
+}
+
+.record-card {
+  border: 2px solid var(--accent-2);
+  background: linear-gradient(135deg, rgba(190, 24, 93, 0.2), rgba(194, 65, 12, 0.16)), var(--surface);
 }

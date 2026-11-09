@@ -3,7 +3,7 @@
  */
 import 'fake-indexeddb/auto';
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildExport, exportFileName } from './backup';
+import { backupSummary, buildExport, exportFileName, parseBackup, restoreBackup, type ExportFile } from './backup';
 import { CranDB, SCHEMA_VERSION } from './db';
 import { DEFAULT_LOCATIONS } from './equipment';
 import { EVENT_MAX_AGE_DAYS, pruneEvents, track } from './usage';
@@ -71,6 +71,100 @@ describe('buildExport', () => {
     expect(file.photosExcluded).toBeUndefined();
     expect(file.tables.photos).toEqual([expect.objectContaining({ pose: 'front', dataUrl: 'data:image/jpeg;base64,AQID' })]);
     expect(JSON.parse(JSON.stringify(file))).toEqual(file);
+  });
+});
+
+describe('import', () => {
+  /** Base remplie de quelques données fictives. */
+  async function filled(): Promise<CranDB> {
+    const database = freshDb();
+    await database.workouts.add({
+      startedAt: '2026-11-07T18:00:00Z', endedAt: '2026-11-07T18:20:00Z', locationId: 'home', duration: 20, kneeScore: 1,
+      entries: [{ movementId: 'push-h', variantId: 'archer', level: 5, sets: [{ value: 12 }] }],
+    });
+    await database.settings.put({ key: 'weekGoal', value: { strength: 3, cardio: 2 } });
+    await database.weights.put({ day: '2026-11-08', at: '2026-11-08T07:00:00Z', kg: 80 });
+    await database.foodLog.bulkAdd([
+      { day: '2026-11-08', at: '', meal: 'noon', label: 'Test', portion: '1', count: 1, unit: { kcal: 500, protein: 30 }, method: 'free' },
+      { day: '2026-11-08', at: '', meal: 'evening', label: 'Test', portion: '1', count: 1, unit: { kcal: 600, protein: 40 }, method: 'free' },
+    ]);
+    await addPhoto(database);
+    return database;
+  }
+
+  async function addPhoto(database: CranDB) {
+    await database.photos.add({
+      day: '2026-11-08', month: '2026-11', pose: 'front', at: '2026-11-08T08:00:00Z', width: 2, height: 2,
+      blob: new Blob([new Uint8Array([1, 2, 3])], { type: 'image/jpeg' }),
+    });
+  }
+
+  const text = (file: ExportFile) => JSON.stringify(file, null, 1);
+
+  it('export → nouvelle base → import : rien ne se perd', async () => {
+    const source = await filled();
+    const file = await buildExport(source, '0.9.0', new Date('2026-11-09T18:54:00Z'), { includePhotos: true });
+    const target = freshDb();
+    await target.open();
+    const parsed = parseBackup(text(file), target);
+    if (!parsed.ok) throw new Error(parsed.error);
+    expect(backupSummary(parsed.file)).toMatchObject({ workouts: 1, foodDays: 1, weights: 1, photos: 1 });
+    await restoreBackup(target, parsed.file);
+
+    for (const table of source.tables) {
+      if (table.name === 'photos') continue;
+      expect(await target.table(table.name).toArray(), table.name).toEqual(await table.toArray());
+    }
+    const [photo] = await target.photos.toArray();
+    expect(photo).toMatchObject({ pose: 'front', month: '2026-11' });
+    expect(new Uint8Array(await photo!.blob.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
+  });
+
+  it('un fichier sans photo garde les photos du téléphone', async () => {
+    const file = await buildExport(await filled(), '0.9.0', new Date());
+    const target = freshDb();
+    await addPhoto(target);
+    await target.workouts.add({ startedAt: 'x', endedAt: 'x', locationId: 'park', duration: 10, kneeScore: 0, entries: [] });
+    const parsed = parseBackup(text(file), target);
+    if (!parsed.ok) throw new Error(parsed.error);
+    await restoreBackup(target, parsed.file);
+    expect(await target.photos.count()).toBe(1);
+    expect((await target.workouts.toArray()).map((w) => w.locationId)).toEqual(['home']);
+  });
+
+  it('met à niveau un export d’une version plus ancienne', async () => {
+    const target = freshDb();
+    await target.open();
+    const old = {
+      app: 'cran', schemaVersion: 5, appVersion: '0.1.0', exportedAt: '2026-11-07T10:00:00Z',
+      tables: {
+        levels: [{ movementId: 'push-h', level: 5, updatedAt: '2026-11-07T09:00:00Z' }],
+        events: [{ id: 1, at: Date.parse('2026-11-07T08:00:00Z'), type: 'level', data: { movementId: 'push-h', to: 4 } }],
+        locations: DEFAULT_LOCATIONS,
+      },
+    };
+    const parsed = parseBackup(JSON.stringify(old), target);
+    if (!parsed.ok) throw new Error(parsed.error);
+    await restoreBackup(target, parsed.file);
+    expect((await target.levelHistory.toArray()).map((h) => h.level)).toEqual([4, 5]);
+    expect(await target.reviews.count()).toBe(0);
+  });
+
+  it('refuse un fichier abîmé, étranger ou trop récent, sans rien toucher', async () => {
+    const database = freshDb();
+    await database.open();
+    const ok = { app: 'cran', schemaVersion: SCHEMA_VERSION, appVersion: '1', exportedAt: '', tables: {} };
+    const error = (data: unknown) => {
+      const r = parseBackup(typeof data === 'string' ? data : JSON.stringify(data), database);
+      return r.ok ? null : r.error;
+    };
+    expect(error('{ pas du json')).toMatch(/lisible/);
+    expect(error({ ...ok, app: 'autre' })).toMatch(/ne vient pas de Cran/);
+    expect(error({ ...ok, schemaVersion: SCHEMA_VERSION + 1 })).toMatch(/plus récente/);
+    expect(error({ ...ok, tables: { inconnue: [] } })).toMatch(/n’existe pas/);
+    expect(error({ ...ok, tables: { weights: [{ kg: 80 }] } })).toMatch(/identifiant/);
+    expect(error({ ...ok, tables: { photos: [{ day: 'x' }] } })).toMatch(/photo/);
+    expect(error(ok)).toBeNull();
   });
 });
 

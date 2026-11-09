@@ -151,6 +151,10 @@ export interface RunPlan {
   target: number;
   /** Durée de la sortie longue cette semaine. */
   longMinutes: number;
+  /** La longue (ou, en semaines 1–2, une sortie de base) est déjà courue cette semaine. */
+  longDone: boolean;
+  /** La sortie « jeu » est déjà courue cette semaine. */
+  playDone: boolean;
   /** Le genou est resté ≤ 2 cette semaine (condition de la 3e sortie). */
   kneeOkThisWeek: boolean;
   /** Genou du moment (24 dernières heures). */
@@ -234,6 +238,8 @@ export function runPlan(activities: readonly Activity[], kneeLogs: readonly Knee
     done,
     target: RUNS_PER_WEEK,
     longMinutes,
+    longDone,
+    playDone,
     kneeOkThisWeek,
     knee,
     ranToday: runs.some((r) => r.day === today),

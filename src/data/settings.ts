@@ -5,6 +5,8 @@
 import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { IfThenPlan } from '../domain/habits';
 import type { PhaseEntry, PhaseId } from '../domain/phase';
+import type { GoalChange, PauseEntry } from '../domain/regularity';
+import type { DayChoice } from '../domain/weekPlan';
 import type { Profile } from '../domain/nutrition';
 import type { Duration, TrainingFocus } from '../domain/types';
 import { DEFAULT_WEEK_GOAL, type WeekGoal } from '../domain/week';
@@ -31,8 +33,10 @@ export interface SettingsMap {
   watchNotify: boolean;
   /** Rappel « lance l'activité Musculation sur la montre » au démarrage. */
   watchReminder: boolean;
-  /** Date ISO du dernier export (pour le rappel hebdomadaire du J6). */
+  /** Date ISO du dernier export (rappel hebdomadaire, J6a). Vide : jamais exporté. */
   lastExportAt: string;
+  /** Rappel d'export repoussé (« Plus tard ») jusqu'à ce jour inclus. */
+  exportSnoozedUntil: string;
   /** Profil pour la cible calorique (J4) : saisi dans l'appli, jamais dans le code. */
   profile: Profile;
   /** Premier jour de la calibration alimentaire (« 2026-11-14 »), fixé à la création du profil. */
@@ -67,6 +71,12 @@ export interface SettingsMap {
   phaseSeen: string;
   /** Objectif de la semaine modifié dans une phase : il revient avec elle. */
   phaseGoals: Partial<Record<PhaseId, WeekGoal>>;
+  /** Changements de l'objectif de la semaine (J6a) : chaque semaine est jugée sur le sien. */
+  weekGoals: GoalChange[];
+  /** Pauses (J6a) : l'objectif de la semaine est suspendu, rien n'est perdu. */
+  pauses: PauseEntry[];
+  /** Jours réglés à la main dans le planning de la semaine (clé = jour). */
+  planChoices: Record<string, DayChoice>;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -92,6 +102,13 @@ export const SETTING_DEFAULTS = {
   phaseApplied: '',
   phaseSeen: '',
   phaseGoals: {},
+  weekGoals: [],
+  pauses: [],
+  planChoices: {},
+  // Dates : vides tant qu'elles n'ont pas été écrites (installedAt l'est au 1er lancement).
+  installedAt: '',
+  lastExportAt: '',
+  exportSnoozedUntil: '',
 } as const satisfies Partial<SettingsMap>;
 
 /** Lit un réglage ; `undefined` s'il n'a jamais été écrit. */

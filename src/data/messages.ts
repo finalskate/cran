@@ -74,6 +74,16 @@ export const LEVEL_UP: readonly string[] = [
   'Tu l’as bien mérité !',
 ];
 
+/** Ouverture de la carte « Nouveau record » au bilan de séance (J6a). */
+export const RECORD: readonly string[] = [
+  'Record battu !',
+  'Jamais fait mieux !',
+  'Nouveau sommet !',
+  'Ça, c’est une première !',
+  'Le carnet s’en souviendra.',
+  'Tu repousses la limite.',
+];
+
 /** Ouverture de la carte qui propose de consolider un cran plus bas. */
 export const STEP_BACK: readonly string[] = [
   'Ce niveau résiste encore.',

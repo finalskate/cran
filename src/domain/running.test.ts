@@ -171,7 +171,7 @@ describe('suggestion de course : 3 semaines simulées', () => {
 
   it('suggestion au-delà de 60 min : rappel du genou du lendemain ; tapis : rappel périostite', () => {
     const plan: RunPlan = {
-      week: 9, restart: false, started: true, status: 'go', done: 0, target: 2, longMinutes: 65,
+      week: 9, restart: false, started: true, status: 'go', done: 0, target: 2, longMinutes: 65, longDone: false, playDone: false,
       kneeOkThisWeek: true, knee: 0, ranToday: false, noDownhillUntil: null,
       next: { minutes: 65, kind: 'easy', long: true, optional: false },
     };

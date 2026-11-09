@@ -12,6 +12,10 @@
  *
  * Toucher un jour ouvre son détail : séances, activités, total de l'Assiette, et de quoi noter
  * après coup une course, un vélotaf ou une séance imposée oubliés.
+ *
+ * J6a : la semaine en cours montre son planning (jours restants, chacun réglable d'un geste) et
+ * les semaines réussies ; une semaine passée dit si elle a été réussie ou mise en pause ; dans le
+ * mois, la colonne « Sem. » porte un ✓ pour chaque semaine réussie.
  */
 import { useEffect, useState } from 'preact/hooks';
 import { mondayOf, monthGrid, monthOf, shiftMonth } from '../../domain/calendar';
@@ -31,6 +35,11 @@ import { CardioSheet } from './CardioSheet';
 import { ActivityLine, WorkoutLines } from './common';
 import { CommuteSheet } from './CommuteSheet';
 import { ImposedSheet } from './ImposedSheet';
+import { PlanList, RegularityLine } from '../components/WeekPlanView';
+import { cardioChoice } from '../../domain/phase';
+import { currentPhaseInfo } from '../phaseState';
+import { locations } from '../state';
+import { currentPause, currentWeekPlan, weekRegularity } from '../weekState';
 
 /** Saisie après coup depuis le détail d'un jour. */
 type LogKind = 'cardio' | 'commute' | 'imposed';
@@ -68,6 +77,8 @@ export function CalendarView() {
 
   const w = workouts.value;
   const a = activities.value;
+  const results = weekRegularity().results;
+  const succeeded = new Set(results.filter((r) => r.verdict === 'success').map((r) => r.monday));
 
   return (
     <>
@@ -147,8 +158,13 @@ export function CalendarView() {
                   </button>
                 );
               }),
-              <span key={`${week[0]}-n`} class="cal__week num" aria-label={`${count} séance${count > 1 ? 's' : ''} cette semaine`}>
+              <span
+                key={`${week[0]}-n`}
+                class={`cal__week num${succeeded.has(week[0]!) ? ' cal__week--done' : ''}`}
+                aria-label={`${count} séance${count > 1 ? 's' : ''} cette semaine${succeeded.has(week[0]!) ? ', semaine réussie' : ''}`}
+              >
                 {count > 0 ? count : ''}
+                {succeeded.has(week[0]!) && <span class="cal__week-check">✓</span>}
               </span>,
             ];
           })}
@@ -283,6 +299,12 @@ function WeekCard({ today, onDay }: { today: string; onDay: (day: string) => voi
   const [monday, setMonday] = useState(mondayOf(today));
   const current = monday === mondayOf(today);
   const week = trainingWeek(monday, renfoDays.value, activities.value);
+  const regular = weekRegularity();
+  const verdict = regular.results.find((r) => r.monday === monday);
+  // Planning : la semaine en cours seulement, et pas en pause.
+  const plan = current && !currentPause() ? currentWeekPlan() : null;
+  const location = locations.value.find((l) => l.id === prefs.value.lastLocationId);
+  const cardio = cardioChoice(currentPhaseInfo(), location?.equipment ?? []).primary;
   const totals = [
     week.runMinutes > 0 && `course ${week.runMinutes} min`,
     week.bikeMinutes > 0 && `vélo ${week.bikeMinutes} min`,
@@ -305,9 +327,16 @@ function WeekCard({ today, onDay }: { today: string; onDay: (day: string) => voi
           ›
         </button>
       </div>
-      <WeekStrip week={week} today={today} onDay={onDay} />
-      <GoalLine week={week} goal={prefs.value.weekGoal} />
+      <WeekStrip week={week} today={today} onDay={onDay} {...(plan ? { plan } : {})} />
+      {verdict?.paused && verdict.verdict !== 'success' ? (
+        <span class="muted">Semaine en pause : elle ne compte ni pour ni contre.</span>
+      ) : (
+        <GoalLine week={week} goal={verdict && !current ? verdict.goal : prefs.value.weekGoal} />
+      )}
+      {!current && verdict?.verdict === 'success' && <span class="goal-part goal-part--done">Semaine réussie ✓</span>}
       {totals.length > 0 && <span class="muted week-detail__totals">{totals.join(' · ')}</span>}
+      {current && <RegularityLine summary={regular.summary} />}
+      {plan && <PlanList plan={plan} goal={prefs.value.weekGoal} cardio={cardio} />}
     </section>
   );
 }

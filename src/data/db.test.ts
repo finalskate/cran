@@ -45,6 +45,7 @@ describe('CranDB', () => {
         'locations',
         'measures',
         'photos',
+        'remarks',
         'reviews',
         'settings',
         'weights',
@@ -270,6 +271,42 @@ describe('migration v6 → v7', () => {
     expect(await v7.reviews.count()).toBe(0);
     await v7.reviews.put({ day: '2026-11-08', at: '2026-11-08T20:00:00Z', protein: 'yes', proteinAuto: true, veggies: true, slip: 'none' });
     expect((await v7.reviews.get('2026-11-08'))?.slip).toBe('none');
+  });
+});
+
+describe('migration v7 → v8', () => {
+  it('conserve les données et ajoute les remarques', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée au J4B (schéma v7).
+    const v7 = new Dexie(name);
+    v7.version(1).stores({ settings: '&key' });
+    v7.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v7.version(3).stores({ events: '++id, at' });
+    v7.version(4).stores({ foods: '&id, barcode', foodLog: '++id, day', weights: '&day' });
+    v7.version(5).stores({ activities: '++id, day, type' });
+    v7.version(6).stores({ measures: '&id, kind, day', photos: '++id, month, pose', levelHistory: '++id, movementId, at' });
+    v7.version(7).stores({ reviews: '&day' });
+    await v7.table('reviews').put({ day: '2026-11-10', at: '2026-11-10T20:00:00Z', protein: 'yes', proteinAuto: true, veggies: true, slip: 'none' });
+    await v7.table('events').add({ at: 1, type: 'screen', data: { name: 'today' } });
+    v7.close();
+
+    const v8 = new CranDB(name);
+    opened.push(v8);
+    await v8.open();
+    expect(v8.verno).toBe(SCHEMA_VERSION);
+    expect(await v8.reviews.count()).toBe(1);
+    expect(await v8.events.count()).toBe(1);
+    expect(await v8.remarks.count()).toBe(0);
+    const context = { screen: 'today', origin: 'screen' as const, appVersion: '1', viewport: '412x915' };
+    await v8.remarks.add({ at: 2, text: 'Pas clair', tags: ['unclear'], context });
+    expect((await v8.remarks.toArray())[0]?.tags).toEqual(['unclear']);
   });
 });
 

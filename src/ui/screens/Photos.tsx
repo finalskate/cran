@@ -20,6 +20,7 @@ import { measures, photos, removePhotos, trend, waists } from '../bodyState';
 import { locations } from '../state';
 import { formatCm, formatKg, formatMonthLower } from '../format';
 import type { PhotoRow } from '../../data/db';
+import { RemarkButton } from '../components/RemarkSheet';
 
 const POSE_TAB: Record<PhotoPose, string> = { front: 'Face', side: 'Profil' };
 
@@ -75,6 +76,7 @@ export function Photos() {
           <span class="screen-header__kicker">Carnet › Corps</span>
           <h1 class="screen-header__title">Photos</h1>
         </div>
+        <RemarkButton />
       </header>
 
       {photos.value.length === 0 ? (

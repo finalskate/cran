@@ -51,9 +51,11 @@ import {
 } from '../../domain/session';
 import { bandAt, bandLabels } from '../../domain/bands';
 import type { Movement, PlanBlock, PlanItem, Variant } from '../../domain/types';
+import type { SessionContext } from '../../domain/remarks';
 import { DemoLink } from '../components/DemoLink';
 import { ExerciseSheet } from '../components/ExerciseSheet';
 import { Figure } from '../components/Figure';
+import { RemarkIcon } from '../components/RemarkSheet';
 import { Sheet } from '../components/Sheet';
 import { SwapPicker } from '../components/SwapPicker';
 import { beep, notify, speak, vibrate } from '../device/feedback';
@@ -62,6 +64,7 @@ import { CATEGORY_LABEL, formatClock, formatTarget, HAND_LABEL } from '../format
 import { withoutEquipment } from '../../domain/gear';
 import { contextFor, describeItem } from '../planner';
 import { go } from '../router';
+import { openRemark } from '../remarksState';
 import { lastRecord } from '../summary';
 import { afterWorkout } from '../training';
 import { locations, prefs, session, updateSession } from '../state';
@@ -179,7 +182,15 @@ export function Session() {
             </svg>
           </button>
         ) : (
-          <span class="icon-btn--spacer" aria-hidden="true" />
+          // Pendant le repos, la place du « ⋯ » sert au bouton « Signaler » (remarques d'usage).
+          <button
+            type="button"
+            class="icon-btn icon-btn--round remark-btn"
+            aria-label="Signaler quelque chose"
+            onClick={() => void openRemark('session', sessionContext(state, now))}
+          >
+            <RemarkIcon />
+          </button>
         )}
       </div>
 
@@ -190,6 +201,26 @@ export function Session() {
       )}
     </main>
   );
+}
+
+/**
+ * Où en est la séance, pour une remarque : l'exercice en cours (ou celui qui vient de finir,
+ * pendant le repos), la série, le lieu et le temps écoulé.
+ */
+function sessionContext(state: SessionState, now: number): SessionContext {
+  const step = currentStep(state)!;
+  const { variant } = describeItem(itemOf(state, step));
+  return {
+    phase: state.phase === 'rest' ? 'rest' : 'work',
+    block: state.plan.blocks[step.block]!.title,
+    variantId: variant.id,
+    variantName: variant.name,
+    set: step.set,
+    sets: step.sets,
+    locationId: state.plan.locationId,
+    duration: state.plan.duration,
+    minutes: Math.round((now - state.startedAt) / 60_000),
+  };
 }
 
 // ─── Repos ───
@@ -504,6 +535,16 @@ function WorkView({ state, step, menuOpen, closeMenu }: WorkViewProps) {
               }}
             >
               Passer le bloc « {block.title} »
+            </button>
+            <button
+              type="button"
+              class="btn btn--big btn--quiet"
+              onClick={() => {
+                closeAll();
+                void openRemark('session', sessionContext(state, Date.now()));
+              }}
+            >
+              Signaler quelque chose
             </button>
           </div>
         )}

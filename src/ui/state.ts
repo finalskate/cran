@@ -11,6 +11,7 @@ import { toRecord, type SessionState } from '../domain/session';
 import { loadBodyState } from './bodyState';
 import { loadFoodState } from './foodState';
 import { loadHabitsState } from './habitsState';
+import { loadRemarksState } from './remarksState';
 import { syncPhase } from './phaseState';
 import { loadTraining } from './training';
 import type { Location, Plan } from '../domain/types';
@@ -82,7 +83,7 @@ export function updateSession(next: SessionState | null): void {
  * (base indisponible, navigateur restrictif), les autres se font quand même.
  */
 export async function initState(): Promise<void> {
-  await Promise.allSettled([loadData(), loadFoodState(), loadBodyState(), loadHabitsState(), loadTraining(), refreshPersistence()]);
+  await Promise.allSettled([loadData(), loadFoodState(), loadBodyState(), loadHabitsState(), loadRemarksState(), loadTraining(), refreshPersistence()]);
   // Changement de phase programmé arrivé à date : appliqué avant le premier affichage.
   await syncPhase().catch(() => undefined);
   ready.value = true;

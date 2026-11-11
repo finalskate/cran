@@ -10,6 +10,7 @@ import { go } from '../router';
 import { draftPlan, locations, prefs } from '../state';
 import { makePlan } from '../planner';
 import { kneeLogs, logKnee } from '../training';
+import { RemarkButton } from '../components/RemarkSheet';
 
 type Side = 'left' | 'right' | 'both';
 
@@ -44,6 +45,7 @@ export function KneeCheck() {
       <header class="screen-header">
         <span class="screen-header__kicker">Avant de commencer</span>
         <h1 class="screen-header__title">Ton genou aujourd’hui ?</h1>
+        <RemarkButton />
       </header>
 
       <section class="card" aria-labelledby="knee-label">

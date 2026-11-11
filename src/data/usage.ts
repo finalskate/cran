@@ -78,6 +78,9 @@
  *   pushup-test    test pompes noté (format, répétitions), ou « Plus tard »
  *   badge          badges gagnés : identifiants (pas les valeurs de poids)
  *   week-review    bilan du dimanche ouvert ou confirmé : semaine, objectif suivant
+ *   plan-moment    rappel d'un plan « si… alors… » sur l'accueil fermé (« Vu ») : moment (après le vélo, soir, journée)
+ *   remark-open    panneau « Signaler » ouvert : d'où (écran, séance, raccourci), écran
+ *   remark         remarque notée : étiquettes, capture jointe ou non, écran (pas le texte : il est dans sa table)
  *   error          erreur JavaScript non interceptée
  */
 import { db, type CranDB } from './db';

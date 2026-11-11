@@ -14,6 +14,7 @@ import { CalendarView } from '../journal/CalendarView';
 import { LevelsView } from '../journal/LevelsView';
 import { SessionsView } from '../journal/SessionsView';
 import { currentRoute, go } from '../router';
+import { RemarkButton } from '../components/RemarkSheet';
 
 type Tab = 'calendar' | 'sessions' | 'levels' | 'body';
 
@@ -50,6 +51,7 @@ export function Journal() {
       <header class="screen-header">
         <span class="screen-header__kicker">Ce que j’ai fait</span>
         <h1 class="screen-header__title">Carnet</h1>
+        <RemarkButton />
       </header>
 
       <div class="segmented" role="tablist" aria-label="Vues du carnet">

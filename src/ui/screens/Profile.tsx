@@ -32,6 +32,7 @@ import { adjustments, profile, saveProfile, weights } from '../foodState';
 import { formatInt, formatKg, formatLongDate, parseDecimal } from '../format';
 import { go } from '../router';
 import { prefs, setPref } from '../state';
+import { RemarkButton } from '../components/RemarkSheet';
 
 const SEXES: { value: Sex; label: string }[] = [
   { value: 'male', label: 'Homme' },
@@ -100,6 +101,7 @@ export function Profile() {
       <header class="screen-header">
         <span class="screen-header__kicker">Alimentation</span>
         <h1 class="screen-header__title">Ta cible</h1>
+        <RemarkButton />
       </header>
 
       <section class="card" aria-label="Profil">

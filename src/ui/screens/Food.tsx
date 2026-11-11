@@ -77,6 +77,7 @@ import { CantinePlate } from '../food/CantinePlate';
 import { PHASES } from '../../data/phases';
 import { cantineOn } from '../../domain/phase';
 import { prefs } from '../state';
+import { RemarkButton } from '../components/RemarkSheet';
 
 /** Panneau ouvert (un seul à la fois). */
 type Panel =
@@ -172,6 +173,7 @@ export function Food() {
           <h1 class="screen-header__title">Assiette</h1>
         </div>
         <div class="daynav">
+          <RemarkButton />
           <button
             type="button"
             class="icon-btn icon-btn--round"

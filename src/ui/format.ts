@@ -154,6 +154,11 @@ export function formatShortDate(date: Date): string {
   return shortDate.format(date);
 }
 
+/** « 18 h 05 » (remarques d'usage). */
+export function formatTime(date: Date): string {
+  return `${date.getHours()} h ${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
 const monthTitle = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' });
 
 /** « Novembre 2026 » (calendrier ; `month` = « 2026-11 »). */

@@ -9,6 +9,7 @@ import {
   formatLongDate,
   formatSigned,
   formatTarget,
+  formatTime,
   parseDecimal,
   relativeDayLabel,
 } from './format';
@@ -83,5 +84,12 @@ describe('poids et mesures (J3)', () => {
   it('formate un tour de taille', () => {
     expect(formatCm(85.5)).toBe('85,5 cm');
     expect(formatCm(86)).toBe('86 cm');
+  });
+});
+
+describe('formatTime', () => {
+  it('écrit l’heure à la française, minutes sur deux chiffres', () => {
+    expect(formatTime(new Date(2026, 10, 11, 18, 5))).toBe('18 h 05');
+    expect(formatTime(new Date(2026, 10, 11, 7, 30))).toBe('7 h 30');
   });
 });

@@ -50,6 +50,18 @@ export default defineConfig({
         // Couleur de l'écran de démarrage et de la barre système.
         background_color: '#000000',
         theme_color: '#120b12',
+        // Appui long sur l'icône de l'appli installée → « Signaler » (remarques d'usage, retouche
+        // du 11/11). Android ne relit le manifeste qu'à la mise à jour de l'appli installée
+        // (parfois un jour ou deux) : le raccourci peut tarder à apparaître.
+        shortcuts: [
+          {
+            name: 'Signaler quelque chose',
+            short_name: 'Signaler',
+            description: 'Noter ce qui ne va pas dans Cran',
+            url: './#/?remarque',
+            icons: [{ src: 'pwa-192x192.png', sizes: '192x192', type: 'image/png' }],
+          },
+        ],
       },
 
       workbox: {

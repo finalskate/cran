@@ -83,6 +83,8 @@ export interface SettingsMap {
   weekReviewDone: string;
   /** Test pompes du mois repoussé (« Plus tard ») jusqu'à ce jour inclus. */
   pushupTestSnoozed: string;
+  /** Rappels de plan « si… alors… » fermés sur l'accueil (clés « jour:moment », voir planMomentKey). */
+  planMomentsSeen: string[];
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -114,6 +116,7 @@ export const SETTING_DEFAULTS = {
   badges: {},
   weekReviewDone: '',
   pushupTestSnoozed: '',
+  planMomentsSeen: [],
   // Dates : vides tant qu'elles n'ont pas été écrites (installedAt l'est au 1er lancement).
   installedAt: '',
   lastExportAt: '',

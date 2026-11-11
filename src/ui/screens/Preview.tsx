@@ -20,6 +20,7 @@ import { CATEGORY_LABEL, formatLongDate, formatTarget, HAND_LABEL, SESSION_FEEL_
 import { contextFor, describeItem, makePlan } from '../planner';
 import { go } from '../router';
 import { draftPlan, locations, prefs, updateSession } from '../state';
+import { RemarkButton } from '../components/RemarkSheet';
 
 /** Conseil associé au ressenti de la séance précédente. Le niveau ne change pas pour autant. */
 const RECALL_TIP = {
@@ -127,6 +128,7 @@ export function Preview() {
           {location.name} · ≈ {plan.estimatedMinutes} min · genou {plan.kneeScore}/10
         </span>
         <h1 class="screen-header__title">Ta séance</h1>
+        <RemarkButton />
       </header>
 
       {plan.recall && (

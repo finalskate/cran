@@ -15,6 +15,8 @@
  * Puis J6a : planning de la semaine (un jour réglé à la main), pause, records, rappel de
  * sauvegarde, et un vrai aller-retour export → données effacées → import.
  * Puis J6b : test pompes du mois, badges et puzzle, bilan du dimanche (horloge avancée).
+ * Retouche du 11/11 : plan « après le vélo » sur l'accueil (« Vu »), remarque signalée avec une
+ * capture (bouton de l'accueil), liste dans Réglages, remarque conservée par l'export → import.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -527,6 +529,11 @@ try {
   }));
   if (marks.cardio !== 1 || marks.commute !== 1) throw new Error(`semaine de l’accueil : ${JSON.stringify(marks)}`);
   await shot('84-accueil-apres-course', true);
+  // Vélotaf noté à l'instant : le plan « après le vélo » est rappelé, « Vu » le range pour la journée.
+  if (!(await content()).includes('Après le vélo')) throw new Error('accueil : plan « après le vélo » absent');
+  await page.evaluate(() => [...document.querySelectorAll('[aria-labelledby="plan-moment-title"] button')].find((b) => b.textContent === 'Vu').click());
+  await wait(200);
+  if ((await content()).includes('Après le vélo')) throw new Error('accueil : plan « après le vélo » toujours là après « Vu »');
   await page.evaluate(() => document.querySelector('.week-card').click());
   await page.waitForFunction(() => document.body.textContent.includes('Ce que j’ai fait'));
   await wait(300);
@@ -967,6 +974,27 @@ try {
   await click('Plus tard');
   await page.waitForFunction(() => !document.body.textContent.includes('Dernière sauvegarde'), { timeout: 5000 });
 
+  // Remarque d'usage : bulle de l'accueil → texte, étiquette, capture jointe → liste dans Réglages.
+  await page.goto(BASE);
+  await wait(300);
+  await page.click('.screen-header .remark-btn');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Ce qui ne va pas'), { timeout: 5000 });
+  await page.type('#remark-text', 'Test : la carte du plan prend trop de place');
+  await clickIn('Pas clair');
+  const captureInput = await page.$('dialog[open] input[type=file]');
+  await captureInput.uploadFile(resolve(OUT, '01-accueil-vierge.png'));
+  await page.waitForFunction(() => document.querySelector('dialog[open] .remark-capture img'), { timeout: 5000 });
+  await shot('100a-signaler');
+  await clickIn('Noter');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Noté'), { timeout: 5000 });
+  await clickIn('Fermer');
+  await page.goto(`${BASE}#/reglages`);
+  await page.waitForFunction(() => document.body.textContent.includes('1 nouvelle depuis le dernier export'), { timeout: 5000 });
+  await page.evaluate(() => document.querySelector('.remark-list').scrollIntoView());
+  await wait(200);
+  await shot('100b-mes-remarques');
+  if (!(await page.evaluate(() => document.querySelector('.remark-item img')?.naturalWidth > 0))) throw new Error('remarque : capture non affichée');
+
   // Import : export réel (téléchargement), données effacées, puis import du fichier → tout revient.
   const already = new Set(await readdir(downloads));
   await page.goto(`${BASE}#/reglages`);
@@ -979,7 +1007,8 @@ try {
     exported = (await readdir(downloads)).find((f) => f.endsWith('.json') && !already.has(f));
   }
   if (!exported) throw new Error('import : le fichier exporté n’a pas été téléchargé');
-  const before = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
+  const before = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog'), remarks: await count('remarks') };
+  if (before.remarks !== 1) throw new Error(`remarques avant l’import : ${before.remarks}`);
   await idb(
     (db) =>
       new Promise((ok) => {
@@ -998,7 +1027,7 @@ try {
   await page.evaluate(() => [...document.querySelectorAll('dialog[open] button')].find((b) => b.textContent.includes('Remplacer')).click());
   await page.waitForNavigation({ timeout: 5000 }).catch(() => undefined);
   await wait(800);
-  const after = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog') };
+  const after = { workouts: await count('workouts'), weights: await count('weights'), foodLog: await count('foodLog'), remarks: await count('remarks') };
   if (JSON.stringify(after) !== JSON.stringify(before)) throw new Error(`import : ${JSON.stringify(after)} au lieu de ${JSON.stringify(before)}`);
   await shot('102-apres-import', true);
 

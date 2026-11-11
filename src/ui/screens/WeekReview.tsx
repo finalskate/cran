@@ -31,6 +31,7 @@ import { go } from '../router';
 import { levelHistory, prefs } from '../state';
 import { activities, kneeLogs, renfoDays, workouts } from '../training';
 import { weekPlanFor, weekRegularity } from '../weekState';
+import { RemarkButton } from '../components/RemarkSheet';
 
 export function WeekReview() {
   // La semaine est fixée à l'ouverture : confirmer la fait disparaître de l'accueil, pas d'ici.
@@ -78,6 +79,7 @@ export function WeekReview() {
         <span class="screen-header__kicker">Semaine du {formatShortDate(dayToDate(monday))} · bilan</span>
         <h1 class="screen-header__title">{success ? 'Semaine réussie ✓' : 'Ta semaine'}</h1>
         <RegularityLine summary={regular} />
+        <RemarkButton />
       </header>
 
       <section class="card" aria-label="La semaine">

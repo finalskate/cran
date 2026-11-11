@@ -28,6 +28,7 @@ import { levelVariant, movementById } from '../planner';
 import { go } from '../router';
 import { chooseLevel } from '../state';
 import { lastRecord } from '../summary';
+import { RemarkButton } from '../components/RemarkSheet';
 
 const FEELS = Object.entries(SESSION_FEEL_LABEL) as [SessionFeel, string][];
 
@@ -58,6 +59,7 @@ export function Summary() {
       <header class="screen-header">
         <span class="screen-header__kicker">Séance terminée</span>
         <h1 class="screen-header__title">{nthMessage(SESSION_DONE, record.id ?? 0, 'session-done')}</h1>
+        <RemarkButton />
       </header>
 
       <section class="card">

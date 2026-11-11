@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dayTrigger,
   isCompletePlan,
+  planMoment,
+  planMomentKey,
   plansFor,
   proteinFromEntries,
   reviewPrompt,
@@ -120,5 +123,66 @@ describe('résumé de la semaine', () => {
 
   it('semaine vide', () => {
     expect(weekSummary([], '2026-11-14')).toMatchObject({ reviews: 0, slips: 0, triggers: [] });
+  });
+});
+
+describe('le plan au bon moment', () => {
+  const plan = (trigger: IfThenPlan['trigger'], when = 'situation', then = 'réponse'): IfThenPlan => ({ id: trigger, trigger, when, then });
+  const all = [plan('boredom'), plan('stress'), plan('post-ride'), plan('evening'), plan('cooking')];
+  const review = (day: string, trigger: DailyReview['trigger']): DailyReview => ({
+    day,
+    at: `${day}T21:00:00`,
+    protein: 'yes',
+    proteinAuto: true,
+    veggies: true,
+    slip: 'small',
+    trigger,
+  });
+  const at = (iso: string) => new Date(iso);
+  const none = new Set<string>();
+
+  it('juste après un vélotaf : le plan « après le vélo », pendant 2 h', () => {
+    const now = at('2026-11-12T17:30:00');
+    const ride = at('2026-11-12T16:00:00').getTime();
+    expect(planMoment(now, all, [], ride, none)).toMatchObject({ slot: 'post-ride', plans: [{ trigger: 'post-ride' }] });
+    expect(planMoment(at('2026-11-12T18:30:00'), all, [], ride, none)?.slot).toBe('evening');
+  });
+
+  it('le soir dès 18 h : « en cuisinant » et « soirée » ensemble, jusqu’à 4 h', () => {
+    const m = planMoment(at('2026-11-12T18:00:00'), all, [], null, none)!;
+    expect(m.slot).toBe('evening');
+    expect(m.plans.map((p) => p.trigger)).toEqual(['evening', 'cooking']);
+    // À 1 h du matin, on est encore dans la soirée de la veille (journée alimentaire).
+    expect(planMoment(at('2026-11-13T01:00:00'), all, [], null, none)?.key).toBe(planMomentKey('2026-11-12', 'evening'));
+    expect(planMoment(at('2026-11-13T04:30:00'), all, [], null, none)).toBeNull();
+  });
+
+  it('un moment fermé ne revient pas le même jour', () => {
+    const seen = new Set([planMomentKey('2026-11-12', 'evening')]);
+    expect(planMoment(at('2026-11-12T21:00:00'), all, [], null, seen)).toBeNull();
+    expect(planMoment(at('2026-11-13T21:00:00'), all, [], null, seen)?.slot).toBe('evening');
+  });
+
+  it('dans la journée : un déclencheur imprévisible, un par jour, à tour de rôle', () => {
+    const a = planMoment(at('2026-11-12T10:00:00'), all, [], null, none)!;
+    const b = planMoment(at('2026-11-13T10:00:00'), all, [], null, none)!;
+    expect(a.slot).toBe('day');
+    expect(a.plans).toHaveLength(1);
+    expect(new Set([a.plans[0]!.trigger, b.plans[0]!.trigger])).toEqual(new Set(['boredom', 'stress']));
+  });
+
+  it('les déclencheurs cités dans les bilans récents passent en priorité', () => {
+    const reviews = [review('2026-11-10', 'stress')];
+    for (const day of ['2026-11-11', '2026-11-12', '2026-11-13']) expect(dayTrigger(all, reviews, day)).toBe('stress');
+    // Au-delà de 28 jours, le bilan ne compte plus : retour à la rotation complète.
+    const later = ['2026-12-20', '2026-12-21'].map((d) => dayTrigger(all, reviews, d));
+    expect(new Set(later)).toEqual(new Set(['boredom', 'stress']));
+  });
+
+  it('sans plan complet pour le moment : rien', () => {
+    expect(planMoment(at('2026-11-12T19:00:00'), [plan('boredom')], [], null, none)).toBeNull();
+    expect(planMoment(at('2026-11-12T19:00:00'), [plan('evening', ' ', 'réponse')], [], null, none)).toBeNull();
+    // Avant 5 h du matin passé 4 h : ni soir ni journée.
+    expect(planMoment(at('2026-11-12T04:30:00'), all, [], null, none)).toBeNull();
   });
 });

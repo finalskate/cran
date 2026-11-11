@@ -3,6 +3,7 @@
  * Retouches J1 : export complet des données (sauvegarde et journal d'usage, SPEC §4.11).
  * J5a : objectif de la semaine (renfos et cardio) ; lien vers les lieux (sorti de l'accueil).
  * J6a : mode pause ; import d'une sauvegarde (validée, puis remplacement complet après accord).
+ * Retouche du 11/11 : « Mes remarques » (ce qui a été signalé, à relire ou supprimer).
  */
 import { useEffect, useState } from 'preact/hooks';
 import { SCHEMA_VERSION } from '../../data/db';
@@ -30,8 +31,11 @@ import {
 import { ImportSheet } from '../components/ImportSheet';
 import { PauseSheet } from '../components/PauseSheet';
 import { currentPause, resume, runExport } from '../weekState';
-import { formatBytes, formatLongDate, formatShortDate } from '../format';
+import { formatBytes, formatLongDate, formatShortDate, formatTime } from '../format';
+import { contextLine, REMARK_TAG_LABEL } from '../components/RemarkSheet';
+import { openRemark, remarks, remarksNotExported, removeRemark } from '../remarksState';
 import { persistState, prefs, refreshPersistence, setFx, setPref } from '../state';
+import { RemarkButton } from '../components/RemarkSheet';
 
 const FX_OPTIONS: { value: FxLevel; label: string }[] = [
   { value: 'full', label: 'Complets' },
@@ -118,6 +122,7 @@ export function Settings() {
       <header class="screen-header">
         <span class="screen-header__kicker">Cran</span>
         <h1 class="screen-header__title">Réglages</h1>
+        <RemarkButton />
       </header>
 
       <section class="card" aria-labelledby="fx-title">
@@ -306,6 +311,8 @@ export function Settings() {
         </span>
       </a>
 
+      <RemarksCard />
+
       <section class="card" aria-labelledby="storage-title">
         <span id="storage-title" class="card__label">
           Données
@@ -343,7 +350,7 @@ export function Settings() {
           {exporting ? 'Préparation…' : 'Exporter mes données'}
         </button>
         <p class="muted" style={{ margin: 0, fontSize: '14px' }}>
-          Tout dans un fichier : séances, niveaux, alimentation, pesées, réglages et journal d’usage. Partage-le vers OneDrive pour
+          Tout dans un fichier : séances, niveaux, alimentation, pesées, réglages, remarques et journal d’usage. Partage-le vers OneDrive pour
           le garder à l’abri (et me le faire lire).
           {lastExport ? ` Dernier export : ${formatLongDate(new Date(lastExport)).toLowerCase()}.` : ' Aucun export pour l’instant.'}
         </p>
@@ -395,3 +402,63 @@ export function Settings() {
     </main>
   );
 }
+
+/**
+ * Remarques signalées (bouton bulle en haut des écrans, menu de la séance, raccourci Android) :
+ * la plus récente en haut ; celles que le dernier export n'a pas emportées sont marquées.
+ */
+function RemarksCard() {
+  const list = [...remarks.value].reverse();
+  const fresh = remarksNotExported.value;
+  const lastExport = prefs.value.lastExportAt ? Date.parse(prefs.value.lastExportAt) : Number.NEGATIVE_INFINITY;
+  const [showAll, setShowAll] = useState(false);
+  const shown = showAll ? list : list.slice(0, REMARKS_SHOWN);
+
+  async function remove(id: number) {
+    if (!confirm('Supprimer cette remarque ?')) return;
+    await removeRemark(id);
+  }
+
+  return (
+    <section class="card" aria-labelledby="remarks-title">
+      <span id="remarks-title" class="card__label">
+        Mes remarques
+      </span>
+      <span class="muted">
+        {list.length === 0
+          ? 'Quelque chose ne va pas ? La bulle en haut à droite des écrans (ou « ⋯ » en séance) le note avec l’écran où tu es. Ça part avec l’export.'
+          : fresh > 0
+            ? `${fresh} nouvelle${fresh > 1 ? 's' : ''} depuis le dernier export.`
+            : 'Toutes parties avec le dernier export.'}
+      </span>
+      {shown.length > 0 && (
+        <ul class="remark-list">
+          {shown.map((r) => (
+            <li key={r.id} class={`remark-item${r.at > lastExport ? ' remark-item--new' : ''}`}>
+              <span class="remark-item__meta">
+                {formatShortDate(new Date(r.at))} · {formatTime(new Date(r.at))} · {contextLine(r.context)}
+                {r.tags.length > 0 && ` · ${r.tags.map((t) => REMARK_TAG_LABEL[t]).join(', ')}`}
+              </span>
+              {r.text && <p class="remark-item__text">{r.text}</p>}
+              {r.capture && <img src={r.capture} alt="Capture jointe" />}
+              <button type="button" class="btn btn--small btn--quiet" onClick={() => void remove(r.id!)}>
+                Supprimer
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {list.length > REMARKS_SHOWN && !showAll && (
+        <button type="button" class="btn btn--small btn--quiet" onClick={() => setShowAll(true)}>
+          Voir les {list.length} remarques
+        </button>
+      )}
+      <button type="button" class="btn" onClick={() => void openRemark('screen')}>
+        Signaler quelque chose
+      </button>
+    </section>
+  );
+}
+
+/** Remarques montrées avant « Voir tout ». */
+const REMARKS_SHOWN = 5;

@@ -12,6 +12,7 @@ import { EQUIPMENT, SPACES } from '../../data/equipment';
 import { deleteLocation, saveLocation } from '../../data/repo';
 import type { EquipmentTag, Location, SpaceSize } from '../../domain/types';
 import { locations, prefs, reloadLocations, setPref } from '../state';
+import { RemarkButton } from '../components/RemarkSheet';
 
 export function Locations() {
   const [open, setOpen] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export function Locations() {
       <header class="screen-header">
         <span class="screen-header__kicker">Matériel disponible</span>
         <h1 class="screen-header__title">Lieux</h1>
+        <RemarkButton />
       </header>
 
       {locations.value.map((loc) => {

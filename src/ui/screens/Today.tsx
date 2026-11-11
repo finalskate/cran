@@ -19,6 +19,8 @@
  * « Demain : … ») et les semaines réussies ; en pause, une carte « En pause » et l'objectif
  * suspendu (pas de suggestion de cardio) ; un rappel de sauvegarde discret après 7 jours sans export.
  * J6b : le bilan du dimanche (dès 17 h, rattrapable lundi midi) et le test pompes du mois.
+ * Retouche du 11/11 : le plan « si… alors… » du moment (après le vélo, le soir, ou un déclencheur
+ * de la journée), AVANT la situation plutôt qu'au bilan ; « Vu » le fait taire pour la journée.
  */
 import { useState } from 'preact/hooks';
 import { clearActiveSession } from '../../data/repo';
@@ -53,13 +55,18 @@ import { pushupTestNow, snoozePushupTest, weekReviewNow } from '../prideState';
 import { currentPause, currentWeekPlan, exportDue, nextWeekPlan, resume, runExport, snoozeExport, weekRegularity } from '../weekState';
 import { ReviewSheet } from '../food/ReviewSheet';
 import { calibrationStart, profile, targets, useDayEntries, weights } from '../foodState';
-import { reviewedDays } from '../habitsState';
+import { dismissPlanMoment, planMomentNow, reviewedDays } from '../habitsState';
+import { TRIGGER_LABEL } from '../../data/habits';
+import type { PlanMoment } from '../../domain/habits';
+import { PlanText } from '../food/PlanForm';
+import { PlansSheet } from '../food/PlansSheet';
 import { photos, summary, trend } from '../bodyState';
 import { formatApproxDate, formatKg, formatLongDate, formatShortDate, formatSigned } from '../format';
 import type { WeekPlan } from '../../domain/weekPlan';
 import { go } from '../router';
 import { levels, locations, prefs, ready, session, setPref, updateSession } from '../state';
 import { activities, answerMorningKnee, kneeLogs, renfoDays, workouts } from '../training';
+import { RemarkButton } from '../components/RemarkSheet';
 
 const DURATION_LABEL: Record<Duration, string> = { 10: '10 min', 20: '20 min', 30: '30 min', 40: '40 min et +' };
 
@@ -90,6 +97,8 @@ export function Today() {
   const reviewWeek = ready.value ? weekReviewNow(now) : null;
   const pushupTest = ready.value && !pause ? pushupTestNow(now) : null;
   const [testing, setTesting] = useState(false);
+  const moment = ready.value ? planMomentNow(now) : null;
+  const [editingPlans, setEditingPlans] = useState(false);
 
   function openCardio(type: 'run' | 'bike' | undefined, from: 'shortcut' | 'card') {
     track('cardio-sheet', { from, type });
@@ -118,6 +127,7 @@ export function Today() {
           {phase && ` · ${phase.label}`}
         </span>
         <h1 class="screen-header__title">Aujourd'hui</h1>
+        <RemarkButton />
       </header>
 
       {active && active.phase !== 'done' && (
@@ -230,6 +240,8 @@ export function Today() {
           <span class="muted">Légumes, écart éventuel et ce qui l’a déclenché. Les protéines notées sont déjà comptées.</span>
         </button>
       )}
+
+      {moment && <PlanMomentCard moment={moment} onEdit={() => setEditingPlans(true)} />}
 
       {ready.value && (
         <button type="button" class="card card--link card--button card--quiet week-card" onClick={() => openCalendar()}>
@@ -351,8 +363,41 @@ export function Today() {
       {cardio && <CardioSheet {...(cardio.type ? { type: cardio.type } : {})} onClose={() => setCardio(null)} />}
       {commuting && <CommuteSheet onClose={() => setCommuting(false)} />}
       {testing && <PushupTestSheet onClose={() => setTesting(false)} />}
+      {editingPlans && <PlansSheet onClose={() => setEditingPlans(false)} />}
       {reviewing && <ReviewSheet day={reviewing.day} via={reviewing.via} onClose={() => setReviewing(null)} />}
     </main>
+  );
+}
+
+/** Titre de la carte selon le moment. */
+function momentTitle(moment: PlanMoment): string {
+  if (moment.slot === 'post-ride') return 'Après le vélo';
+  if (moment.slot === 'evening') return 'Pour ce soir';
+  return TRIGGER_LABEL[moment.plans[0]!.trigger];
+}
+
+/** Le plan « si… alors… » du moment : à relire avant la situation, pas après l'écart. */
+function PlanMomentCard({ moment, onEdit }: { moment: PlanMoment; onEdit: () => void }) {
+  return (
+    <section class="card card--quiet" aria-labelledby="plan-moment-title">
+      <span class="card__label">Ton plan</span>
+      <span id="plan-moment-title" class="card__title">
+        {momentTitle(moment)}
+      </span>
+      <div class="plan-box">
+        {moment.plans.map((p) => (
+          <PlanText key={p.id} when={p.when} then={p.then} />
+        ))}
+      </div>
+      <div class="segmented">
+        <button type="button" class="btn btn--small btn--quiet" onClick={onEdit}>
+          Modifier
+        </button>
+        <button type="button" class="btn btn--small" onClick={() => void dismissPlanMoment(moment)}>
+          Vu
+        </button>
+      </div>
+    </section>
   );
 }
 

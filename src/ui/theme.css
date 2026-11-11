@@ -3351,3 +3351,112 @@ button.week-strip__day {
   border-radius: 14px;
   background: rgba(255, 255, 255, 0.04);
 }
+
+/* ─── Remarques d'usage (retouche du 11/11) ─── */
+
+/* Bouton « Signaler » : discret, en haut à droite de l'en-tête ; le titre ne passe pas dessous. */
+.screen-header:has(> .remark-btn) {
+  position: relative;
+  padding-right: calc(var(--tap) + 8px);
+}
+
+.screen-header > .remark-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.remark-btn {
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: transparent;
+}
+
+.remark-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.remark-hint {
+  margin: 0;
+  font-size: 14px;
+}
+
+.remark-context {
+  color: var(--text);
+}
+
+.remark-done {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.field textarea {
+  width: 100%;
+  min-height: 112px;
+  padding: 12px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  color: var(--text);
+  font: inherit;
+  line-height: 1.4;
+  resize: vertical;
+}
+
+.remark-capture {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.remark-capture img {
+  max-width: 50%;
+  max-height: 240px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+}
+
+/* Réglages → Mes remarques : une ligne par remarque, la plus récente en haut. */
+.remark-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.remark-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.remark-item__meta {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.remark-item__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.remark-item img {
+  max-width: 40%;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+}
+
+.remark-item--new {
+  border-left: 3px solid var(--accent);
+}

@@ -118,6 +118,17 @@ try {
   await page.click('dialog[open] [aria-label="Fermer"]');
   await wait(200);
 
+  // Matériel à préparer : le premier « pas là », la séance est refaite sans lui, puis il revient.
+  const firstGear = await page.evaluate(() => document.querySelector('[aria-label="À préparer"] .plan-item__name')?.textContent);
+  await click('Pas là ?');
+  await page.waitForFunction(() => document.body.innerText.includes('Pas sous la main'));
+  await wait(200);
+  await shot('05c-materiel-absent', true);
+  console.log(`  matériel retiré puis remis : ${firstGear}`);
+  await click('Il est là');
+  await page.waitForFunction(() => !document.body.innerText.includes('Pas sous la main'));
+  await wait(200);
+
   // Remplacement du 3e exercice (pompes) par la première option proposée.
   await page.evaluate(() => [...document.querySelectorAll('button')].filter((b) => b.innerText.includes('Remplacer'))[2].click());
   await wait(150);

@@ -699,6 +699,22 @@ h3 {
   font-size: 13px;
 }
 
+/* ─── Aperçu : matériel à préparer ─── */
+.gear-setup {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.gear-missing .plan-item__name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.gear-hint {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
 .swap {
   display: flex;
   flex-direction: column;
@@ -1077,6 +1093,10 @@ h3 {
 
 .sheet__content {
   overflow-y: auto;
+  /* Une zone qui défile rogne ce qui dépasse : on laisse 4 px pour l'anneau de focus
+     (contour 2 px + décalage 2 px), sans décaler le contenu. */
+  padding: 4px;
+  margin: -4px;
   display: flex;
   flex-direction: column;
   gap: 18px;

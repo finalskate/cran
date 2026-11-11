@@ -218,4 +218,9 @@ export interface Plan {
   notes?: string[];
   /** Ressenti global de la séance précédente, rappelé dans l'aperçu (« la dernière fois, c'était dur »). */
   recall?: { feel: SessionFeel; startedAt: string; locationId: string };
+  /**
+   * Matériel du lieu « pas sous la main » pour cette séance (aperçu, cf. gear.ts) : le plan a été
+   * construit sans lui, et les remplacements en séance l'écartent aussi. Le lieu n'est pas modifié.
+   */
+  missing?: EquipmentTag[];
 }

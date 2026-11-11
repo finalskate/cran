@@ -3,16 +3,21 @@
  * (SPEC §2.1). « C'est parti » lance la séance.
  * Toucher le nom d'un exercice ouvre sa fiche. Si la séance précédente a reçu un ressenti
  * global, il est rappelé en tête (« la dernière fois, c'était trop dur »).
+ * Carte « À préparer » : le matériel de la séance, dans l'ordre d'utilisation. « Pas là ? » refait
+ * la séance sans ce matériel, pour cette séance seulement (le lieu ne change pas, cf. gear.ts).
  */
 import { useEffect, useState } from 'preact/hooks';
+import { handSupport, isAvailable } from '../../domain/availability';
+import { gearNeeds, toggleMissing, withoutEquipment, type GearNeed } from '../../domain/gear';
 import { startSession } from '../../domain/session';
-import type { PlanItem } from '../../domain/types';
+import type { EquipmentTag, PlanItem } from '../../domain/types';
+import { EQUIPMENT } from '../../data/equipment';
 import { track } from '../../data/usage';
 import { ExerciseSheet } from '../components/ExerciseSheet';
 import { SwapPicker } from '../components/SwapPicker';
 import { requestNotifyPermission, unlockAudio } from '../device/feedback';
 import { CATEGORY_LABEL, formatLongDate, formatTarget, HAND_LABEL, SESSION_FEEL_LABEL } from '../format';
-import { contextFor, describeItem } from '../planner';
+import { contextFor, describeItem, makePlan } from '../planner';
 import { go } from '../router';
 import { draftPlan, locations, prefs, updateSession } from '../state';
 
@@ -23,10 +28,26 @@ const RECALL_TIP = {
   'too-easy': 'Une série de plus sur les blocs principaux. Vise le haut de la fourchette : c’est ce qui débloque le niveau suivant.',
 } as const;
 
+const equipmentLabel = (tag: EquipmentTag) => EQUIPMENT.find((e) => e.tag === tag)?.label ?? tag;
+
+/** Nom d'un matériel à préparer ; pour les élastiques, ceux qui sont prévus (« Élastique 20 kg »). */
+function gearName(need: GearNeed): string {
+  if (need.tag !== 'bands' || !need.bands?.length) return equipmentLabel(need.tag);
+  return `${need.bands.length > 1 ? 'Élastiques' : 'Élastique'} ${need.bands.join(', ')}`;
+}
+
+/** Un remplacement fait dans l'aperçu : retenu pour être réappliqué si la séance est refaite. */
+interface Swap {
+  from: string;
+  to: PlanItem;
+}
+
 export function Preview() {
   const plan = draftPlan.value;
   const [swapping, setSwapping] = useState<string | null>(null);
   const [fiche, setFiche] = useState<PlanItem | null>(null);
+  const [swaps, setSwaps] = useState<Swap[]>([]);
+  const [adapting, setAdapting] = useState(false);
 
   // Arrivée directe sur l'URL (rechargement) : pas de plan en mémoire, retour à l'accueil.
   useEffect(() => {
@@ -35,15 +56,51 @@ export function Preview() {
   if (!plan) return null;
 
   const location = locations.value.find((l) => l.id === plan.locationId)!;
-  const ctx = contextFor(location, plan.kneeScore);
+  const missing = plan.missing ?? [];
+  const ctx = contextFor(withoutEquipment(location, missing), plan.kneeScore);
+  const needs = gearNeeds(
+    plan.blocks.flatMap((b) => b.items).map((item) => ({ variant: describeItem(item).variant, handSupport: item.handSupport, band: item.band })),
+    ctx.location,
+  );
 
   function replace(b: number, i: number, item: PlanItem) {
-    track('swap', { from: plan!.blocks[b]!.items[i]!.variantId, to: item.variantId, where: 'preview' });
+    const from = plan!.blocks[b]!.items[i]!.variantId;
+    track('swap', { from, to: item.variantId, where: 'preview' });
+    // Un exercice déjà remplacé garde son origine : A → B puis B → C se retient comme A → C.
+    const earlier = swaps.find((s) => s.to.variantId === from);
+    setSwaps([...swaps.filter((s) => s !== earlier), { from: earlier?.from ?? from, to: item }]);
     const blocks = plan!.blocks.map((block, bi) =>
       bi !== b ? block : { ...block, items: block.items.map((it, ii) => (ii === i ? item : it)) },
     );
     draftPlan.value = { ...plan!, blocks };
     setSwapping(null);
+  }
+
+  /**
+   * Matériel absent (ou revenu) : la séance est refaite par le moteur sans lui. Les remplacements
+   * faits dans l'aperçu sont gardés s'ils restent faisables (même support des mains compris).
+   */
+  async function toggleGear(tag: EquipmentTag) {
+    if (adapting) return;
+    setAdapting(true);
+    const next = toggleMissing(missing, tag);
+    track('gear-missing', { tag, missing: !missing.includes(tag), count: next.length, locationId: plan!.locationId });
+    const today = withoutEquipment(location, next);
+    const fresh = await makePlan(today, plan!.duration, plan!.kneeScore);
+    const freshCtx = contextFor(today, fresh.kneeScore);
+    const keep = (item: PlanItem): PlanItem => {
+      const swap = swaps.find((s) => s.from === item.variantId);
+      if (!swap) return item;
+      const variant = describeItem(swap.to).variant;
+      const ok = isAvailable(variant, freshCtx) && (swap.to.handSupport ?? null) === (handSupport(variant, freshCtx) ?? null);
+      return ok ? swap.to : item;
+    };
+    draftPlan.value = {
+      ...fresh,
+      blocks: fresh.blocks.map((b) => ({ ...b, items: b.items.map(keep) })),
+      ...(next.length > 0 ? { missing: next } : {}),
+    };
+    setAdapting(false);
   }
 
   async function start() {
@@ -99,6 +156,41 @@ export function Preview() {
           ))}
         </section>
       )}
+
+      <section class="card" aria-label="À préparer" aria-busy={adapting}>
+        <span class="card__label">À préparer</span>
+        {needs.length === 0 && missing.length === 0 && (
+          <p class="muted gear-hint">Rien à préparer : un peu de place au sol suffit.</p>
+        )}
+        {needs.map((need) => (
+          <div key={need.tag} class="plan-item">
+            <div class="plan-item__main">
+              <span class="plan-item__name">{gearName(need)}</span>
+              <span class="muted plan-item__meta">
+                {need.setup && <span class="gear-setup">À installer avant · </span>}
+                {need.uses.join(' · ')}
+              </span>
+            </div>
+            <button type="button" class="btn btn--small" disabled={adapting} onClick={() => void toggleGear(need.tag)}>
+              Pas là ?
+            </button>
+          </div>
+        ))}
+        {missing.map((tag) => (
+          <div key={tag} class="plan-item gear-missing">
+            <div class="plan-item__main">
+              <span class="plan-item__name">{equipmentLabel(tag)}</span>
+              <span class="muted plan-item__meta">Pas sous la main · séance adaptée</span>
+            </div>
+            <button type="button" class="btn btn--small" disabled={adapting} onClick={() => void toggleGear(tag)}>
+              Il est là
+            </button>
+          </div>
+        ))}
+        {needs.length > 0 && missing.length === 0 && (
+          <p class="muted gear-hint">Un matériel n’est pas sous la main ? Touche « Pas là ? », la séance s’adapte.</p>
+        )}
+      </section>
 
       {plan.blocks.map((block, b) => (
         <section key={b} class="card" aria-label={block.title}>

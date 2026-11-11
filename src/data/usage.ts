@@ -16,6 +16,7 @@
  *   sheet          fiche d'exercice ouverte : variante, écran d'origine
  *   demo           lien vidéo ouvert : variante
  *   swap           exercice remplacé : ancienne et nouvelle variante, écran
+ *   gear-missing   matériel signalé absent (ou revenu) dans l'aperçu : tag, absent ou non, nombre d'absents, lieu
  *   variant-choice variante équivalente retenue pour la suite (après un remplacement) : mouvement, variante
  *   band           élastique changé pendant la séance : variante, ancien, nouveau
  *   bands          forces des élastiques enregistrées (Lieux) : nombre d'élastiques

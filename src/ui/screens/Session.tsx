@@ -59,6 +59,7 @@ import { SwapPicker } from '../components/SwapPicker';
 import { beep, notify, speak, vibrate } from '../device/feedback';
 import { useWakeLock } from '../device/wakeLock';
 import { CATEGORY_LABEL, formatClock, formatTarget, HAND_LABEL } from '../format';
+import { withoutEquipment } from '../../domain/gear';
 import { contextFor, describeItem } from '../planner';
 import { go } from '../router';
 import { lastRecord } from '../summary';
@@ -411,7 +412,8 @@ function WorkView({ state, step, menuOpen, closeMenu }: WorkViewProps) {
   const shownAt = useRef(Date.now());
 
   const location = locations.value.find((l) => l.id === state.plan.locationId)!;
-  const ctx = contextFor(location, state.plan.kneeScore);
+  // Matériel « pas sous la main » choisi dans l'aperçu : les remplacements l'écartent aussi.
+  const ctx = contextFor(withoutEquipment(location, state.plan.missing ?? []), state.plan.kneeScore);
 
   // Voix : annonce de l'exercice au début de chaque bloc (les fins de repos annoncent déjà la suite).
   useEffect(() => {

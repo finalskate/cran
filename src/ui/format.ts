@@ -117,10 +117,26 @@ export const INTENSITY_LABEL = {
   hard: 'Dure',
 } as const;
 
-/** Course (J5a) : sortie en aisance ou sortie « jeu ». */
+/** Course (J5a) : sortie en aisance, sortie « jeu », ou séance proposée par la montre (14/11). */
 export const RUN_KIND_LABEL = {
   easy: 'Aisance',
   play: 'Jeu',
+  garmin: 'Garmin',
+} as const;
+
+/**
+ * Catégories des séances suggérées par Garmin, avec les noms de la montre (à vérifier sur la
+ * sienne : la traduction peut varier d'un modèle à l'autre). Aisance d'abord, puis intense.
+ */
+export const GARMIN_LABEL = {
+  recovery: 'Récupération',
+  base: 'Base',
+  long: 'Sortie longue',
+  tempo: 'Tempo',
+  threshold: 'Seuil',
+  vo2max: 'VO2 max',
+  anaerobic: 'Anaérobie',
+  sprint: 'Sprint',
 } as const;
 
 /** Vélo (J5a) : séance en aisance ou fractionnée. */

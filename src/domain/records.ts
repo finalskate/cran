@@ -4,7 +4,8 @@
  *
  *  - Par variante : la meilleure série (répétitions, ou secondes pour un exercice en durée). Un
  *    exercice à l'élastique a un record par élastique : 15 avec le 10 kg ne se compare pas à 15
- *    avec le 30 kg. La date retenue est celle où le record a été établi (la 1re fois).
+ *    avec le 30 kg. De même, un exercice lesté a un record par charge du sac (14/11).
+ *    La date retenue est celle où le record a été établi (la 1re fois).
  *  - La plus longue série de pompes : le record de la série longue hebdomadaire (pushup-max-set).
  *  - La plus longue course (les miennes et les imposées « course »).
  *  - Un NOUVEAU record se fête au bilan de la séance seulement s'il bat un record existant : la
@@ -27,12 +28,24 @@ export interface VariantRecord {
   variantId: string;
   /** Élastique utilisé (« 20 kg », « moyen »), pour les exercices à l'élastique. */
   band?: string;
+  /** Charge du sac en kg, pour les exercices lestés. */
+  load?: number;
   value: number;
   /** Séance où le record a été établi (début, ISO). */
   at: string;
 }
 
-const keyOf = (variantId: string, band?: string) => (band ? `${variantId}|${band}` : variantId);
+const keyOf = (variantId: string, band?: string, load?: number) => [variantId, band ?? '', load ?? ''].join('|');
+
+/** Élastique et charge d'une série, tels qu'ils distinguent les records. */
+const setupOf = (e: { band?: { label: string }; load?: number }) => ({
+  ...(e.band ? { band: e.band.label } : {}),
+  ...(e.load !== undefined ? { load: e.load } : {}),
+});
+
+/** Même variante, même élastique, même charge. */
+const sameSetup = (r: { variantId: string; band?: string; load?: number }, variantId: string, setup: { band?: string; load?: number }) =>
+  r.variantId === variantId && r.band === setup.band && r.load === setup.load;
 
 /** Meilleure série par variante (et élastique), de toutes les séances passées. */
 export function variantRecords(workouts: readonly WorkoutRecord[]): VariantRecord[] {
@@ -43,12 +56,12 @@ export function variantRecords(workouts: readonly WorkoutRecord[]): VariantRecor
       if (NO_RECORD.has(e.movementId) || e.sets.length === 0) continue;
       const value = Math.max(...e.sets.map((s) => s.value));
       if (value <= 0) continue;
-      const band = e.band?.label;
-      const key = keyOf(e.variantId, band);
+      const setup = setupOf(e);
+      const key = keyOf(e.variantId, setup.band, setup.load);
       const prev = best.get(key);
       // À égalité, on garde la date de la 1re fois.
       if (!prev || value > prev.value) {
-        best.set(key, { movementId: e.movementId, variantId: e.variantId, ...(band ? { band } : {}), value, at: w.startedAt });
+        best.set(key, { movementId: e.movementId, variantId: e.variantId, ...setup, value, at: w.startedAt });
       }
     }
   }
@@ -60,6 +73,7 @@ export interface NewRecord {
   movementId: string;
   variantId: string;
   band?: string;
+  load?: number;
   value: number;
   previous: number;
 }
@@ -73,14 +87,14 @@ export function newRecords(record: WorkoutRecord, history: readonly WorkoutRecor
   const out: NewRecord[] = [];
   for (const e of record.entries) {
     if (NO_RECORD.has(e.movementId) || e.sets.length === 0) continue;
-    const band = e.band?.label;
-    const prev = before.find((r) => r.variantId === e.variantId && r.band === band);
+    const setup = setupOf(e);
+    const prev = before.find((r) => sameSetup(r, e.variantId, setup));
     const value = Math.max(...e.sets.map((s) => s.value));
     // Une variante faite deux fois dans la séance : une seule carte, avec la meilleure série.
-    const already = out.find((r) => r.variantId === e.variantId && r.band === band);
+    const already = out.find((r) => sameSetup(r, e.variantId, setup));
     if (!prev || value <= prev.value) continue;
     if (already) already.value = Math.max(already.value, value);
-    else out.push({ movementId: e.movementId, variantId: e.variantId, ...(band ? { band } : {}), value, previous: prev.value });
+    else out.push({ movementId: e.movementId, variantId: e.variantId, ...setup, value, previous: prev.value });
   }
   return out;
 }

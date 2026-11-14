@@ -33,8 +33,17 @@ export interface ImposedActivity {
   intensity: Intensity;
 }
 
-/** Sortie de course : en aisance, ou « jeu » (accélérations libres, SPEC §4.7). */
-export type RunKind = 'easy' | 'play';
+/**
+ * Sortie de course : en aisance, « jeu » (accélérations libres, SPEC §4.7), ou séance proposée
+ * par la montre Garmin (retour du 14/11), dont la catégorie est notée à part (`garmin`).
+ */
+export type RunKind = 'easy' | 'play' | 'garmin';
+
+/**
+ * Catégories des séances suggérées par Garmin, telles que la montre les affiche. Le plan les
+ * range en deux groupes (running.ts) : aisance (récupération, base, sortie longue) ou intense.
+ */
+export type GarminWorkout = 'recovery' | 'base' | 'long' | 'tempo' | 'threshold' | 'vo2max' | 'anaerobic' | 'sprint';
 
 /** Course notée (J5a) : saisie en moins de 15 s, la Garmin garde le détail. */
 export interface RunActivity {
@@ -46,6 +55,8 @@ export interface RunActivity {
   /** Distance en km, facultative. */
   km?: number;
   kind: RunKind;
+  /** Catégorie Garmin, quand `kind` vaut « garmin ». */
+  garmin?: GarminWorkout;
   feel: Feel;
   /** Score de genou noté juste après (0–10), aussi écrit dans `kneeLogs` (contexte « run »). */
   kneeAfter: number;

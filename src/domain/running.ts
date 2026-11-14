@@ -27,6 +27,14 @@
  *  - Une course imposée (travail) compte comme une sortie de la semaine (pour ne pas en
  *    proposer trop) et dans le total, mais ne démarre pas le plan et ne vaut pas « longue ».
  *
+ * ─── Séances Garmin (retour du 14/11) ───
+ *  - La montre propose ses propres séances (base, tempo, seuil…) d'après la VO2max et la charge,
+ *    sans rien savoir du genou. Cran les arbitre (`garminVerdict`) et les note avec leur catégorie.
+ *  - Récupération, base et sortie longue = aisance : elles comptent comme une sortie en aisance.
+ *  - Tempo, seuil, VO2 max, anaérobie, sprint = intense : une séance intense tient la place de la
+ *    sortie « jeu » (une par semaine, à partir de la semaine 3, genou resté ≤ 2 dans la semaine,
+ *    40 min au plus échauffement compris). Elle ne vaut jamais « longue », qui se court en aisance.
+ *
  * ─── Règles du vélo (P3 surtout, aussi P4) ───
  *  - 20 à 40 min en aisance (30 proposées), une séance fractionnée courte par semaine
  *    (6 × 1 min soutenue), proposée après une première séance en aisance dans la semaine.
@@ -34,7 +42,7 @@
  */
 import { mondayOf } from './calendar';
 import { addDays, dayKey, daysBetween } from './days';
-import type { Activity, BikeKind, KneeLog, RunKind } from './recovery';
+import type { Activity, BikeKind, GarminWorkout, KneeLog, RunActivity, RunKind } from './recovery';
 
 // ─── Réglages du plan (repères, pas dogmes) ───
 
@@ -68,21 +76,41 @@ export const KNEE_SHORT = 3;
 export const KNEE_REST = 5;
 /** Sortie courte quand le genou est à 3 ou 4. */
 export const SHORT_RUN_MINUTES = 20;
+/** Séance intense (Garmin) : durée maximale, échauffement et retour au calme compris. */
+export const HARD_RUN_MAX_MINUTES = 40;
+
+/** Catégories Garmin courues en aisance ; les autres sont intenses. */
+const GARMIN_EASY: readonly GarminWorkout[] = ['recovery', 'base', 'long'];
+
+/** Une séance Garmin de cette catégorie est-elle intense (tempo, seuil, VO2 max…) ? */
+export function isHardGarmin(workout: GarminWorkout): boolean {
+  return !GARMIN_EASY.includes(workout);
+}
+
+/** Une course notée est-elle une séance intense ? (Les sorties « jeu » restent en aisance.) */
+export function isHardRun(run: Pick<RunActivity, 'kind' | 'garmin'>): boolean {
+  return run.kind === 'garmin' && !!run.garmin && isHardGarmin(run.garmin);
+}
 
 /** Une course vue par le plan : les miennes et les imposées « course ». */
 interface PlanRun {
   day: string;
   minutes: number;
   kind: RunKind;
+  /** Séance intense (Garmin tempo, seuil…) : tient la place du « jeu », ne vaut pas « longue ». */
+  hard: boolean;
   /** Notée par moi (et non imposée au travail). */
   own: boolean;
 }
 
+/** Peut valoir « longue » : une de mes sorties, en aisance, d'au moins `minutes` (à 2 min près). */
+const countsAsLong = (r: PlanRun, minutes: number) => r.own && !r.hard && r.minutes >= minutes - LONG_TOLERANCE_MINUTES;
+
 function runsOf(activities: readonly Activity[]): PlanRun[] {
   const out: PlanRun[] = [];
   for (const a of activities) {
-    if (a.type === 'run') out.push({ day: a.day, minutes: a.minutes, kind: a.kind, own: true });
-    else if (a.type === 'imposed' && a.kind === 'run') out.push({ day: a.day, minutes: a.minutes, kind: 'easy', own: false });
+    if (a.type === 'run') out.push({ day: a.day, minutes: a.minutes, kind: a.kind, hard: isHardRun(a), own: true });
+    else if (a.type === 'imposed' && a.kind === 'run') out.push({ day: a.day, minutes: a.minutes, kind: 'easy', hard: false, own: false });
   }
   return out.sort((a, b) => a.day.localeCompare(b.day));
 }
@@ -153,7 +181,7 @@ export interface RunPlan {
   longMinutes: number;
   /** La longue (ou, en semaines 1–2, une sortie de base) est déjà courue cette semaine. */
   longDone: boolean;
-  /** La sortie « jeu » est déjà courue cette semaine. */
+  /** La sortie « jeu », ou une séance intense qui en tient lieu, est déjà courue cette semaine. */
   playDone: boolean;
   /** Le genou est resté ≤ 2 cette semaine (condition de la 3e sortie). */
   kneeOkThisWeek: boolean;
@@ -182,7 +210,7 @@ function longByWeek(runs: readonly PlanRun[], kneeLogs: readonly KneeLog[], star
     const monday = addDays(startMonday, 7 * (w - 2));
     const sunday = addDays(monday, 6);
     const week = w >= 2 ? runs.filter((r) => r.day >= monday && r.day <= sunday) : [];
-    const longDone = week.some((r) => r.own && r.minutes >= prev - LONG_TOLERANCE_MINUTES);
+    const longDone = week.some((r) => countsAsLong(r, prev));
     if (longDone) lastDone = prev;
     if (w < PROGRESS_FROM_WEEK) {
       long.push(BASE_RUN_MINUTES);
@@ -200,7 +228,7 @@ function longByWeek(runs: readonly PlanRun[], kneeLogs: readonly KneeLog[], star
       // Zone lente : la durée doit avoir tenu 2 semaines, et le genou du lendemain dit « pareil ».
       const recent = long.slice(-LONG_SLOW_HOLD_WEEKS);
       const held = recent.length === LONG_SLOW_HOLD_WEEKS && recent.every((m) => m === prev);
-      const lastLong = week.filter((r) => r.own && r.minutes >= prev - LONG_TOLERANCE_MINUTES).at(-1);
+      const lastLong = week.filter((r) => countsAsLong(r, prev)).at(-1);
       progress = held && !!lastLong && morningSameAfter(kneeLogs, lastLong.day);
     }
     long.push(progress ? proposed : prev);
@@ -225,8 +253,8 @@ export function runPlan(activities: readonly Activity[], kneeLogs: readonly Knee
 
   const thisWeek = runs.filter((r) => r.day >= monday);
   const done = thisWeek.length;
-  const longDone = thisWeek.some((r) => r.own && r.minutes >= longMinutes - LONG_TOLERANCE_MINUTES);
-  const playDone = thisWeek.some((r) => r.own && r.kind === 'play');
+  const longDone = thisWeek.some((r) => countsAsLong(r, longMinutes));
+  const playDone = thisWeek.some((r) => r.own && (r.kind === 'play' || r.hard));
   const kneeOkThisWeek = kneeOkDuring(kneeLogs, monday);
   const knee = currentKnee(kneeLogs, now);
   const downhillEnd = addDays(start ?? today, NO_DOWNHILL_WEEKS * 7 - 1);
@@ -298,9 +326,13 @@ export function runAdvice(plan: RunPlan, treadmill?: Treadmill): Advice {
     lines.push('Genou à 3 ou 4 : sortie courte et facile, sur le plat. Arrête-toi si la douleur monte.');
   } else if (next.kind === 'play') {
     lines.push('En aisance, avec quelques accélérations libres de 20 à 60 s, quand tu en as envie. Pas de chrono, pas d’allure.');
+    lines.push(`Ou la séance intense que propose Garmin (tempo, seuil…) : ${HARD_RUN_MAX_MINUTES} min au plus.`);
   } else {
     lines.push(treadmill === 'only' ? 'Aisance respiratoire : tu peux parler en courant.' : 'Aisance respiratoire : tu peux parler en courant. Terrain plat.');
-    if (plan.week < PROGRESS_FROM_WEEK) lines.push(`Jusqu’à ${EARLY_RUN_MAX_MINUTES} min si tu te sens bien.`);
+    if (plan.week < PROGRESS_FROM_WEEK) {
+      lines.push(`Jusqu’à ${EARLY_RUN_MAX_MINUTES} min si tu te sens bien.`);
+      lines.push('Garmin propose du tempo ou du seuil ? Pas avant la semaine 3 : choisis une séance Base.');
+    }
     if (next.long) lines.push('C’est la sortie longue de la semaine.');
     if (next.long && next.minutes >= LONG_SLOW_FROM_MINUTES && next.minutes < LONG_RUN_MAX_MINUTES) {
       lines.push('Demain matin, réponds à « genou ce matin » : au-delà d’une heure, c’est lui qui décide du +5 min.');
@@ -327,6 +359,75 @@ export function runSlotLabel(plan: RunPlan): string {
   if (!plan.next) return `${plan.done} sortie${plan.done > 1 ? 's' : ''} cette semaine`;
   if (plan.next.optional) return '3e sortie · facultative';
   return `Sortie ${plan.done + 1} sur ${plan.target} · semaine ${plan.week}`;
+}
+
+// ─── Séance proposée par Garmin : la faire ou pas ? ───
+
+/**
+ * Avis sur la séance que la montre propose aujourd'hui :
+ *  - go : elle colle au plan telle quelle ;
+ *  - shorten : la faire, mais raccourcie à `minutes` ;
+ *  - easy : pas d'intensité aujourd'hui, la remplacer par `minutes` en aisance (séance Base) ;
+ *  - skip : pas de course.
+ */
+export interface GarminVerdict {
+  verdict: 'go' | 'shorten' | 'easy' | 'skip';
+  /** Durée conseillée (shorten, easy), ou la durée proposée (go). */
+  minutes?: number;
+  /** L'avis en clair : une phrase, parfois deux. */
+  lines: string[];
+}
+
+/** Durée maximale d'une sortie en aisance aujourd'hui (Récupération, Base). */
+function easyCap(plan: RunPlan): number {
+  if (plan.status === 'short') return SHORT_RUN_MINUTES;
+  if (plan.week < PROGRESS_FROM_WEEK) return EARLY_RUN_MAX_MINUTES;
+  return plan.next?.minutes ?? BASE_RUN_MINUTES;
+}
+
+/** La séance tient dans `cap` (2 min de tolérance) : go ; sinon on la raccourcit. */
+function fit(minutes: number, cap: number, line: string): GarminVerdict {
+  return minutes <= cap + LONG_TOLERANCE_MINUTES
+    ? { verdict: 'go', minutes, lines: [line] }
+    : { verdict: 'shorten', minutes: cap, lines: [line, `Arrête-la à ${cap} min : la montre ne connaît pas ton genou.`] };
+}
+
+/**
+ * Arbitre une séance Garmin (catégorie et durée affichées par la montre) d'après le plan du jour.
+ * Mêmes règles que le plan : genou d'abord, aisance seule en semaines 1 et 2, une séance intense
+ * par semaine à la place du « jeu », jamais à la place de la longue.
+ */
+export function garminVerdict(plan: RunPlan, workout: GarminWorkout, minutes: number): GarminVerdict {
+  if (plan.status === 'rest') {
+    return { verdict: 'skip', lines: ['Genou à 5 ou plus : pas de course aujourd’hui, même si la montre en propose une.'] };
+  }
+  if (plan.status === 'week-done' || !plan.next) {
+    return { verdict: 'skip', lines: ['Tes sorties de la semaine sont faites. Laisse la montre de côté : repos, vélo ou marche.'] };
+  }
+  const cap = easyCap(plan);
+  if (!isHardGarmin(workout)) {
+    if (plan.status === 'short') return fit(minutes, cap, 'Genou à 3 ou 4 : seulement une sortie courte et tranquille.');
+    // « Sortie longue » de la montre, alors que la prochaine sortie du plan n'est pas la longue.
+    if (workout === 'long' && !plan.next.long) {
+      return fit(
+        minutes,
+        cap,
+        plan.week < PROGRESS_FROM_WEEK ? 'Pas encore de sortie longue dans le plan : elle arrive en semaine 3.' : 'La longue de la semaine est déjà faite.',
+      );
+    }
+    const line = plan.next.long ? 'Ça colle : c’est ta sortie longue, en aisance.' : 'Ça colle : c’est une sortie en aisance.';
+    return fit(minutes, plan.next.long ? plan.longMinutes : cap, line);
+  }
+  // Séance intense : toutes les conditions de la sortie « jeu », et un peu plus.
+  const easy = (line: string): GarminVerdict => ({ verdict: 'easy', minutes: Math.min(minutes, cap), lines: [line, 'Choisis une séance Base sur la montre, ou cours sans regarder l’allure.'] });
+  if (plan.status === 'short') return easy('Genou à 3 ou 4 : pas d’intensité aujourd’hui.');
+  if (plan.week < PROGRESS_FROM_WEEK) return easy(`Semaine ${plan.week} : on reste en aisance jusqu’à la semaine 3, le temps que le genou s’habitue.`);
+  if (plan.playDone) return easy('La séance intense de la semaine est faite (ou la sortie jeu) : une seule par semaine.');
+  if (!plan.kneeOkThisWeek) return easy('Ton genou est monté à 3 ou plus cette semaine : pas d’intensité avant lundi.');
+  const verdict = fit(minutes, HARD_RUN_MAX_MINUTES, 'Ça colle : elle tient la place de la sortie jeu de la semaine.');
+  if (verdict.verdict === 'shorten') verdict.lines[1] = `Arrête-la à ${HARD_RUN_MAX_MINUTES} min : raccourcis l’échauffement et le retour au calme, pas les blocs rapides.`;
+  if (!plan.longDone) verdict.lines.push('La longue reste à faire : pas le lendemain de celle-ci.');
+  return verdict;
 }
 
 // ─── Vélo ───

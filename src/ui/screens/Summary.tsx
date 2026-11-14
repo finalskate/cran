@@ -15,6 +15,7 @@
  */
 import { useEffect, useState } from 'preact/hooks';
 import { LEVEL_UP, RECORD, SESSION_DONE, STEP_BACK } from '../../data/messages';
+import { formatLoad } from '../../domain/load';
 import { newRecords } from '../../domain/records';
 import { formatRecord, variantInfo } from '../journal/RecordsCard';
 import { workouts } from '../training';
@@ -81,10 +82,11 @@ export function Summary() {
           <span class="card__label">{records.length > 1 ? 'Nouveaux records' : 'Nouveau record'}</span>
           <p style={{ margin: 0 }}>{nthMessage(RECORD, record.id ?? 0, 'record')}</p>
           {records.map((r) => (
-            <div key={`${r.variantId}|${r.band ?? ''}`} class="row records__row">
+            <div key={`${r.variantId}|${r.band ?? ''}|${r.load ?? ''}`} class="row records__row">
               <span class="records__name">
                 {variantInfo(r.movementId, r.variantId).name}
                 {r.band && <span class="muted"> · élastique {r.band}</span>}
+                {r.load !== undefined && <span class="muted"> · sac {formatLoad(r.load)}</span>}
               </span>
               <span>
                 <span class="num records__value">{formatRecord(r)}</span>{' '}

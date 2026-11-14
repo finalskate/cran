@@ -2,6 +2,7 @@
  * Matériel d'une séance (« À préparer », dans l'aperçu) : ce qu'il faut avoir sous la main avant de
  * démarrer, dans l'ordre d'utilisation. Et l'inverse : un matériel « pas sous la main » aujourd'hui
  * retire ce tag du lieu pour cette séance seulement, le moteur refait alors le plan sans lui.
+ * Tapis de sol (14/11) : demandé pour les exercices au sol ; sans tapis ici, une serviette pliée.
  * Fonctions pures.
  */
 import type { BandChoice, EquipmentTag, HandSupport, Location, Variant } from './types';
@@ -16,6 +17,8 @@ export interface GearUse {
   handSupport?: HandSupport;
   /** Élastique prévu. */
   band?: BandChoice;
+  /** Charge du sac prévue, en kg (exercices lestés). */
+  load?: number;
 }
 
 /** Un matériel à préparer. */
@@ -27,6 +30,10 @@ export interface GearNeed {
   setup: boolean;
   /** Élastiques prévus (libellés), pour le tag `bands`. */
   bands?: string[];
+  /** Charges du sac prévues (kg), pour le tag `backpack` : de quoi le remplir avant de commencer. */
+  loads?: number[];
+  /** Tag `mat` sur un lieu sans tapis : une serviette pliée le remplace (rien à retirer). */
+  towel?: boolean;
 }
 
 /**
@@ -47,6 +54,10 @@ export function gearNeeds(uses: readonly GearUse[], location: Location): GearNee
       need.bands ??= [];
       if (!need.bands.includes(use.band.label)) need.bands.push(use.band.label);
     }
+    if (tag === 'backpack' && use.load !== undefined) {
+      need.loads ??= [];
+      if (!need.loads.includes(use.load)) need.loads.push(use.load);
+    }
   };
   for (const use of uses) {
     for (const req of use.variant.needs) {
@@ -54,7 +65,10 @@ export function gearNeeds(uses: readonly GearUse[], location: Location): GearNee
       if (tag) add(tag, use);
     }
     if (use.handSupport === 'handles') add('pushup-handles', use);
+    if (use.variant.floor) add('mat', use);
   }
+  const mat = out.find((n) => n.tag === 'mat');
+  if (mat && !location.equipment.includes('mat')) mat.towel = true;
   return out;
 }
 

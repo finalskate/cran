@@ -209,6 +209,14 @@ export function setItemBand(state: SessionState, block: number, item: number, ba
   return { ...state, plan: { ...state.plan, blocks } };
 }
 
+/** Change la charge du sac d'un exercice lesté (elle sera enregistrée avec ses séries). */
+export function setItemLoad(state: SessionState, block: number, item: number, load: number): SessionState {
+  const blocks = state.plan.blocks.map((b, bi) =>
+    bi !== block ? b : { ...b, items: b.items.map((it, ii) => (ii === item ? { ...it, load } : it)) },
+  );
+  return { ...state, plan: { ...state.plan, blocks } };
+}
+
 /** Avancement : étapes terminées / total. */
 export function progress(state: SessionState): { done: number; total: number } {
   const done = state.phase === 'done' ? state.steps.length : state.index + (state.phase === 'rest' ? 1 : 0);
@@ -270,7 +278,14 @@ export function toRecord(state: SessionState, endedAt: number): WorkoutRecord {
         .map((s, k) => (s.block === b && s.item === i ? state.results[k] : null))
         .filter((r): r is SetResult => r !== null);
       if (sets.length) {
-        entries.push({ movementId: item.movementId, variantId: item.variantId, level: item.level, sets, ...(item.band ? { band: item.band } : {}) });
+        entries.push({
+          movementId: item.movementId,
+          variantId: item.variantId,
+          level: item.level,
+          sets,
+          ...(item.band ? { band: item.band } : {}),
+          ...(item.load !== undefined ? { load: item.load } : {}),
+        });
       }
     });
   });

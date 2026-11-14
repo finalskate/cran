@@ -18,6 +18,7 @@ export const EQUIPMENT: { tag: EquipmentTag; label: string; hint?: string }[] = 
   { tag: 'step', label: 'Marche ou escalier' },
   { tag: 'wall', label: 'Mur dégagé' },
   { tag: 'backpack', label: 'Sac à dos lestable' },
+  { tag: 'mat', label: 'Tapis de sol', hint: 'Pour le gainage et les exercices à genoux. Sans tapis, une serviette pliée' },
   { tag: 'bike', label: 'Vélo' },
   { tag: 'treadmill', label: 'Tapis de course' },
 ];
@@ -42,7 +43,7 @@ export const DEFAULT_LOCATIONS: Location[] = [
   {
     id: 'home',
     name: 'Maison',
-    equipment: ['pushup-handles', 'straps', 'anchor', 'bands', 'mini-bands', 'table', 'bench', 'step', 'wall', 'backpack'],
+    equipment: ['pushup-handles', 'straps', 'anchor', 'bands', 'mini-bands', 'table', 'bench', 'step', 'wall', 'backpack', 'mat'],
     space: 'large',
     order: 0,
   },
@@ -77,7 +78,7 @@ export const DEFAULT_LOCATIONS: Location[] = [
   {
     id: 'equipped',
     name: 'Base équipée',
-    equipment: ['pullup-bar', 'dip-bars', 'straps', 'bands', 'mini-bands', 'bench', 'step', 'wall', 'backpack', 'bike', 'treadmill'],
+    equipment: ['pullup-bar', 'dip-bars', 'straps', 'bands', 'mini-bands', 'bench', 'step', 'wall', 'backpack', 'mat', 'bike', 'treadmill'],
     space: 'large',
     order: 5,
   },

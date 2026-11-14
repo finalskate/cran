@@ -23,6 +23,7 @@ export type EquipmentTag =
   | 'step' // marche, escalier
   | 'wall' // mur dégagé
   | 'backpack' // sac à dos lestable
+  | 'mat' // tapis de sol (confort des exercices au sol ; une serviette pliée le remplace)
   | 'bike' // vélo (cardio, jalon J5)
   | 'treadmill'; // tapis de course (J5b : la course en intérieur)
 
@@ -90,6 +91,12 @@ export interface Variant {
   fistsOk?: boolean;
   /** Charge forte sur le poignet : avertissement au choix du niveau (règle poignet). */
   wristHeavy?: boolean;
+  /**
+   * Allongé, à genoux ou sur les avant-bras (gainage, pont, tirage à genoux…) : le tapis de sol
+   * est conseillé, sans être obligatoire. Sans tapis sur le lieu, une variante équivalente debout
+   * passe d'abord, et « À préparer » propose une serviette pliée (gear.ts).
+   */
+  floor?: boolean;
   /** Objectif par série. */
   target: Target;
   /** Nombre et cible exprimés par côté (fentes, pistol…). */
@@ -107,6 +114,8 @@ export interface Variant {
   videoQuery?: string;
   /** Exercice à l'élastique : la force de l'élastique est suivie (voir bands.ts). */
   band?: BandUse;
+  /** Exercice lesté au sac : la charge est suivie et augmente (voir load.ts). */
+  load?: LoadUse;
   /** Repère de départ affiché dans la fiche et au test de niveau (ex. charge du sac). */
   startHint?: string;
 }
@@ -123,6 +132,12 @@ export interface BandUse {
   start: 0 | 1 | 2;
   assist?: boolean;
   fixed?: boolean;
+}
+
+/** Charge du sac (kg) : celle de départ, et ce qu'on ajoute quand le haut de la fourchette est tenu. */
+export interface LoadUse {
+  start: number;
+  step: number;
 }
 
 /** Élastique utilisé : rang parmi les élastiques possédés (0 = le plus léger), et son libellé. */
@@ -191,6 +206,10 @@ export interface PlanItem {
   band?: BandChoice;
   /** Élastique de la dernière séance, affiché avec son rappel (« élastique 20 kg »). */
   lastBand?: string;
+  /** Charge du sac prévue, en kg (exercices lestés) ; modifiable pendant la séance. */
+  load?: number;
+  /** Charge de la dernière séance, affichée avec son rappel (« sac 6 kg »). */
+  lastLoad?: number;
 }
 
 /** Un bloc : un exercice seul, un superset (2 exercices alternés) ou un circuit. */

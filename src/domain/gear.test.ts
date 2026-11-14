@@ -17,6 +17,17 @@ const variant = (id: string): Variant => {
 const NOW = new Date('2026-11-14T09:00:00Z');
 
 describe('matériel à préparer', () => {
+  it('tapis de sol pour les exercices au sol ; sans tapis, une serviette pliée', () => {
+    const uses: GearUse[] = [{ variant: variant('plank') }, { variant: variant('dead-bug') }];
+    const home = gearNeeds(uses, loc('home'));
+    expect(home).toEqual([{ tag: 'mat', uses: ['Planche sur avant-bras', 'Dead bug'], setup: false }]);
+    const towel = gearNeeds(uses, withoutEquipment(loc('home'), ['mat']));
+    expect(towel[0]).toMatchObject({ tag: 'mat', towel: true });
+    // Rien au sol : pas de tapis demandé.
+    expect(gearNeeds([{ variant: variant('step-down') }], loc('home')).map((n) => n.tag)).toEqual(['step']);
+  });
+
+
   it('liste le matériel dans l’ordre d’utilisation, sans doublon', () => {
     const uses: GearUse[] = [
       { variant: variant('step-down') },

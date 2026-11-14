@@ -5,11 +5,14 @@
  */
 import { describe, expect, it } from 'vitest';
 import { addDays, dayToDate } from './days';
-import type { Activity, BikeActivity, ImposedActivity, KneeLog, RunActivity, RunKind } from './recovery';
+import type { Activity, BikeActivity, GarminWorkout, ImposedActivity, KneeLog, RunActivity, RunKind } from './recovery';
 import {
   bikeAdvice,
   bikePlan,
   currentKnee,
+  garminVerdict,
+  HARD_RUN_MAX_MINUTES,
+  isHardRun,
   LONG_RUN_MAX_MINUTES,
   LONG_SLOW_FROM_MINUTES,
   runAdvice,
@@ -213,6 +216,83 @@ describe('suggestion de course : 3 semaines simulées', () => {
     const now = at(MONDAY, 17);
     expect(currentKnee([knee(addDays(MONDAY, -2), 6), knee(MONDAY, 2, 8), knee(MONDAY, 1, 9)], now)).toBe(2);
     expect(currentKnee([], now)).toBe(0);
+  });
+});
+
+/** Une séance Garmin notée. */
+const garmin = (day: string, minutes: number, workout: GarminWorkout, kneeAfter = 0): RunActivity => ({
+  ...run(day, minutes, 'garmin', kneeAfter),
+  garmin: workout,
+});
+
+describe('séances Garmin', () => {
+  it('intense = tempo, seuil, VO2 max, anaérobie, sprint ; récupération, base, longue = aisance', () => {
+    expect(isHardRun({ kind: 'garmin', garmin: 'threshold' })).toBe(true);
+    expect(isHardRun({ kind: 'garmin', garmin: 'sprint' })).toBe(true);
+    expect(isHardRun({ kind: 'garmin', garmin: 'base' })).toBe(false);
+    expect(isHardRun({ kind: 'garmin', garmin: 'long' })).toBe(false);
+    expect(isHardRun({ kind: 'play' })).toBe(false);
+  });
+
+  it('une séance intense tient la place du jeu, mais ne vaut pas la longue', () => {
+    // Semaines 1 et 2 courues, puis en semaine 3 : un seuil de 40 min le lundi.
+    const before = [...week(0), ...week(1)].map((d) => run(d, 30));
+    const plan = runPlan([...before, garmin(addDays(MONDAY, 14), 40, 'threshold')], [], at(addDays(MONDAY, 15), 17));
+    expect(plan.playDone).toBe(true);
+    expect(plan.longDone).toBe(false);
+    // La suivante est donc la longue (35 min), pas une sortie jeu.
+    expect(short(plan)).toBe('35 easy long');
+  });
+
+  it('une séance Garmin en aisance compte comme une sortie en aisance (et peut valoir la longue)', () => {
+    const before = [...week(0), ...week(1)].map((d) => run(d, 30));
+    const plan = runPlan([...before, garmin(addDays(MONDAY, 14), 36, 'base')], [], at(addDays(MONDAY, 15), 17));
+    expect(plan.longDone).toBe(true);
+    expect(short(plan)).toBe('30 play');
+  });
+
+  it('semaines 1 et 2 : pas d’intensité, une séance Base à la place', () => {
+    const plan = runPlan([run(MONDAY, 30)], [], at(addDays(MONDAY, 2), 17));
+    const v = garminVerdict(plan, 'tempo', 35);
+    expect(v.verdict).toBe('easy');
+    expect(v.minutes).toBe(35);
+    expect(v.lines.join(' ')).toContain('semaine 3');
+    // Une séance Base de 50 min : raccourcie à 35 (le haut des premières semaines).
+    expect(garminVerdict(plan, 'base', 50)).toMatchObject({ verdict: 'shorten', minutes: 35 });
+    expect(garminVerdict(plan, 'base', 35).verdict).toBe('go');
+  });
+
+  it('semaine 3 : un seuil passe (40 min au plus), un seul par semaine, et pas si le genou a tiqué', () => {
+    const before = [...week(0), ...week(1)].map((d) => run(d, 30));
+    const now = at(addDays(MONDAY, 14), 17);
+    const fresh = runPlan(before, [], now);
+    const ok = garminVerdict(fresh, 'threshold', 38);
+    expect(ok.verdict).toBe('go');
+    expect(ok.lines.join(' ')).toContain('longue reste à faire');
+    expect(garminVerdict(fresh, 'vo2max', 55)).toMatchObject({ verdict: 'shorten', minutes: HARD_RUN_MAX_MINUTES });
+    // Déjà une séance intense cette semaine : la 2e passe en aisance.
+    const again = runPlan([...before, garmin(addDays(MONDAY, 14), 40, 'tempo')], [], at(addDays(MONDAY, 16), 17));
+    expect(garminVerdict(again, 'sprint', 30).verdict).toBe('easy');
+    // Genou à 3 noté cette semaine (plus dans les 24 h) : pas d'intensité avant lundi.
+    const sore = runPlan(before, [knee(addDays(MONDAY, 14), 3, 8)], at(addDays(MONDAY, 16), 17));
+    expect(garminVerdict(sore, 'tempo', 30).lines[0]).toContain('pas d’intensité avant lundi');
+  });
+
+  it('genou : à 3 ou 4, 20 min tranquilles ; à 5, pas de course ; semaine faite : rien', () => {
+    const now = at(MONDAY, 17);
+    const sore = runPlan([], [knee(MONDAY, 3, 8)], now);
+    expect(garminVerdict(sore, 'base', 40)).toMatchObject({ verdict: 'shorten', minutes: 20 });
+    expect(garminVerdict(sore, 'tempo', 40)).toMatchObject({ verdict: 'easy', minutes: 20 });
+    expect(garminVerdict(runPlan([], [knee(MONDAY, 5, 8)], now), 'recovery', 20).verdict).toBe('skip');
+    const done = runPlan(week(0).map((d) => run(d, 30)), [], at(addDays(MONDAY, 6), 17));
+    expect(garminVerdict(done, 'base', 30).verdict).toBe('skip');
+  });
+
+  it('« sortie longue » de la montre : la longue du plan, sinon une sortie normale', () => {
+    const before = [...week(0), ...week(1)].map((d) => run(d, 30));
+    const plan = runPlan(before, [], at(addDays(MONDAY, 14), 17));
+    expect(garminVerdict(plan, 'long', 60)).toMatchObject({ verdict: 'shorten', minutes: 35 });
+    expect(garminVerdict(runPlan([run(MONDAY, 30)], [], at(addDays(MONDAY, 2), 17)), 'long', 60).lines[0]).toContain('Pas encore');
   });
 });
 

@@ -95,12 +95,13 @@ export interface Resolved {
  *  2. à défaut, le niveau faisable le plus proche au-dessus (ex. niveau 1 « squat sur chaise »
  *     sans chaise → squat) ;
  *  3. à défaut, un substitut.
- * Dans un niveau, la variante préférée (`ctx.preferred`) passe avant l'ordre du catalogue.
+ * Dans un niveau, la variante préférée (`ctx.preferred`) passe avant l'ordre du catalogue ; sans
+ * tapis sur le lieu, les variantes au sol passent après les autres (voir `orderedHere`).
  * `null` si rien n'est faisable ici.
  */
 export function resolveVariant(movement: Movement, targetLevel: number, ctx: Context): Resolved | null {
   const top = Math.min(Math.max(targetLevel, 0), movement.levels.length - 1);
-  const at = (level: number) => preferredFirst(movement.levels[level]!.variants, ctx.preferred?.[movement.id]).find((v) => isAvailable(v, ctx));
+  const at = (level: number) => orderedHere(movement.levels[level]!.variants, movement.id, ctx).find((v) => isAvailable(v, ctx));
   for (let level = top; level >= 0; level--) {
     const variant = at(level);
     if (variant) return { variant, level, adapted: level !== top };
@@ -137,11 +138,24 @@ export function preferredFirst(variants: readonly Variant[], preferredId: string
 }
 
 /**
+ * Ordre de préférence des variantes d'un niveau sur ce lieu : la préférée d'abord ; puis, sans
+ * tapis de sol, celles qui ne se font pas au sol (le tapis n'est qu'un confort : une variante au
+ * sol reste possible, sur une serviette, quand le niveau n'a rien d'autre).
+ */
+export function orderedHere(variants: readonly Variant[], movementId: string, ctx: Context): Variant[] {
+  const ordered = preferredFirst(variants, ctx.preferred?.[movementId]);
+  if (ctx.location.equipment.includes('mat')) return ordered;
+  const pref = ordered[0]?.id === ctx.preferred?.[movementId] ? ordered.slice(0, 1) : [];
+  const rest = ordered.slice(pref.length);
+  return [...pref, ...rest.filter((v) => !v.floor), ...rest.filter((v) => v.floor)];
+}
+
+/**
  * Variante d'un niveau qu'on fera vraiment ici (test de niveau, échelle) : la préférée ou la
  * première faisable ; à défaut (rien de faisable), la première de la liste.
  */
 export function variantHere(movement: Movement, level: number, ctx: Context): Variant {
-  const ordered = preferredFirst(movement.levels[level]!.variants, ctx.preferred?.[movement.id]);
+  const ordered = orderedHere(movement.levels[level]!.variants, movement.id, ctx);
   return ordered.find((v) => isAvailable(v, ctx)) ?? ordered[0]!;
 }
 

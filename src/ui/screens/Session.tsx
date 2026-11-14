@@ -43,6 +43,7 @@ import {
   restFollows,
   restRemaining,
   setItemBand,
+  setItemLoad,
   setsOfItem,
   skipBlock,
   toRecord,
@@ -50,6 +51,7 @@ import {
   type Step,
 } from '../../domain/session';
 import { bandAt, bandLabels } from '../../domain/bands';
+import { formatLoad, MAX_LOAD_KG } from '../../domain/load';
 import type { Movement, PlanBlock, PlanItem, Variant } from '../../domain/types';
 import type { SessionContext } from '../../domain/remarks';
 import { DemoLink } from '../components/DemoLink';
@@ -57,6 +59,7 @@ import { ExerciseSheet } from '../components/ExerciseSheet';
 import { Figure } from '../components/Figure';
 import { RemarkIcon } from '../components/RemarkSheet';
 import { Sheet } from '../components/Sheet';
+import { Stepper } from '../components/Stepper';
 import { SwapPicker } from '../components/SwapPicker';
 import { beep, notify, speak, vibrate } from '../device/feedback';
 import { useWakeLock } from '../device/wakeLock';
@@ -379,6 +382,7 @@ function NextCard({ state, next }: { state: SessionState; next: Step }) {
         </span>
       )}
       {item.band && <span class="muted">Élastique {item.band.label}</span>}
+      {item.load !== undefined && <span class="muted">Sac à {formatLoad(item.load)}</span>}
       <ul class="fiche__list next-card__cues">
         {variant.cues.slice(0, NEXT_CUES).map((c) => (
           <li key={c}>{c}</li>
@@ -641,9 +645,11 @@ function SeriesCard({ state, step, item }: WorkProps) {
         <span class="muted series__last">
           Dernière séance : <span class="num series__last-values">{item.last.map((v) => formatValue(v, isTime)).join(' · ')}</span>
           {item.lastBand && ` · élastique ${item.lastBand}`}
+          {item.lastLoad !== undefined && ` · sac ${formatLoad(item.lastLoad)}`}
         </span>
       )}
       {item.band && <BandPicker state={state} step={step} item={item} />}
+      {item.load !== undefined && <LoadPicker state={state} step={step} item={item} />}
     </section>
   );
 }
@@ -674,6 +680,31 @@ function BandPicker({ state, step, item }: Pick<WorkProps, 'state' | 'step' | 'i
           {label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Charge du sac d'un exercice lesté (pré-choisie : celle de la dernière fois, ou 2 kg de plus
+ * après une séance au haut de la fourchette). La changer vaut pour toutes les séries de l'exercice.
+ */
+function LoadPicker({ state, step, item }: Pick<WorkProps, 'state' | 'step' | 'item'>) {
+  const { variant } = describeItem(item);
+  return (
+    <div class="row">
+      <span class="muted">Sac</span>
+      <Stepper
+        label="Charge du sac en kg"
+        value={item.load!}
+        step={variant.load?.step ?? 2}
+        min={0}
+        max={MAX_LOAD_KG}
+        format={formatLoad}
+        onChange={(load) => {
+          track('load', { variantId: item.variantId, from: item.load, to: load });
+          updateSession(setItemLoad(state, step.block, step.item, load));
+        }}
+      />
     </div>
   );
 }

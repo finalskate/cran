@@ -4,6 +4,7 @@
  * vélo. J5b : le cardio proposé en premier dépend de la phase (vélo en éloignement) et du lieu
  * (vélo, tapis de course) ; l'autre se montre d'un geste (« Plutôt du vélo ? »).
  * Le bouton ouvre la saisie, pré-remplie avec la suggestion.
+ * 14/11 : « Garmin propose une séance ? » ouvre l'arbitrage de la séance suggérée par la montre.
  */
 import { useState } from 'preact/hooks';
 import { dayKey, dayToDate } from '../../domain/days';
@@ -11,6 +12,7 @@ import type { CardioChoice } from '../../domain/phase';
 import { bikeAdvice, bikePlan, runAdvice, runPlan, runSlotLabel } from '../../domain/running';
 import { formatShortDate } from '../format';
 import { activities, kneeLogs } from '../training';
+import { GarminSheet } from './GarminSheet';
 
 interface Props {
   /** Cardio proposé (phase et matériel du lieu choisi). */
@@ -22,6 +24,7 @@ const SWITCH_LABEL = { run: 'Plutôt courir ?', bike: 'Plutôt du vélo ?' } as 
 
 export function CardioCard({ choice, onLog }: Props) {
   const [switched, setSwitched] = useState(false);
+  const [garmin, setGarmin] = useState(false);
   const now = new Date();
   const today = dayKey(now);
   const type = switched && choice.alternative ? choice.alternative : choice.primary;
@@ -88,8 +91,14 @@ export function CardioCard({ choice, onLog }: Props) {
         <button type="button" class="btn btn--small cardio-card__log" onClick={() => onLog('run')}>
           Noter une course
         </button>
+        {plan.status !== 'rest' && (
+          <button type="button" class="btn btn--small btn--quiet" onClick={() => setGarmin(true)}>
+            Garmin propose une séance ?
+          </button>
+        )}
         {switchButton}
       </div>
+      {garmin && <GarminSheet plan={plan} onClose={() => setGarmin(false)} />}
     </section>
   );
 }

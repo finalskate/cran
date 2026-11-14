@@ -2918,6 +2918,20 @@ button.week-strip__day {
   color: var(--text-muted);
 }
 
+/* Avis sur une séance Garmin (14/11) : un liseré, vert quand elle colle au plan, sobre sinon. */
+.garmin-verdict {
+  gap: 4px;
+  border-left: 3px solid var(--accent-2);
+}
+
+.garmin-verdict--go {
+  border-left-color: var(--ok);
+}
+
+.garmin-verdict--skip {
+  border-left-color: var(--border-strong);
+}
+
 /* Genou à 5 ou plus : la carte reste sobre (pas de couleur d'alerte). */
 .cardio-card--rest .card__title {
   color: var(--text);

@@ -29,7 +29,12 @@
  *  - jambes environ 2 fois par semaine : pas de jambes si elles ont été travaillées il y a moins
  *    de 3 jours, et une seule famille « jambes » par séance (la prévention genou reste, toujours) ;
  *  - dès 30 min, une série de plus sur les blocs sans jambes (4 au plus) ;
- *  - dès 20 min, un bloc « Bras » (biceps + triceps) après les mouvements principaux.
+ *  - dès 20 min, un bloc « Bras » (biceps + triceps) après les mouvements principaux ; à 20 min,
+ *    il alterne avec le gainage (voir ci-dessous).
+ *
+ * 14/11 — gainage dès 20 min : à 20 min, un seul bloc de complément, bras OU gainage, celui des
+ * deux qui a été travaillé le moins récemment (priorité haut du corps) ; sans cette priorité, le
+ * gainage seul. La durée de la séance ne change pas. À 30 et 40 min, rien ne change.
  * Les repères : 10 à 20 séries « dures » par muscle et par semaine suffisent à faire grossir un
  * muscle, en restant à 1–3 répétitions de l'échec (c'est ce que fait la double progression).
  */
@@ -122,7 +127,14 @@ export function buildPlan(input: EngineInput): Plan {
 
   blocks.push(...mainBlocks(input, format));
 
-  if (input.focus === 'upper' && input.duration >= 20) {
+  if (input.duration === 20) {
+    // Bras ou gainage, en alternance ; si l'un des deux n'est pas faisable ici, l'autre.
+    const coreFirst = input.focus !== 'upper' || familyAge(input, 'core') >= familyAge(input, 'arms');
+    const complement = coreFirst
+      ? (coreBlock(input, format, 2) ?? (input.focus === 'upper' ? armsBlock(input) : null))
+      : (armsBlock(input) ?? coreBlock(input, format, 2));
+    if (complement) blocks.push(complement);
+  } else if (input.focus === 'upper' && input.duration > 20) {
     const arms = armsBlock(input);
     if (arms) blocks.push(arms);
   }
@@ -133,7 +145,7 @@ export function buildPlan(input: EngineInput): Plan {
   }
 
   if (format.core) {
-    const core = coreBlock(input, format);
+    const core = coreBlock(input, format, 3);
     if (core) blocks.push(core);
   }
 
@@ -195,6 +207,11 @@ interface Candidate {
 function ageInDays(movementId: string, input: EngineInput): number {
   const last = input.lastDone[movementId];
   return last ? (input.now.getTime() - new Date(last).getTime()) / 86_400_000 : Infinity;
+}
+
+/** Âge d'une famille : celui de son mouvement le plus récent (Infinity si aucun n'a été fait). */
+function familyAge(input: EngineInput, category: Category): number {
+  return Math.min(...input.catalog.filter((m) => m.category === category).map((m) => ageInDays(m.id, input)));
 }
 
 /** Le moins récent d'abord ; à égalité, l'ordre du catalogue. */
@@ -360,10 +377,10 @@ function armsBlock(input: EngineInput): PlanBlock | null {
 }
 
 /** Gainage ou abdos en flexion (le moins récent des deux), plus les épaules à 40 min. */
-function coreBlock(input: EngineInput, format: Format): PlanBlock | null {
+function coreBlock(input: EngineInput, format: Format, sets: number): PlanBlock | null {
   const core = candidates(input, ['core'])[0];
   if (!core) return null;
-  const items: PlanItem[] = [{ ...core.item, sets: 3 }];
+  const items: PlanItem[] = [{ ...core.item, sets }];
   if (format.shoulders) {
     const shoulder = candidates(input, ['shoulders'])[0];
     if (shoulder) items.push({ ...shoulder.item, sets: 2 });

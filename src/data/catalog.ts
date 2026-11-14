@@ -177,12 +177,13 @@ export const CATALOG: Movement[] = [
             handsOnFloor: true,
             fistsOk: true,
             target: { kind: 'reps', min: 6, max: 12 },
+            load: { start: 4, step: 2 },
             startHint: 'Commence avec 4 à 5 kg dans le sac (des bouteilles d’eau), puis ajoute 2 kg à la fois.',
             cues: [
               'Sac lesté bien serré sur le dos',
               'Pieds surélevés, corps gainé',
               'Amplitude complète, poitrine près du sol',
-              'Ajoute du poids quand tu tiens le haut de la fourchette',
+              'Quand tu tiens le haut de la fourchette, l’appli ajoute 2 kg au sac',
             ],
             mistakes: ['Sac qui glisse vers la nuque', 'Amplitude qui raccourcit avec la charge'],
           },
@@ -361,6 +362,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 5, max: 10 },
+            load: { start: 4, step: 2 },
             startHint: 'Commence avec 4 à 5 kg dans le sac, puis ajoute 2 kg à la fois.',
             cues: [
               'Sac porté devant ou sur le dos, bien serré',
@@ -666,6 +668,7 @@ export const CATALOG: Movement[] = [
             space: 'small',
             knee: 'low',
             target: { kind: 'reps', min: 3, max: 8 },
+            load: { start: 2, step: 2 },
             startHint: 'Commence avec 2 à 4 kg dans le sac, puis ajoute 2 kg à la fois.',
             cues: [
               'Sac lesté bien serré',
@@ -686,6 +689,7 @@ export const CATALOG: Movement[] = [
         needs: ['bands', 'anchor'],
         space: 'small',
         knee: 'low',
+        floor: true,
         substitute: true,
         target: { kind: 'reps', min: 12, max: 20 },
         band: { start: 1 },
@@ -704,6 +708,7 @@ export const CATALOG: Movement[] = [
         needs: ['straps', 'anchor'],
         space: 'small',
         knee: 'low',
+        floor: true,
         substitute: true,
         target: { kind: 'reps', min: 8, max: 15 },
         cues: [
@@ -882,6 +887,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 12, max: 20 },
             cues: [
               'Allongé, pieds à plat près des fesses',
@@ -902,6 +908,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'reps', min: 8, max: 15 },
             cues: [
@@ -946,6 +953,7 @@ export const CATALOG: Movement[] = [
             knee: 'low',
             perSide: true,
             target: { kind: 'reps', min: 8, max: 12 },
+            load: { start: 6, step: 2 },
             startHint: 'Commence avec 5 à 8 kg dans le sac, tenu d’une main.',
             cues: [
               'Sac lesté dans une main',
@@ -966,6 +974,7 @@ export const CATALOG: Movement[] = [
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
             knee: 'mid',
+            floor: true,
             target: { kind: 'reps', min: 6, max: 12 },
             cues: [
               'Allongé, talons dans les sangles basses',
@@ -1137,6 +1146,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'reps', min: 8, max: 12 },
             cues: [
@@ -1167,6 +1177,7 @@ export const CATALOG: Movement[] = [
             needs: ['mini-bands'],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 12, max: 20 },
             cues: [
               'Sur le dos, mini-bande juste au-dessus des genoux, pieds à plat largeur de hanches',
@@ -1194,6 +1205,7 @@ export const CATALOG: Movement[] = [
             needs: ['mini-bands'],
             space: 'small',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'reps', min: 12, max: 20 },
             cues: [
@@ -1224,6 +1236,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'time', min: 30, max: 60 },
             cues: [
               'Coudes sous les épaules',
@@ -1244,6 +1257,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'time', min: 15, max: 30 },
             cues: [
               'Planche sur avant-bras, coudes un peu plus avancés',
@@ -1264,6 +1278,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'medium',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'reps', min: 8, max: 12 },
             cues: [
@@ -1285,6 +1300,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'time', min: 20, max: 40 },
             cues: [
               'Sur le dos, bas du dos plaqué',
@@ -1304,6 +1320,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'time', min: 20, max: 45 },
             cues: [
@@ -1325,6 +1342,7 @@ export const CATALOG: Movement[] = [
             needs: ['bench'],
             space: 'medium',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'time', min: 15, max: 30 },
             cues: [
@@ -1346,6 +1364,7 @@ export const CATALOG: Movement[] = [
             needs: ['bench'],
             space: 'medium',
             knee: 'low',
+            floor: true,
             perSide: true,
             target: { kind: 'time', min: 15, max: 30 },
             cues: [
@@ -1367,6 +1386,7 @@ export const CATALOG: Movement[] = [
             needs: ['straps', ['anchor', 'pullup-bar']],
             space: 'large',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 6, max: 12 },
             cues: [
               'Debout penché, poignées en main bras tendus',
@@ -1388,6 +1408,7 @@ export const CATALOG: Movement[] = [
             needs: ['straps', 'pullup-bar'],
             space: 'large',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 6, max: 12 },
             cues: [
               'Planche sur avant-bras, pieds dans les sangles basses',
@@ -1404,6 +1425,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'medium',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 6, max: 12 },
             cues: [
               'Planche sur avant-bras, pointes de pieds sur une serviette',
@@ -1433,6 +1455,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'small',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 10, max: 15 },
             cues: [
               'Sur le dos, genoux pliés à 90°, mains au sol le long du corps',
@@ -1841,6 +1864,7 @@ export const CATALOG: Movement[] = [
             needs: [],
             space: 'medium',
             knee: 'low',
+            floor: true,
             target: { kind: 'reps', min: 6, max: 10 },
             cues: [
               'Allongé sur le ventre, front au sol',
@@ -1908,11 +1932,11 @@ export const WARMUP: Movement = {
           'Grands cercles dans un sens puis l’autre',
           'Genoux souples',
         ]),
-        guided('warmup-cat-cow', 'Chat-vache', 30, 'low', [
+        { ...guided('warmup-cat-cow', 'Chat-vache', 30, 'low', [
           'À quatre pattes (poings ou avant-bras si le poignet gêne)',
           'Dos rond en expirant, dos creux en inspirant',
           'Mouvement lent',
-        ]),
+        ]), floor: true },
         guided('warmup-slow-squat', 'Squats lents, amplitude confortable', 30, 'mid', [
           'Descends seulement jusqu’où c’est confortable',
           'Genoux dans l’axe des pieds',
@@ -1941,11 +1965,11 @@ export const COOLDOWN: Movement = {
           'Talon au sol, 30 s par côté',
           'Respire lentement',
         ]),
-        guided('cooldown-hip-flexor', 'Fléchisseurs de hanche', 60, 'low', [
+        { ...guided('cooldown-hip-flexor', 'Fléchisseurs de hanche', 60, 'low', [
           'Un genou au sol, l’autre pied devant',
           'Serre le fessier de la jambe arrière, avance doucement le bassin',
           '30 s par côté',
-        ]),
+        ]), floor: true },
         guided('cooldown-quad', 'Quadriceps', 60, 'low', [
           'Debout, une main au mur',
           'Talon vers la fesse, genoux serrés',

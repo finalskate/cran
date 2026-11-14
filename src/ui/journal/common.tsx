@@ -12,6 +12,7 @@ import {
   FEEL_LABEL,
   formatClock,
   formatKm,
+  GARMIN_LABEL,
   IMPOSED_KIND_LABEL,
   INTENSITY_LABEL,
   RUN_KIND_LABEL,
@@ -90,7 +91,7 @@ function describeActivity(a: Activity): [string, string, string] {
       return [
         'Course',
         `${a.minutes} min${a.km !== undefined ? ` · ${formatKm(a.km)}` : ''}`,
-        `${RUN_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()} · genou ${a.kneeAfter}`,
+        `${a.kind === 'garmin' && a.garmin ? `Garmin ${GARMIN_LABEL[a.garmin].toLowerCase()}` : RUN_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()} · genou ${a.kneeAfter}`,
       ];
     case 'bike':
       return ['Vélo', `${a.minutes} min`, `${BIKE_KIND_LABEL[a.kind].toLowerCase()} · ${FEEL_LABEL[a.feel].toLowerCase()}`];

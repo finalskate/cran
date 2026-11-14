@@ -5,16 +5,17 @@
  * le détail : ici, juste de quoi suivre le plan, la charge sur les jambes et la semaine.
  *
  * S'ouvre sur le dernier type noté (course ou vélo), sauf si l'appelant impose le type.
+ * Séance proposée par la montre (retour du 14/11) : type « Garmin », puis sa catégorie.
  */
 import { useState } from 'preact/hooks';
 import { addDays, dayKey, dayToDate } from '../../domain/days';
 import type { Feel } from '../../domain/history';
-import type { BikeKind, RunKind } from '../../domain/recovery';
+import type { BikeKind, GarminWorkout, RunKind } from '../../domain/recovery';
 import { bikePlan, runPlan } from '../../domain/running';
 import { Sheet } from '../components/Sheet';
 import { Stepper } from '../components/Stepper';
 import { NumberField } from '../food/common';
-import { BIKE_KIND_LABEL, FEEL_LABEL, formatLongDate, parseDecimal, RUN_KIND_LABEL } from '../format';
+import { BIKE_KIND_LABEL, FEEL_LABEL, formatLongDate, GARMIN_LABEL, parseDecimal, RUN_KIND_LABEL } from '../format';
 import { prefs, setPref } from '../state';
 import { activities, kneeLogs, logBike, logRun } from '../training';
 
@@ -31,6 +32,7 @@ interface Props {
 const FEELS = Object.entries(FEEL_LABEL) as [Feel, string][];
 const RUN_KINDS = Object.entries(RUN_KIND_LABEL) as [RunKind, string][];
 const BIKE_KINDS = Object.entries(BIKE_KIND_LABEL) as [BikeKind, string][];
+const GARMIN_WORKOUTS = Object.entries(GARMIN_LABEL) as [GarminWorkout, string][];
 
 /** Valeurs de départ d'un type : celles de la suggestion du moment. */
 function suggested(type: CardioType): { minutes: number; kind: RunKind | BikeKind } {
@@ -45,6 +47,7 @@ export function CardioSheet({ day: fixedDay, type: fixedType, onClose }: Props) 
   const [type, setType] = useState<CardioType>(fixedType ?? prefs.value.lastCardio);
   const [minutes, setMinutes] = useState(() => suggested(type).minutes);
   const [kind, setKind] = useState<RunKind | BikeKind>(() => suggested(type).kind);
+  const [garmin, setGarmin] = useState<GarminWorkout>('base');
   const [km, setKm] = useState('');
   const [feel, setFeel] = useState<Feel>('ok');
   const [knee, setKnee] = useState(0);
@@ -69,6 +72,7 @@ export function CardioSheet({ day: fixedDay, type: fixedType, onClose }: Props) 
         at,
         minutes,
         kind: kind as RunKind,
+        ...(kind === 'garmin' ? { garmin } : {}),
         feel,
         kneeAfter: knee,
         ...(distance !== undefined && distance > 0 ? { km: distance } : {}),
@@ -132,6 +136,16 @@ export function CardioSheet({ day: fixedDay, type: fixedType, onClose }: Props) 
           </button>
         ))}
       </div>
+
+      {type === 'run' && kind === 'garmin' && (
+        <div class="segmented segmented--tight segmented--grid" role="radiogroup" aria-label="Séance Garmin">
+          {GARMIN_WORKOUTS.map(([value, label]) => (
+            <button key={value} type="button" class="btn btn--small" role="radio" aria-checked={garmin === value} onClick={() => setGarmin(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {type === 'run' && <NumberField id="run-km" label="Distance (facultative)" value={km} onInput={setKm} suffix="km" />}
 

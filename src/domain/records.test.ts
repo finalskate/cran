@@ -37,6 +37,20 @@ describe('records', () => {
     ]);
   });
 
+  it('exercice lesté : un record par charge du sac', () => {
+    const weighted = [
+      workout('2026-11-10', [{ movementId: 'push-h', variantId: 'decline', level: 6, sets: sets(12), load: 4 }]),
+      workout('2026-11-12', [{ movementId: 'push-h', variantId: 'decline', level: 6, sets: sets(8), load: 6 }]),
+    ];
+    expect(variantRecords(weighted).map((r) => [r.load, r.value])).toEqual([
+      [4, 12],
+      [6, 8],
+    ]);
+    // 9 à 6 kg bat le 8 à 6 kg, pas le 12 à 4 kg.
+    const next = workout('2026-11-14', [{ movementId: 'push-h', variantId: 'decline', level: 6, sets: sets(9), load: 6 }]);
+    expect(newRecords(next, weighted)).toEqual([{ movementId: 'push-h', variantId: 'decline', load: 6, value: 9, previous: 8 }]);
+  });
+
   it('fête un record battu, pas une 1re fois ni une égalité', () => {
     const today = workout('2026-11-14', [
       { movementId: 'push-h', variantId: 'archer', level: 5, sets: sets(13, 12, 14) },

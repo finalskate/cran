@@ -22,6 +22,8 @@ export interface WorkoutEntry {
   sets: SetResult[];
   /** Élastique utilisé (exercices à l'élastique, depuis la retouche du 08/11 ; champ non indexé). */
   band?: BandChoice;
+  /** Charge du sac en kg (exercices lestés, depuis le 14/11 ; champ non indexé). */
+  load?: number;
 }
 
 /**
@@ -61,6 +63,7 @@ export interface LastSession {
   sets: SetResult[];
   at: string;
   band?: BandChoice;
+  load?: number;
 }
 
 /**
@@ -73,7 +76,12 @@ export function lastSessionByVariant(workouts: readonly WorkoutRecord[]): Record
     for (const e of w.entries) {
       if (e.sets.length === 0) continue;
       const prev = latest[e.variantId];
-      if (!prev || w.startedAt > prev.at) latest[e.variantId] = { at: w.startedAt, sets: e.sets, ...(e.band ? { band: e.band } : {}) };
+      if (!prev || w.startedAt > prev.at) latest[e.variantId] = {
+          at: w.startedAt,
+          sets: e.sets,
+          ...(e.band ? { band: e.band } : {}),
+          ...(e.load !== undefined ? { load: e.load } : {}),
+        };
     }
   }
   return latest;

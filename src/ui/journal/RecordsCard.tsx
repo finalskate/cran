@@ -5,6 +5,7 @@
  */
 import { CATALOG } from '../../data/catalog';
 import { dayKey } from '../../domain/days';
+import { formatLoad } from '../../domain/load';
 import { longestRun, PUSHUP_MAX_SET, variantRecords, type VariantRecord } from '../../domain/records';
 import { bestTest } from '../../domain/pushupTest';
 import { formatTinyDate } from '../format';
@@ -87,7 +88,7 @@ export function RecordsCard() {
             <div key={g.movement.id} class="records__group">
               <span class="card__label">{g.movement.name}</span>
               {g.items.map((r) => (
-                <RecordLine key={`${r.variantId}|${r.band ?? ''}`} record={r} />
+                <RecordLine key={`${r.variantId}|${r.band ?? ''}|${r.load ?? ''}`} record={r} />
               ))}
             </div>
           ))}
@@ -104,6 +105,7 @@ function RecordLine({ record }: { record: VariantRecord }) {
       <span class="records__name">
         {name}
         {record.band && <span class="muted"> · élastique {record.band}</span>}
+        {record.load !== undefined && <span class="muted"> · sac {formatLoad(record.load)}</span>}
       </span>
       <span>
         <span class="num records__value">{formatRecord(record)}</span> <span class="muted">· {dateOf(record.at)}</span>

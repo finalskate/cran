@@ -502,9 +502,19 @@ try {
   const content = () => page.evaluate(() => document.body.textContent);
   if (!(await content()).includes('Prochaine sortie')) throw new Error('accueil : carte « Prochaine sortie » absente');
   await shot('80-accueil-semaine', true);
+  // Séance Garmin (14/11) : en semaine 1, un seuil proposé par la montre se court en aisance.
+  await click('Garmin propose une séance ?');
+  await clickIn('Seuil');
+  await wait(100);
+  if (!(await content()).includes('en aisance')) throw new Error('arbitrage Garmin : un seuil en semaine 1 devrait passer en aisance');
+  await shot('80b-garmin-arbitrage');
+  await page.click('dialog[open] [aria-label="Fermer"]');
+  await wait(200);
   await click('Noter une course');
   await wait(200);
   await fill('#run-km', '5,2');
+  await clickIn('Garmin');
+  await clickIn('Base');
   await page.click('dialog[open] .score-grid button:nth-child(2)'); // genou après : 1
   await wait(100);
   await shot('81-course');

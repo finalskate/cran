@@ -134,3 +134,27 @@ describe('ancrage de porte (retouche du 08/11)', () => {
     expect(resolveVariant(byId('pull-h'), 0, ctx(onlyBands))?.variant.id).toBe('row-band');
   });
 });
+
+describe('tapis de sol', () => {
+  // Mouvement fictif : un niveau avec une variante au sol et son équivalent debout.
+  const plank = { ...byId('core').levels[0]!.variants[0]!, id: 'test-floor' };
+  const standing = { ...plank, id: 'test-standing', floor: undefined };
+  const mixed: Movement = { ...byId('core'), id: 'test-core', levels: [{ variants: [plank, standing] }] };
+  const withMat: Location = { ...bare, equipment: ['mat'] };
+
+  it('avec un tapis, l’ordre du catalogue ; sans tapis, la variante debout d’abord', () => {
+    expect(resolveVariant(mixed, 0, ctx(withMat))?.variant.id).toBe('test-floor');
+    expect(resolveVariant(mixed, 0, ctx(bare))?.variant.id).toBe('test-standing');
+    expect(variantHere(mixed, 0, ctx(bare)).id).toBe('test-standing');
+  });
+
+  it('la variante préférée reste en tête, même au sol', () => {
+    expect(resolveVariant(mixed, 0, ctx(bare, { preferred: { 'test-core': 'test-floor' } }))?.variant.id).toBe('test-floor');
+  });
+
+  it('sans tapis, un exercice au sol reste proposé (sur une serviette)', () => {
+    const res = resolveVariant(byId('core'), 0, ctx(bare));
+    expect(res?.variant.floor).toBe(true);
+    expect(res?.adapted).toBe(false);
+  });
+});

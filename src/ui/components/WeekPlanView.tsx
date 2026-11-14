@@ -23,7 +23,7 @@ function slotLabel(slot: CardioSlot | undefined): string {
     case 'long':
       return `Sortie longue · ${slot.minutes} min`;
     case 'play':
-      return `Course · sortie jeu`;
+      return `Course · jeu ou séance intense`;
     case 'base':
       return `Course · ${slot.minutes} min`;
     case 'bike':

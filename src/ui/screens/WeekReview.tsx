@@ -118,7 +118,7 @@ export function WeekReview() {
             </div>
           ))}
           {highlights.records.map((r) => (
-            <div key={`${r.variantId}|${r.band ?? ''}`} class="row records__row">
+            <div key={`${r.variantId}|${r.band ?? ''}|${r.load ?? ''}`} class="row records__row">
               <span class="records__name">Record · {variantInfo(r.movementId, r.variantId).name}</span>
               <span>
                 <strong class="num">{formatRecord(r)}</strong> <span class="muted">(avant {formatRecord({ ...r, value: r.previous })})</span>

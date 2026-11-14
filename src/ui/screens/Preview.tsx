@@ -9,6 +9,7 @@
 import { useEffect, useState } from 'preact/hooks';
 import { handSupport, isAvailable } from '../../domain/availability';
 import { gearNeeds, toggleMissing, withoutEquipment, type GearNeed } from '../../domain/gear';
+import { formatLoad } from '../../domain/load';
 import { startSession } from '../../domain/session';
 import type { EquipmentTag, PlanItem } from '../../domain/types';
 import { EQUIPMENT } from '../../data/equipment';
@@ -33,6 +34,8 @@ const equipmentLabel = (tag: EquipmentTag) => EQUIPMENT.find((e) => e.tag === ta
 
 /** Nom d'un matériel à préparer ; pour les élastiques, ceux qui sont prévus (« Élastique 20 kg »). */
 function gearName(need: GearNeed): string {
+  if (need.towel) return 'Serviette pliée';
+  if (need.tag === 'backpack' && need.loads?.length) return `Sac lesté à ${need.loads.map(formatLoad).join(', ')}`;
   if (need.tag !== 'bands' || !need.bands?.length) return equipmentLabel(need.tag);
   return `${need.bands.length > 1 ? 'Élastiques' : 'Élastique'} ${need.bands.join(', ')}`;
 }
@@ -60,7 +63,7 @@ export function Preview() {
   const missing = plan.missing ?? [];
   const ctx = contextFor(withoutEquipment(location, missing), plan.kneeScore);
   const needs = gearNeeds(
-    plan.blocks.flatMap((b) => b.items).map((item) => ({ variant: describeItem(item).variant, handSupport: item.handSupport, band: item.band })),
+    plan.blocks.flatMap((b) => b.items).map((item) => ({ variant: describeItem(item).variant, handSupport: item.handSupport, band: item.band, load: item.load })),
     ctx.location,
   );
 
@@ -170,12 +173,15 @@ export function Preview() {
               <span class="plan-item__name">{gearName(need)}</span>
               <span class="muted plan-item__meta">
                 {need.setup && <span class="gear-setup">À installer avant · </span>}
+                {need.towel && 'Pas de tapis ici · '}
                 {need.uses.join(' · ')}
               </span>
             </div>
-            <button type="button" class="btn btn--small" disabled={adapting} onClick={() => void toggleGear(need.tag)}>
-              Pas là ?
-            </button>
+            {!need.towel && (
+              <button type="button" class="btn btn--small" disabled={adapting} onClick={() => void toggleGear(need.tag)}>
+                Pas là ?
+              </button>
+            )}
           </div>
         ))}
         {missing.map((tag) => (

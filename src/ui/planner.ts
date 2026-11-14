@@ -5,6 +5,7 @@
 import { CATALOG, COOLDOWN, WARMUP } from '../data/catalog';
 import { alternatives, handSupport, resolveVariant, variantHere, type Context, type Resolved } from '../domain/availability';
 import { bandLabels, plannedBand } from '../domain/bands';
+import { plannedLoad } from '../domain/load';
 import { buildPlan } from '../domain/engine';
 import { lastDoneByMovement, lastSessionByVariant, lastSessionFeel, lastSetsByVariant, type LastSession } from '../domain/history';
 import { isValidated, nextPrefill, volumeDelta } from '../domain/progression';
@@ -85,6 +86,19 @@ function withBand(item: PlanItem): PlanItem {
   return { ...item, band, ...(reset ? { prefill: variant.target.min } : {}), ...(last?.band ? { lastBand: last.band.label } : {}) };
 }
 
+/**
+ * Exercice lesté (14/11) : charge du sac prévue (la même, ou +2 kg après une séance au haut de la
+ * fourchette, l'objectif repartant alors du bas), et celle de la dernière fois pour le rappel.
+ */
+function withLoad(item: PlanItem): PlanItem {
+  if (item.guided) return item;
+  const { variant } = describeItem(item);
+  if (!variant.load) return item;
+  const last = lastSessions[item.variantId];
+  const { load, reset } = plannedLoad(variant.load, last && { load: last.load, validated: isValidated(last.sets, variant.target) });
+  return { ...item, load, ...(reset ? { prefill: variant.target.min } : {}), ...(last?.load !== undefined ? { lastLoad: last.load } : {}) };
+}
+
 /** Le test pompes du mois vaut la série longue de la semaine (J6b) : le moteur ne la repropose pas. */
 function withPushupTest(lastDone: Record<string, string>): Record<string, string> {
   const test = activities.value.filter((a) => a.type === 'pushup-test').at(-1);
@@ -121,7 +135,7 @@ export async function makePlan(location: Location, duration: Duration, kneeScore
   });
   return {
     ...plan,
-    blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map((i) => withLast(withBand(i))) })),
+    blocks: plan.blocks.map((b) => ({ ...b, items: b.items.map((i) => withLast(withLoad(withBand(i)))) })),
     ...(recall ? { recall } : {}),
   };
 }
@@ -157,7 +171,7 @@ export function swapOptions(item: PlanItem, plan: Plan, ctx: Context): SwapOptio
 export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): PlanItem {
   const { variant, level, adapted } = option.resolved;
   const support = handSupport(variant, ctx);
-  return withLast(withBand({
+  return withLast(withLoad(withBand({
     movementId: option.movement.id,
     variantId: variant.id,
     level,
@@ -171,5 +185,5 @@ export function itemFromSwap(option: SwapOption, base: PlanItem, ctx: Context): 
     ),
     ...(variant.perSide ? { perSide: true } : {}),
     ...(support ? { handSupport: support } : {}),
-  }));
+  })));
 }

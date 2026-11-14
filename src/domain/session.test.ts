@@ -14,6 +14,7 @@ import {
   restFollows,
   restRemaining,
   setItemBand,
+  setItemLoad,
   setsOfItem,
   skipBlock,
   startSession,
@@ -156,6 +157,19 @@ describe('élastique de l’exercice (retouche du 08/11)', () => {
     const rec = toRecord(s, T0 + 600_000);
     expect(rec.entries.find((e) => e.movementId === 'a')?.band).toEqual(band);
     expect(rec.entries.find((e) => e.movementId === 'b')).not.toHaveProperty('band');
+  });
+});
+
+describe('charge du sac (14/11)', () => {
+  it('se change en séance et s’enregistre avec les séries', () => {
+    let s = startSession(PLAN, T0);
+    s = setItemLoad(s, 1, 0, 6);
+    while (s.phase !== 'done') {
+      s = s.phase === 'rest' ? endRest(s) : completeStep(s, { value: 8, feel: 'ok' }, T0);
+    }
+    const rec = toRecord(s, T0 + 600_000);
+    expect(rec.entries.find((e) => e.movementId === 'a')?.load).toBe(6);
+    expect(rec.entries.find((e) => e.movementId === 'b')).not.toHaveProperty('load');
   });
 });
 

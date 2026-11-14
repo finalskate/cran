@@ -243,6 +243,25 @@ describe('priorité haut du corps (J3b)', () => {
     expect(armsBlock(plan)).toBeUndefined();
   });
 
+  it('20 min : bras ou gainage, en alternance (le moins récent des deux)', () => {
+    const complement = (lastDone: Record<string, string>) =>
+      buildPlan(input({ duration: 20, focus: 'upper', lastDone }))
+        .blocks.filter((b) => b.title === 'Bras' || b.kind === 'core')
+        .map((b) => b.title);
+    // Bras faits il y a 2 jours, gainage jamais : gainage. Et l'inverse.
+    expect(complement({ biceps: daysAgo(2), triceps: daysAgo(2) })).toEqual(['Gainage']);
+    expect(complement({ core: daysAgo(2), biceps: daysAgo(5) })).toEqual(['Bras']);
+    // Un seul complément, en 2 séries, et la séance tient toujours dans ses 20 min.
+    const plan = buildPlan(input({ duration: 20, focus: 'upper', lastDone: { biceps: daysAgo(2) } }));
+    expect(plan.blocks.find((b) => b.kind === 'core')!.items[0]!.sets).toBe(2);
+    expect(plan.estimatedMinutes).toBeLessThanOrEqual(23);
+  });
+
+  it('20 min en priorité équilibrée : le gainage (pas de bras)', () => {
+    const plan = buildPlan(input({ duration: 20 }));
+    expect(plan.blocks.some((b) => b.kind === 'core')).toBe(true);
+  });
+
   it('gainage et abdos en flexion alternent (le moins récent d’abord)', () => {
     const core = (lastDone: Record<string, string>) => buildPlan(input({ duration: 30, lastDone })).blocks.find((b) => b.kind === 'core')!;
     expect(core({ core: daysAgo(2) }).title).toBe('Abdos');

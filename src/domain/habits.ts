@@ -212,8 +212,10 @@ export function planMomentKey(day: string, slot: PlanSlot): string {
  * Plan à rappeler maintenant, ou null. Priorité : après le vélo, puis le soir, puis la journée.
  *  - `lastRideAt` : heure (ms) de la dernière saisie d'un vélotaf ou d'une séance de vélo ;
  *  - `seen` : clés des moments déjà fermés (`planMomentKey`) ;
- *  - `badNight` : la nuit dernière a été notée mauvaise (21/11) → en journée, le plan
- *    « stress, fatigue » passe avant la rotation : c'est le jour où il sert.
+ *  - `opts.badNight` : la nuit dernière a été notée mauvaise (21/11) → en journée, le plan
+ *    « stress, fatigue » passe avant la rotation : c'est le jour où il sert ;
+ *  - `opts.cited` : déclencheurs notés ailleurs que dans le bilan (grignotages, 21/11), qui
+ *    comptent comme ceux des bilans pour la rotation de la journée.
  * Seuls les plans complets (« si » et « alors » remplis) sont montrés ; sans plan, rien.
  */
 export function planMoment(
@@ -222,7 +224,7 @@ export function planMoment(
   reviews: readonly DailyReview[],
   lastRideAt: number | null,
   seen: ReadonlySet<string>,
-  badNight = false,
+  opts: { badNight?: boolean; cited?: readonly CitedTrigger[] } = {},
 ): PlanMoment | null {
   const day = foodDay(now);
   const h = now.getHours();
@@ -240,24 +242,36 @@ export function planMoment(
   if (h >= EVENING_PLAN_HOUR || h < 4) return pick('evening', EVENING_TRIGGERS);
   if (h < DAY_PLAN_HOUR) return null;
 
-  const tired = badNight ? pick('day', ['stress']) : null;
+  const tired = opts.badNight ? pick('day', ['stress']) : null;
   if (tired) return tired;
-  const trigger = dayTrigger(usable, reviews, day);
+  const trigger = dayTrigger(usable, reviews, day, opts.cited);
   return trigger ? pick('day', [trigger]) : null;
+}
+
+/** Un déclencheur noté un jour (grignotage), hors bilan du soir. */
+export interface CitedTrigger {
+  day: string;
+  trigger: Trigger;
 }
 
 /**
  * Déclencheur rappelé dans la journée : à tour de rôle (un par jour) parmi ceux qui ont un plan,
- * en se limitant à ceux cités dans les bilans des 28 derniers jours s'il y en a.
+ * en se limitant à ceux cités dans les bilans (et les grignotages, `extra`) des 28 derniers
+ * jours s'il y en a.
  */
-export function dayTrigger(plans: readonly IfThenPlan[], reviews: readonly DailyReview[], day: string): Trigger | null {
+export function dayTrigger(
+  plans: readonly IfThenPlan[],
+  reviews: readonly DailyReview[],
+  day: string,
+  extra: readonly CitedTrigger[] = [],
+): Trigger | null {
   const candidates = DAY_TRIGGERS.filter((t) => plans.some((p) => p.trigger === t));
   if (candidates.length === 0) return null;
-  const cited = new Set(
-    reviews
-      .filter((r) => r.slip !== 'none' && r.trigger && daysBetween(r.day, day) >= 0 && daysBetween(r.day, day) < PLAN_HISTORY_DAYS)
-      .map((r) => r.trigger!),
-  );
+  const recent = (d: string) => daysBetween(d, day) >= 0 && daysBetween(d, day) < PLAN_HISTORY_DAYS;
+  const cited = new Set([
+    ...reviews.filter((r) => r.slip !== 'none' && r.trigger && recent(r.day)).map((r) => r.trigger!),
+    ...extra.filter((c) => recent(c.day)).map((c) => c.trigger),
+  ]);
   const pool = candidates.filter((t) => cited.has(t));
   const list = pool.length > 0 ? pool : candidates;
   // Rang du jour depuis une date fixe : la rotation ne dépend que du calendrier.

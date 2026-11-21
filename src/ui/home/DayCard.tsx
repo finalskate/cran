@@ -3,15 +3,13 @@
  * (semaine, prochaine sortie, alimentation, poids) et la rangée de raccourcis.
  *  - la semaine : pastilles, objectif, « Aujourd'hui : … » / « Demain : … », semaines réussies,
  *    et « Séance faite ✓ » une fois la séance du jour terminée (toucher → Carnet) ;
- *  - les repas du jour en une ligne (toucher → Assiette) ; les boutons de repas arriveront avec
- *    « Noter vite » ;
+ *  - les repas du jour : un bouton par repas (« Noter vite »), « J'ai grignoté », le total ;
  *  - le poids : la tendance, jamais la pesée du jour (toucher → Carnet › Corps, où l'on se pèse
  *    à toute heure) ; avant la toute première pesée, un bouton « Se peser » ;
  *  - « Noter : course · vélo, vélotaf, imposée » (l'ancienne rangée de raccourcis).
  */
 import { dayKey } from '../../domain/days';
 import { photoDue } from '../../domain/body';
-import { sumEntries } from '../../domain/nutrition';
 import type { TrainingWeek } from '../../domain/week';
 import type { WeekPlan } from '../../domain/weekPlan';
 import type { Regularity } from '../../domain/regularity';
@@ -19,11 +17,11 @@ import { photos, summary, trend } from '../bodyState';
 import { Sparkline } from '../components/SmallCharts';
 import { GoalLine, WeekStrip } from '../components/WeekStrip';
 import { PlanLine, RegularityLine } from '../components/WeekPlanView';
-import { profile, targets } from '../foodState';
-import { formatApproxDate, formatInt, formatKg, formatSigned } from '../format';
+import { formatApproxDate, formatKg, formatSigned } from '../format';
 import { openCalendar } from '../screens/Journal';
 import { prefs } from '../state';
-import type { FoodEntry } from '../../domain/nutrition';
+import type { FoodEntry, Meal } from '../../domain/nutrition';
+import { MealButtons } from './MealButtons';
 
 /** Nombre de pesées montrées dans la petite courbe. */
 const SPARK_POINTS = 14;
@@ -44,6 +42,9 @@ interface Props {
   onImposed: () => void;
   /** Ouvre la pesée (panneau tenu par l'écran : il reste ouvert quand la ligne change). */
   onWeigh: () => void;
+  /** « Noter vite » : un repas, ou un grignotage (panneaux tenus par l'écran). */
+  onMeal: (meal: Meal) => void;
+  onSnack: () => void;
 }
 
 export function DayCard(p: Props) {
@@ -67,7 +68,7 @@ export function DayCard(p: Props) {
       </button>
 
       <hr class="day-card__rule" />
-      <MealsRow entries={p.entries} cantine={p.cantine} />
+      <MealButtons entries={p.entries} hour={p.now.getHours()} cantine={p.cantine} onMeal={p.onMeal} onSnack={p.onSnack} />
 
       <hr class="day-card__rule" />
       <WeightRow today={today} onWeigh={p.onWeigh} />
@@ -86,27 +87,6 @@ export function DayCard(p: Props) {
         </button>
       </div>
     </section>
-  );
-}
-
-/** Repas du jour en une ligne (provisoire : « Noter vite » la remplacera par un bouton par repas). */
-function MealsRow({ entries, cantine }: { entries: FoodEntry[] | null | undefined; cantine: boolean }) {
-  const totals = sumEntries(entries ?? []);
-  const t = targets.value;
-  const noted = (entries?.length ?? 0) > 0;
-  let value: string;
-  if (cantine) value = noted ? `≈ ${formatInt(totals.kcal)} kcal · ${formatInt(totals.protein)} g de protéines` : '½ légumes, ¼ protéines, ¼ féculents';
-  else if (!profile.value) value = 'Calculer ma cible';
-  else if (!noted) value = 'Rien de noté pour l’instant';
-  else if (t) value = `${formatInt(totals.kcal)} / ${formatInt(t.kcal)} kcal · ${formatInt(totals.protein)} / ${formatInt(t.protein)} g de protéines`;
-  else value = `${formatInt(totals.kcal)} kcal · ${formatInt(totals.protein)} g de protéines`;
-  return (
-    <a class="day-row" href="#/assiette">
-      <span class="day-card__name">{cantine ? 'Repas · mode cantine' : 'Repas'}</span>
-      <span class="day-row__value">
-        {value} <span aria-hidden="true">→</span>
-      </span>
-    </a>
   );
 }
 

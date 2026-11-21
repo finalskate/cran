@@ -25,7 +25,7 @@ import { DURATIONS, type Duration } from '../../domain/types';
 import { CATALOG } from '../../data/catalog';
 import { REST_DAY } from '../../data/messages';
 import { dayKey, dayToDate } from '../../domain/days';
-import { calibrationDay, foodDay, latestWeight } from '../../domain/nutrition';
+import { calibrationDay, foodDay, latestWeight, type Meal } from '../../domain/nutrition';
 import { reviewPrompt } from '../../domain/habits';
 import { dailyMessage } from '../../domain/messages';
 import { askMorningKnee, sessionDoneToday } from '../../domain/recovery';
@@ -46,6 +46,8 @@ import { lastTestText, PushupTestSheet } from '../components/PushupTestSheet';
 import { RemarkButton } from '../components/RemarkSheet';
 import { ReviewSheet } from '../food/ReviewSheet';
 import { WeighSheet } from '../food/WeighSheet';
+import { QuickMealSheet } from '../food/QuickMealSheet';
+import { SnackSheet } from '../food/SnackSheet';
 import { PlansSheet } from '../food/PlansSheet';
 import { DayCard } from '../home/DayCard';
 import { MorningCard, WEIGH_FROM, WEIGH_UNTIL } from '../home/MorningCard';
@@ -119,6 +121,8 @@ export function Today() {
 
   const [testing, setTesting] = useState(false);
   const [weighing, setWeighing] = useState(false);
+  const [quickMeal, setQuickMeal] = useState<Meal | null>(null);
+  const [snacking, setSnacking] = useState(false);
   const [editingPlans, setEditingPlans] = useState(false);
   const [imposing, setImposing] = useState(false);
   const [cardio, setCardio] = useState<{ type?: 'run' | 'bike' } | null>(null);
@@ -309,6 +313,8 @@ export function Today() {
         onCommute={() => setCommuting(true)}
         onImposed={() => setImposing(true)}
         onWeigh={() => setWeighing(true)}
+        onMeal={(meal) => setQuickMeal(meal)}
+        onSnack={() => setSnacking(true)}
       />
 
       {feed.later.length > 0 && (
@@ -356,6 +362,8 @@ export function Today() {
       )}
 
       {weighing && <WeighSheet onClose={() => setWeighing(false)} />}
+      {quickMeal && <QuickMealSheet meal={quickMeal} onClose={() => setQuickMeal(null)} />}
+      {snacking && <SnackSheet onClose={() => setSnacking(false)} />}
       {imposing && <ImposedSheet onClose={() => setImposing(false)} />}
       {cardio && <CardioSheet {...(cardio.type ? { type: cardio.type } : {})} onClose={() => setCardio(null)} />}
       {commuting && <CommuteSheet onClose={() => setCommuting(false)} />}

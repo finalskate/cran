@@ -4,6 +4,7 @@
  *
  * - Les protéines se déduisent des entrées notées dans l'Assiette (on continue de noter après la
  *   calibration) : la question n'est posée que si rien n'a été noté ce jour-là.
+ * - 21/11 : les légumes cochés à un repas (« Noter vite ») valent réponse : plus de question.
  * - Au moment où un déclencheur est choisi, le plan « si… alors… » correspondant s'affiche ; s'il
  *   n'y en a pas, on peut en écrire un sur place.
  * - Jamais de reproche : un écart se note comme le reste, le message qui suit parle de la suite.
@@ -24,6 +25,7 @@ import {
 } from '../../domain/habits';
 import { dailyMessage } from '../../domain/messages';
 import { foodDay } from '../../domain/nutrition';
+import { veggiesNoted } from '../../domain/quickMeal';
 import { Sheet } from '../components/Sheet';
 import { targets, useDayEntries } from '../foodState';
 import { formatInt, MEAL_LABEL, relativeDayLabel } from '../format';
@@ -62,7 +64,10 @@ export function ReviewSheet({ day, via, onClose }: Props) {
 
   const today = foodDay(new Date());
   const proteinValue = check ? check.answer : protein;
-  const ready = proteinValue !== null && veggies !== null && slip !== null && (slip === 'none' || trigger !== null);
+  // Légumes cochés à un repas : la réponse est déjà là.
+  const veggiesAuto = entries ? veggiesNoted(entries) : false;
+  const veggiesValue = veggiesAuto ? true : veggies;
+  const ready = proteinValue !== null && veggiesValue !== null && slip !== null && (slip === 'none' || trigger !== null);
   const triggerPlans = trigger ? plansFor(plans.value, trigger) : [];
 
   async function save() {
@@ -73,7 +78,7 @@ export function ReviewSheet({ day, via, onClose }: Props) {
         at: new Date().toISOString(),
         protein: proteinValue!,
         proteinAuto: !!check,
-        veggies: veggies!,
+        veggies: veggiesValue!,
         slip: slip!,
         ...(slip !== 'none' && trigger ? { trigger } : {}),
       },
@@ -163,16 +168,22 @@ export function ReviewSheet({ day, via, onClose }: Props) {
         <span id="rv-veggies" class="card__label">
           Des légumes aujourd’hui ?
         </span>
-        <div class="segmented" role="radiogroup" aria-labelledby="rv-veggies">
-          {[
-            [true, 'Oui'],
-            [false, 'Non'],
-          ].map(([value, label]) => (
-            <button key={label} type="button" class="btn btn--small" role="radio" aria-checked={veggies === value} onClick={() => setVeggies(value as boolean)}>
-              {label}
-            </button>
-          ))}
-        </div>
+        {veggiesAuto ? (
+          <p class="review-auto">
+            <strong>Oui</strong> <span class="muted">· noté avec tes repas</span>
+          </p>
+        ) : (
+          <div class="segmented" role="radiogroup" aria-labelledby="rv-veggies">
+            {[
+              [true, 'Oui'],
+              [false, 'Non'],
+            ].map(([value, label]) => (
+              <button key={label} type="button" class="btn btn--small" role="radio" aria-checked={veggies === value} onClick={() => setVeggies(value as boolean)}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </section>
 
       <section class="review-q" aria-labelledby="rv-slip">

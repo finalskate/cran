@@ -19,6 +19,8 @@
  * capture (bouton de l'accueil), liste dans Réglages, remarque conservée par l'export → import.
  * Accueil du 21/11 : carte rangée d'un balayage puis « Annuler », « Ta nuit ? » (le matin),
  * « Plus tard » déplié là où une carte y attend, nuits dans Carnet › Corps.
+ * Noter vite (21/11) : repas habituel d'un geste, repas « fait maison, copieux, légumes »,
+ * grignotage avec son plan, légumes repris par le bilan du soir.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -506,6 +508,41 @@ try {
   await wait(200);
   if (!(await text()).includes('Compte pour le calcul')) throw new Error('journée non comptée après « La compter »');
 
+  // ─── Noter vite (21/11) ───
+  // Midi : « Repas (test) », noté chaque midi par l'injection ci-dessus, est un repas habituel.
+  await page.goto(BASE);
+  await page.waitForFunction(() => !!document.querySelector('.meal-btn'), { timeout: 5000 });
+  const mealBtn = (name) => page.evaluate((name) => [...document.querySelectorAll('.meal-btn')].find((b) => b.textContent.startsWith(name))?.textContent ?? '', name);
+  const openMeal = (name) => page.evaluate((name) => [...document.querySelectorAll('.meal-btn')].find((b) => b.textContent.startsWith(name)).click(), name);
+  await openMeal('Midi');
+  await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Comme d’habitude'), { timeout: 5000 });
+  if (!(await page.evaluate(() => document.querySelector('dialog[open] .quick__habit')?.textContent.includes('Repas (test)')))) throw new Error('noter vite : repas habituel absent');
+  await shot('35-noter-vite');
+  await page.evaluate(() => document.querySelector('dialog[open] .quick__habit').click());
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'), { timeout: 5000 });
+  if (!(await mealBtn('Midi')).includes('✓')) throw new Error('noter vite : midi non noté après le repas habituel');
+  // Soir : fait maison, copieux, légumes → le bouton le dit.
+  await openMeal('Soir');
+  await page.waitForFunction(() => !!document.querySelector('dialog[open] .quick__grid'), { timeout: 5000 });
+  await clickIn('Fait maison');
+  await clickIn('Copieux');
+  await clickIn('Légumes');
+  if (!(await page.evaluate(() => document.querySelector('dialog[open]').textContent.replace(/\s/g, ' ').includes('Estimé : 680 à 1 140 kcal')))) throw new Error('noter vite : estimation inattendue');
+  await shot('36-noter-vite-choix');
+  await clickIn('Noter');
+  await page.waitForFunction(() => !document.querySelector('dialog[open]'), { timeout: 5000 });
+  if (!(await mealBtn('Soir')).includes('copieux · légumes')) throw new Error('noter vite : soir non noté');
+  // Grignotage : petit, sucré, « ennui » → le plan s'affiche dans le panneau.
+  await click('J’ai grignoté');
+  await clickIn('Petit');
+  await clickIn('Sucré');
+  await clickIn('Ennui, lecture');
+  if (!(await page.evaluate(() => document.querySelector('dialog[open]').textContent.includes('Ton plan, la prochaine fois')))) throw new Error('grignotage : plan absent');
+  await shot('37-grignotage');
+  await clickIn('Noter');
+  await page.waitForFunction(() => document.body.textContent.includes('J’ai grignoté (1)'), { timeout: 5000 });
+  await shot('38-accueil-repas-notes', true);
+
   // ─── Carnet (J2) ───
   // Séance imposée d'hier, jambes sollicitées : le moteur ménagera les jambes.
   await page.goto(BASE);
@@ -809,7 +846,8 @@ try {
   await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('Un écart ?'), { timeout: 5000 });
   if (!(await page.evaluate(() => document.querySelector('dialog[open]').textContent.includes('D’après ce que tu as noté'))))
     throw new Error('protéines du bilan non déduites des entrées');
-  await clickIn('Oui');
+  // Légumes cochés au dîner (« Noter vite ») : le bilan ne redemande pas.
+  if (!(await page.evaluate(() => document.querySelector('dialog[open]').textContent.includes('noté avec tes repas')))) throw new Error('bilan : légumes du dîner non repris');
   await clickIn('Petit');
   await clickIn('Soirée');
   await page.waitForFunction(() => document.querySelector('dialog[open]')?.textContent.includes('le dîner est fini'), { timeout: 3000 });

@@ -5,6 +5,7 @@
  * Rien n'est codé en dur pour une personne : le profil se saisit dans l'appli et reste sur le
  * téléphone. Les constantes ci-dessous sont des règles générales.
  */
+import type { QuickInfo } from './quickMeal';
 import { addDays, dayKey, daysBetween } from './days';
 import type { TrainingFocus } from './types';
 
@@ -221,8 +222,11 @@ export function formatAmount(n: number): string {
 
 // ─── Entrées du journal ───
 
-/** Comment l'entrée a été saisie (pour le journal d'usage et, plus tard, les statistiques). */
-export type EntryMethod = 'scan' | 'list' | 'hands' | 'free' | 'phrase';
+/**
+ * Comment l'entrée a été saisie (pour le journal d'usage et, plus tard, les statistiques).
+ * 21/11 : « quick » = saisie rapide estimée (voir quickMeal.ts), « habit » = repas habituel recopié.
+ */
+export type EntryMethod = 'scan' | 'list' | 'hands' | 'free' | 'phrase' | 'quick' | 'habit';
 
 /**
  * Une ligne du journal alimentaire. Les valeurs sont COPIÉES au moment de la saisie : modifier
@@ -244,6 +248,8 @@ export interface FoodEntry {
   /** Valeurs d'une portion : permettent de changer `count` après coup. */
   unit: Nutrients;
   method: EntryMethod;
+  /** Saisie rapide (21/11) : ce qui a été choisi (type, quantité, légumes…). Absent sinon. */
+  quick?: QuickInfo;
 }
 
 /** Valeurs d'une entrée (portion × nombre), arrondies à l'unité. */

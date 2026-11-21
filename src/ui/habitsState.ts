@@ -5,10 +5,11 @@
 import { computed, signal } from '@preact/signals';
 import { DEFAULT_PLANS } from '../data/habits';
 import { listReviews, saveReview as storeReview } from '../data/habitsRepo';
+import { listFoodEntriesBetween } from '../data/foodRepo';
 import { getSetting, setSetting } from '../data/settings';
 import { track } from '../data/usage';
 import { addDays, dayKey } from '../domain/days';
-import { planMoment, type DailyReview, type IfThenPlan, type PlanMoment } from '../domain/habits';
+import { PLAN_HISTORY_DAYS, planMoment, type CitedTrigger, type DailyReview, type IfThenPlan, type PlanMoment, type Trigger } from '../domain/habits';
 import { foodDay } from '../domain/nutrition';
 import { badNight } from '../domain/sleep';
 import { nights } from './sleepState';
@@ -27,10 +28,20 @@ export const plans = computed<readonly IfThenPlan[]>(() => userPlans.value ?? DE
 /** Jours qui ont déjà leur bilan. */
 export const reviewedDays = computed(() => new Set(reviews.value.map((r) => r.day)));
 
+/** Déclencheurs notés avec un grignotage (« Noter vite », 21/11) ces 28 derniers jours. */
+export const snackTriggers = signal<CitedTrigger[]>([]);
+
 export async function loadHabitsState(): Promise<void> {
-  const [list, saved] = await Promise.all([listReviews(), getSetting('plans')]);
+  const today = foodDay(new Date());
+  const [list, saved, recent] = await Promise.all([listReviews(), getSetting('plans'), listFoodEntriesBetween(addDays(today, -PLAN_HISTORY_DAYS), today)]);
   reviews.value = list;
   userPlans.value = saved ?? null;
+  snackTriggers.value = recent.flatMap((e) => (e.quick?.type === 'snack' && e.quick.trigger ? [{ day: e.day, trigger: e.quick.trigger }] : []));
+}
+
+/** Un grignotage vient d'être noté avec son déclencheur : il compte pour la rotation des plans. */
+export function noteSnackTrigger(day: string, trigger: Trigger): void {
+  snackTriggers.value = [...snackTriggers.value, { day, trigger }];
 }
 
 /** Enregistre un bilan. `via` : d'où il a été fait (journal d'usage). */
@@ -70,7 +81,7 @@ function lastRideAt(): number | null {
 /** Plan « si… alors… » à rappeler sur l'accueil maintenant (voir planMoment), ou null. */
 export function planMomentNow(now: Date): PlanMoment | null {
   const tired = badNight(nights.value, dayKey(now));
-  return planMoment(now, plans.value, reviews.value, lastRideAt(), new Set(prefs.value.planMomentsSeen), tired);
+  return planMoment(now, plans.value, reviews.value, lastRideAt(), new Set(prefs.value.planMomentsSeen), { badNight: tired, cited: snackTriggers.value });
 }
 
 /** « Vu » : ce moment ne revient pas aujourd'hui. Ne garde que les clés d'hier et d'aujourd'hui. */

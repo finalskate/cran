@@ -81,6 +81,8 @@
  *   plan-moment    rappel d'un plan « si… alors… » sur l'accueil fermé (« Vu ») : moment (après le vélo, soir, journée)
  *   remark-open    panneau « Signaler » ouvert : d'où (écran, séance, raccourci), écran
  *   remark         remarque notée : étiquettes, capture jointe ou non, écran (pas le texte : il est dans sa table)
+ *   quick-meal     repas noté vite : repas, comment (type, habituel, sauté), type, quantité, légumes, protéines
+ *   snack          grignotage noté : taille, sucré / salé / boisson, déclencheur
  *   night          nuit notée le matin (« Ta nuit ? ») : bonne, moyenne, mauvaise
  *   home-defer     carte de l'accueil mise de côté ou remise : carte, geste (balayage, bouton), annulé ou non
  *   home-later     tiroir « Plus tard » de l'accueil ouvert : nombre de cartes dedans

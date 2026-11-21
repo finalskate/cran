@@ -173,10 +173,10 @@ describe('le plan au bon moment', () => {
 
   it('après une mauvaise nuit : le plan « stress, fatigue » toute la journée', () => {
     for (const day of ['2026-11-12', '2026-11-13']) {
-      expect(planMoment(at(`${day}T08:00:00`), all, [], null, none, true)?.plans[0]?.trigger).toBe('stress');
+      expect(planMoment(at(`${day}T08:00:00`), all, [], null, none, { badNight: true })?.plans[0]?.trigger).toBe('stress');
     }
     // Le soir garde ses propres plans.
-    expect(planMoment(at('2026-11-12T19:00:00'), all, [], null, none, true)?.slot).toBe('evening');
+    expect(planMoment(at('2026-11-12T19:00:00'), all, [], null, none, { badNight: true })?.slot).toBe('evening');
   });
 
   it('les déclencheurs cités dans les bilans récents passent en priorité', () => {
@@ -185,6 +185,11 @@ describe('le plan au bon moment', () => {
     // Au-delà de 28 jours, le bilan ne compte plus : retour à la rotation complète.
     const later = ['2026-12-20', '2026-12-21'].map((d) => dayTrigger(all, reviews, d));
     expect(new Set(later)).toEqual(new Set(['boredom', 'stress']));
+  });
+
+  it('un déclencheur noté avec un grignotage compte comme ceux des bilans', () => {
+    const extra = [{ day: '2026-11-10', trigger: 'boredom' as const }];
+    for (const day of ['2026-11-11', '2026-11-12', '2026-11-13']) expect(dayTrigger(all, [], day, extra)).toBe('boredom');
   });
 
   it('sans plan complet pour le moment : rien', () => {

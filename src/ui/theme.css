@@ -3680,8 +3680,13 @@ button.week-strip__day {
   font-size: 14px;
 }
 
-/* « −0,3 kg/sem. » ne se coupe pas en deux. */
-.day-card .body-card__rate {
+/* « 80,3 kg » et « −0,3 kg/sem. » ne se coupent jamais en deux : sur un petit écran, le
+   rythme passe entier à la ligne. */
+.day-card .body-card__value {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
   white-space: nowrap;
 }
 
@@ -3858,4 +3863,149 @@ button.week-strip__day {
   margin-right: 4px;
   border-radius: 3px;
   vertical-align: baseline;
+}
+
+/* ════════════════════════ Noter vite (21/11) ════════════════════════ */
+
+/* Repas du jour dans « Ta journée » : un bouton par repas, le total en dessous. */
+.meals {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.meals__snack {
+  min-height: 40px;
+}
+
+.meals__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.meal-btn {
+  min-height: 52px;
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border-radius: var(--radius-btn);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  font-size: 14px;
+}
+
+.meal-btn--empty {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* Le repas du moment, pas encore noté : l'invitation. */
+.meal-btn--now {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+.meal-btn__name {
+  font-weight: 600;
+}
+
+.meal-btn__sub {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.25;
+}
+
+.meals__total {
+  align-self: flex-end;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-decoration: none;
+  text-align: right;
+}
+
+/* Panneaux « Noter vite » et « Un grignotage ». */
+.quick__group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick__label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.quick__note,
+.quick__hint {
+  margin: 0;
+  font-size: 13px;
+}
+
+.quick__habits {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.quick__habit {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  text-align: left;
+  font-weight: 500;
+}
+
+.quick__habit .muted {
+  flex: 0 0 auto;
+  font-size: 13px;
+}
+
+.quick__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.quick__grid .btn {
+  padding: 0 6px;
+  font-size: 14px;
+}
+
+.quick__toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.quick__toggle {
+  min-height: 44px;
+  border-radius: 22px;
+}
+
+.quick__toggle--veg[aria-pressed='true'] {
+  border-color: var(--ok);
+  background: rgba(134, 239, 172, 0.1);
+  color: var(--ok);
+}
+
+.quick__estimate {
+  color: var(--text);
+}
+
+.quick__footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 14px;
 }

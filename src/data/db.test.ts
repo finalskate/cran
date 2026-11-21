@@ -44,6 +44,7 @@ describe('CranDB', () => {
         'levels',
         'locations',
         'measures',
+        'nights',
         'photos',
         'remarks',
         'reviews',
@@ -307,6 +308,43 @@ describe('migration v7 → v8', () => {
     const context = { screen: 'today', origin: 'screen' as const, appVersion: '1', viewport: '412x915' };
     await v8.remarks.add({ at: 2, text: 'Pas clair', tags: ['unclear'], context });
     expect((await v8.remarks.toArray())[0]?.tags).toEqual(['unclear']);
+  });
+});
+
+describe('migration v8 → v9', () => {
+  it('conserve les données et ajoute les nuits', async () => {
+    const name = `cran-test-${crypto.randomUUID()}`;
+
+    // Base telle qu'un téléphone l'a créée le 11/11 (schéma v8).
+    const v8 = new Dexie(name);
+    v8.version(1).stores({ settings: '&key' });
+    v8.version(2).stores({
+      locations: '&id, order',
+      levels: '&movementId',
+      kneeLogs: '++id, date',
+      workouts: '++id, startedAt',
+      activeSession: '&key',
+    });
+    v8.version(3).stores({ events: '++id, at' });
+    v8.version(4).stores({ foods: '&id, barcode', foodLog: '++id, day', weights: '&day' });
+    v8.version(5).stores({ activities: '++id, day, type' });
+    v8.version(6).stores({ measures: '&id, kind, day', photos: '++id, month, pose', levelHistory: '++id, movementId, at' });
+    v8.version(7).stores({ reviews: '&day' });
+    v8.version(8).stores({ remarks: '++id, at' });
+    await v8.table('weights').put({ day: '2026-11-20', at: '2026-11-20T06:00:00Z', kg: 80 });
+    await v8.table('remarks').add({ at: 1, text: 'Pas clair', tags: [], context: { screen: 'today', origin: 'screen', appVersion: '1', viewport: '412x915' } });
+    v8.close();
+
+    const v9 = new CranDB(name);
+    opened.push(v9);
+    await v9.open();
+    expect(v9.verno).toBe(SCHEMA_VERSION);
+    expect(await v9.weights.count()).toBe(1);
+    expect(await v9.remarks.count()).toBe(1);
+    expect(await v9.nights.count()).toBe(0);
+    await v9.nights.put({ day: '2026-11-21', at: '2026-11-21T06:00:00Z', quality: 'bad' });
+    await v9.nights.put({ day: '2026-11-21', at: '2026-11-21T07:00:00Z', quality: 'ok' });
+    expect((await v9.nights.get('2026-11-21'))?.quality).toBe('ok');
   });
 });
 

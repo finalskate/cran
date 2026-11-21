@@ -7,9 +7,11 @@ import { DEFAULT_PLANS } from '../data/habits';
 import { listReviews, saveReview as storeReview } from '../data/habitsRepo';
 import { getSetting, setSetting } from '../data/settings';
 import { track } from '../data/usage';
-import { addDays } from '../domain/days';
+import { addDays, dayKey } from '../domain/days';
 import { planMoment, type DailyReview, type IfThenPlan, type PlanMoment } from '../domain/habits';
 import { foodDay } from '../domain/nutrition';
+import { badNight } from '../domain/sleep';
+import { nights } from './sleepState';
 import { prefs, setPref } from './state';
 import { activities } from './training';
 
@@ -67,7 +69,8 @@ function lastRideAt(): number | null {
 
 /** Plan « si… alors… » à rappeler sur l'accueil maintenant (voir planMoment), ou null. */
 export function planMomentNow(now: Date): PlanMoment | null {
-  return planMoment(now, plans.value, reviews.value, lastRideAt(), new Set(prefs.value.planMomentsSeen));
+  const tired = badNight(nights.value, dayKey(now));
+  return planMoment(now, plans.value, reviews.value, lastRideAt(), new Set(prefs.value.planMomentsSeen), tired);
 }
 
 /** « Vu » : ce moment ne revient pas aujourd'hui. Ne garde que les clés d'hier et d'aujourd'hui. */

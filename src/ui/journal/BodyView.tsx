@@ -2,6 +2,7 @@
  * Vue « Corps » du Carnet (J3, SPEC §4.9) : tendance de poids, rythme et projection, courbe,
  * tour de taille, photos de progression, historique des pesées et mesures.
  * J3b : tours de bras et de poitrine (mensuels), pour voir le muscle gagné.
+ * 21/11 : les nuits des deux dernières semaines (« Ta nuit ? » sur l'accueil).
  *
  * Ce qui est affiché et commenté, c'est la tendance lissée, jamais la pesée du jour (elle
  * apparaît seulement en petits points sur la courbe, et dans l'historique).
@@ -16,6 +17,7 @@ import { MeasuresSheet } from '../body/MeasuresSheet';
 import { WaistSheet } from '../body/WaistSheet';
 import { LineChart, type LinePoint } from '../components/LineChart';
 import { WeighSheet } from '../food/WeighSheet';
+import { NightsCard } from './NightsCard';
 import { arms, chests, measures, photos, removeMeasure, removeWeight, summary, trend, waists } from '../bodyState';
 import { weights } from '../foodState';
 import { formatApproxDate, formatCm, formatKg, formatMonthLower, formatShortDate, formatSigned } from '../format';
@@ -152,6 +154,8 @@ export function BodyView() {
           </div>
         </section>
       )}
+
+      <NightsCard today={today} />
 
       <section class="card" aria-labelledby="waist-title">
         <div class="row" style={{ minHeight: 0 }}>

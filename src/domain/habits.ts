@@ -211,7 +211,9 @@ export function planMomentKey(day: string, slot: PlanSlot): string {
 /**
  * Plan à rappeler maintenant, ou null. Priorité : après le vélo, puis le soir, puis la journée.
  *  - `lastRideAt` : heure (ms) de la dernière saisie d'un vélotaf ou d'une séance de vélo ;
- *  - `seen` : clés des moments déjà fermés (`planMomentKey`).
+ *  - `seen` : clés des moments déjà fermés (`planMomentKey`) ;
+ *  - `badNight` : la nuit dernière a été notée mauvaise (21/11) → en journée, le plan
+ *    « stress, fatigue » passe avant la rotation : c'est le jour où il sert.
  * Seuls les plans complets (« si » et « alors » remplis) sont montrés ; sans plan, rien.
  */
 export function planMoment(
@@ -220,6 +222,7 @@ export function planMoment(
   reviews: readonly DailyReview[],
   lastRideAt: number | null,
   seen: ReadonlySet<string>,
+  badNight = false,
 ): PlanMoment | null {
   const day = foodDay(now);
   const h = now.getHours();
@@ -237,6 +240,8 @@ export function planMoment(
   if (h >= EVENING_PLAN_HOUR || h < 4) return pick('evening', EVENING_TRIGGERS);
   if (h < DAY_PLAN_HOUR) return null;
 
+  const tired = badNight ? pick('day', ['stress']) : null;
+  if (tired) return tired;
   const trigger = dayTrigger(usable, reviews, day);
   return trigger ? pick('day', [trigger]) : null;
 }

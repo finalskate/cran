@@ -24,11 +24,13 @@
  *    (changements de niveau, reconstitués depuis le journal d'usage pour le passé).
  *  - v7 (J4B) : reviews (bilan alimentaire du soir, un par jour).
  *  - v8 (retouche du 11/11) : remarks (remarques d'usage, avec contexte et capture facultative).
+ *  - v9 (accueil du 21/11) : nights (« Ta nuit ? », une par jour de réveil).
  */
 import Dexie, { type Table, type Transaction } from 'dexie';
 import type { WorkoutRecord } from '../domain/history';
 import type { MeasureEntry, PhotoMeta } from '../domain/body';
 import type { DailyReview } from '../domain/habits';
+import type { NightEntry } from '../domain/sleep';
 import type { Remark } from '../domain/remarks';
 import type { LevelHistoryEntry } from '../domain/progression';
 import type { Activity, KneeLog } from '../domain/recovery';
@@ -41,7 +43,7 @@ import { DEFAULT_LOCATIONS } from './equipment';
 export const DB_NAME = 'cran';
 
 /** Version courante du schéma. Doit toujours égaler la plus haute version déclarée ci-dessous. */
-export const SCHEMA_VERSION = 8;
+export const SCHEMA_VERSION = 9;
 
 /** Un réglage : paire clé → valeur (voir src/data/settings.ts pour les clés typées). */
 export interface SettingRow {
@@ -111,6 +113,7 @@ export class CranDB extends Dexie {
   levelHistory!: Table<LevelHistoryEntry, number>;
   reviews!: Table<DailyReview, string>;
   remarks!: Table<Remark, number>;
+  nights!: Table<NightEntry, string>;
 
   /** Le nom est paramétrable pour que les tests utilisent chacun leur propre base. */
   constructor(name: string = DB_NAME) {
@@ -176,6 +179,12 @@ export class CranDB extends Dexie {
     //  index sur l'heure (liste dans Réglages, « nouvelles depuis le dernier export »).
     this.version(8).stores({
       remarks: '++id, at',
+    });
+
+    // v9 — sommeil (accueil du 21/11). Nouvelle table vide : rien à transformer.
+    //  - nights : une nuit par jour de réveil (clé = jour).
+    this.version(9).stores({
+      nights: '&day',
     });
 
     // Base créée directement en v2 (nouvelle installation) : même contenu de départ.

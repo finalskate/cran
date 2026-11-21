@@ -171,6 +171,14 @@ describe('le plan au bon moment', () => {
     expect(new Set([a.plans[0]!.trigger, b.plans[0]!.trigger])).toEqual(new Set(['boredom', 'stress']));
   });
 
+  it('après une mauvaise nuit : le plan « stress, fatigue » toute la journée', () => {
+    for (const day of ['2026-11-12', '2026-11-13']) {
+      expect(planMoment(at(`${day}T08:00:00`), all, [], null, none, true)?.plans[0]?.trigger).toBe('stress');
+    }
+    // Le soir garde ses propres plans.
+    expect(planMoment(at('2026-11-12T19:00:00'), all, [], null, none, true)?.slot).toBe('evening');
+  });
+
   it('les déclencheurs cités dans les bilans récents passent en priorité', () => {
     const reviews = [review('2026-11-10', 'stress')];
     for (const day of ['2026-11-11', '2026-11-12', '2026-11-13']) expect(dayTrigger(all, reviews, day)).toBe('stress');

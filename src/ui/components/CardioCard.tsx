@@ -5,6 +5,8 @@
  * (vélo, tapis de course) ; l'autre se montre d'un geste (« Plutôt du vélo ? »).
  * Le bouton ouvre la saisie, pré-remplie avec la suggestion.
  * 14/11 : « Garmin propose une séance ? » ouvre l'arbitrage de la séance suggérée par la montre.
+ * 21/11 : `compact` (carte « Maintenant » de l'accueil, un jour de course) ne garde que la
+ * première ligne de conseil ; la carte complète reste dans « Plus tard » les autres jours.
  */
 import { useState } from 'preact/hooks';
 import { dayKey, dayToDate } from '../../domain/days';
@@ -18,11 +20,13 @@ interface Props {
   /** Cardio proposé (phase et matériel du lieu choisi). */
   choice: CardioChoice;
   onLog: (type: 'run' | 'bike') => void;
+  /** Seulement la première ligne de conseil (accueil, « Maintenant »). */
+  compact?: boolean;
 }
 
 const SWITCH_LABEL = { run: 'Plutôt courir ?', bike: 'Plutôt du vélo ?' } as const;
 
-export function CardioCard({ choice, onLog }: Props) {
+export function CardioCard({ choice, onLog, compact = false }: Props) {
   const [switched, setSwitched] = useState(false);
   const [garmin, setGarmin] = useState(false);
   const now = new Date();
@@ -44,7 +48,7 @@ export function CardioCard({ choice, onLog }: Props) {
         <span id="cardio-title" class="card__title">
           {advice.title}
         </span>
-        {advice.lines.map((l) => (
+        {(compact ? advice.lines.slice(0, 1) : advice.lines).map((l) => (
           <span key={l} class="muted">
             {l}
           </span>
@@ -75,7 +79,7 @@ export function CardioCard({ choice, onLog }: Props) {
       <span id="cardio-title" class="card__title">
         {advice.title}
       </span>
-      {advice.lines.map((l) => (
+      {(compact ? advice.lines.slice(0, 1) : advice.lines).map((l) => (
         <span key={l} class="muted">
           {l}
         </span>

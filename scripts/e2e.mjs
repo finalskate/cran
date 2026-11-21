@@ -17,6 +17,8 @@
  * Puis J6b : test pompes du mois, badges et puzzle, bilan du dimanche (horloge avancée).
  * Retouche du 11/11 : plan « après le vélo » sur l'accueil (« Vu »), remarque signalée avec une
  * capture (bouton de l'accueil), liste dans Réglages, remarque conservée par l'export → import.
+ * Accueil du 21/11 : carte rangée d'un balayage puis « Annuler », « Ta nuit ? » (le matin),
+ * « Plus tard » déplié là où une carte y attend, nuits dans Carnet › Corps.
  * Échoue si une erreur JavaScript apparaît ou si le bilan n'est pas atteint.
  * Les captures d'écran sont écrites dans `.e2e/` (ignoré par git) pour vérification visuelle.
  *
@@ -75,8 +77,14 @@ try {
     await wait(150);
   }
 
+  /** Accueil (21/11) : déplie « Plus tard · n » s'il est replié (les cartes rangées n'y sont rendues qu'ouvertes). */
+  async function openLater(pg = page) {
+    await pg.evaluate(() => document.querySelector('.later-toggle[aria-expanded="false"]')?.click());
+    await new Promise((r) => setTimeout(r, 150));
+  }
+
   await page.goto(BASE, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(() => document.body.innerText.includes('Démarrer la séance'));
+  await page.waitForFunction(() => !!document.querySelector('.start-row .cta:not(:disabled)'));
   await shot('01-accueil-vierge');
 
   // Niveaux : pompes au niveau 6 (archer), tirer vertical au niveau 4 (tractions).
@@ -104,7 +112,35 @@ try {
   await wait(200);
   await shot('03-accueil');
 
-  await click('Démarrer la séance');
+  // Accueil du 21/11 : une carte de « Maintenant » se range d'un balayage, « Annuler » la ramène.
+  const firstLabel = () => page.evaluate(() => document.querySelector('.swipe-card .card__label')?.textContent ?? null);
+  const swipeBox = await (await page.$('.swipe-card'))?.boundingBox();
+  if (swipeBox) {
+    const label = await firstLabel();
+    const y = swipeBox.y + Math.min(swipeBox.height / 2, 60);
+    await page.mouse.move(swipeBox.x + swipeBox.width * 0.7, y);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) await page.mouse.move(swipeBox.x + swipeBox.width * (0.7 - i * 0.08), y);
+    await page.mouse.up();
+    await page.waitForFunction(() => !!document.querySelector('.undo-toast'), { timeout: 3000 });
+    await wait(300);
+    await shot('03b-accueil-range');
+    if ((await firstLabel()) === label) throw new Error('balayage : la carte n’a pas été rangée');
+    if (!(await page.evaluate(() => document.querySelector('.later-toggle')?.textContent.includes('Plus tard')))) throw new Error('balayage : « Plus tard » absent');
+    await page.click('.undo-toast .btn');
+    await wait(300);
+    if ((await firstLabel()) !== label) throw new Error('« Annuler » : la carte n’est pas revenue');
+  }
+  // « Ta nuit ? » (le matin seulement) : une mauvaise nuit fait remonter le plan « stress, fatigue ».
+  if (await page.$('[aria-label="Ta nuit"]')) {
+    await page.evaluate(() => [...document.querySelectorAll('[aria-label="Ta nuit"] button')].find((b) => b.textContent === 'Mauvaise').click());
+    await wait(300);
+    if (await page.$('[aria-label="Ta nuit"]')) throw new Error('« Ta nuit ? » : toujours posée après la réponse');
+    const h = new Date().getHours();
+    if (h >= 5 && h < 18 && !(await page.$('.plan-hint[aria-label*="Stress"]'))) throw new Error('mauvaise nuit : plan « stress, fatigue » non rappelé');
+  }
+
+  await page.click('.start-row .cta');
   await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
   await click('3');
   await shot('04-genou');
@@ -250,7 +286,11 @@ try {
   await page.goto(BASE);
   await wait(300);
   await shot('14a-accueil-seance-faite', true);
-  await click('2e séance');
+  // Accueil du 21/11 : la zone Démarrer s'efface, la 2e séance est dans « Plus tard ».
+  if (await page.evaluate(() => !!document.querySelector('.bottom-zone'))) throw new Error('accueil : zone Démarrer encore là après la séance');
+  await openLater();
+  await shot('14b-accueil-plus-tard', true);
+  await click('Une 2e séance');
   await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
   await click('Voir la séance');
   await page.waitForFunction(() => document.body.innerText.includes('Séance jugée'), { timeout: 5000 });
@@ -500,6 +540,8 @@ try {
   await page.goto(BASE);
   await wait(300);
   const content = () => page.evaluate(() => document.body.textContent);
+  // La course du jour est dans « Maintenant » ; un autre jour, la prochaine sortie est dans « Plus tard ».
+  await openLater();
   if (!(await content()).includes('Prochaine sortie')) throw new Error('accueil : carte « Prochaine sortie » absente');
   await shot('80-accueil-semaine', true);
   // Séance Garmin (14/11) : en semaine 1, un seuil proposé par la montre se court en aisance.
@@ -540,10 +582,11 @@ try {
   if (marks.cardio !== 1 || marks.commute !== 1) throw new Error(`semaine de l’accueil : ${JSON.stringify(marks)}`);
   await shot('84-accueil-apres-course', true);
   // Vélotaf noté à l'instant : le plan « après le vélo » est rappelé, « Vu » le range pour la journée.
-  if (!(await content()).includes('Après le vélo')) throw new Error('accueil : plan « après le vélo » absent');
-  await page.evaluate(() => [...document.querySelectorAll('[aria-labelledby="plan-moment-title"] button')].find((b) => b.textContent === 'Vu').click());
+  // Accueil du 21/11 : le plan n'est plus une carte mais une ligne, masquée d'un geste.
+  if (!(await page.evaluate(() => !!document.querySelector('.plan-hint[aria-label*="Après le vélo"]')))) throw new Error('accueil : plan « après le vélo » absent');
+  await page.click('.plan-hint__close');
   await wait(200);
-  if ((await content()).includes('Après le vélo')) throw new Error('accueil : plan « après le vélo » toujours là après « Vu »');
+  if (await page.evaluate(() => !!document.querySelector('.plan-hint[aria-label*="Après le vélo"]'))) throw new Error('accueil : plan « après le vélo » toujours là après l’avoir masqué');
   await page.evaluate(() => document.querySelector('.week-card').click());
   await page.waitForFunction(() => document.body.textContent.includes('Ce que j’ai fait'));
   await wait(300);
@@ -663,6 +706,19 @@ try {
   await click('Tout');
   await wait(200);
   await shot('51-corps-tout', true);
+  // Nuits (21/11) : deux semaines notées dont 8 mauvaises → la case « Nuits » et la phrase sobre.
+  await withDb(async (idb, day) => {
+    const tx = idb.transaction('nights', 'readwrite');
+    const list = ['bad', 'ok', 'bad', 'good', 'bad', 'bad', 'ok', 'bad', 'bad', 'good', 'bad', 'ok', 'bad'];
+    list.forEach((quality, i) => tx.objectStore('nights').put({ day: day(i - 13), at: new Date().toISOString(), quality }));
+    await new Promise((ok) => (tx.oncomplete = ok));
+  });
+  await page.reload();
+  await page.waitForFunction(() => !!document.getElementById('nights-title'), { timeout: 5000 });
+  await page.evaluate(() => document.getElementById('nights-title').scrollIntoView({ block: 'center' }));
+  await wait(200);
+  await shot('51b-corps-nuits');
+  if (!(await text()).includes('en parler à un médecin')) throw new Error('nuits : la suggestion sobre n’apparaît pas après 8 mauvaises nuits');
 
   await page.goto(BASE);
   await wait(300);
@@ -778,12 +834,13 @@ try {
   // Aperçu à la maison, 30 min, priorité haut du corps : un bloc « Bras » après les principaux.
   await page.goto(BASE);
   await wait(300);
+  await openLater();
   const homeSelects = await page.$$('select');
   await homeSelects[0].select('home');
   await homeSelects[1].select('30');
   await wait(200);
   // Une séance est déjà faite aujourd'hui : l'accueil propose « Une 2e séance quand même ».
-  await click('2e séance');
+  await click('Une 2e séance');
   await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
   await click('2');
   await click('Voir la séance');
@@ -816,7 +873,8 @@ try {
   await page.click('dialog[open] [aria-label="Fermer"]');
   await page.goto(BASE);
   await wait(300);
-  await click('2e séance');
+  await openLater();
+  await click('Une 2e séance');
   await page.waitForFunction(() => document.body.innerText.includes('Ton genou'));
   await click('2');
   await click('Voir la séance');
@@ -871,6 +929,7 @@ try {
   await wait(300);
   await page.goto(BASE);
   await wait(400);
+  await openLater();
   const home = await page.evaluate(() => document.body.textContent);
   for (const t of ['· Éloigné', 'mode cantine', 'vélo']) if (!home.includes(t)) throw new Error(`accueil en éloignement : « ${t} » absent`);
   if (home.includes('Noter une course')) throw new Error('accueil en éloignement : course proposée sans tapis de course');
@@ -953,6 +1012,7 @@ try {
   await wait(300);
   await page.goto(BASE);
   await page.waitForFunction(() => document.body.textContent.includes('Objectif suspendu'), { timeout: 5000 });
+  await openLater();
   await shot('98-accueil-pause', true);
   // Le bouton de la carte pause (pas celui de la séance en cours, qui porte le même nom).
   await page.evaluate(() => document.querySelector('.pause-card .btn').click());
@@ -979,9 +1039,12 @@ try {
   );
   await page.goto(BASE);
   await page.reload();
+  // La sauvegarde n'est jamais urgente : elle attend dans « Plus tard ».
+  await page.waitForFunction(() => !!document.querySelector('.later-toggle'), { timeout: 5000 });
+  await openLater();
   await page.waitForFunction(() => document.body.textContent.includes('Dernière sauvegarde il y a 10 jours'), { timeout: 5000 });
   await shot('100-accueil-sauvegarde', true);
-  await click('Plus tard');
+  await page.evaluate(() => [...document.querySelectorAll('[aria-labelledby="backup-title"] button')].find((b) => b.textContent === 'Plus tard').click());
   await page.waitForFunction(() => !document.body.textContent.includes('Dernière sauvegarde'), { timeout: 5000 });
 
   // Remarque d'usage : bulle de l'accueil → texte, étiquette, capture jointe → liste dans Réglages.
@@ -1044,6 +1107,8 @@ try {
   // ─── J6b : test pompes, badges et puzzle, bilan du dimanche ───
   // Test pompes du mois : la carte est sur l'accueil (aucun test ce mois-ci, pas de pompes hier).
   await page.goto(BASE);
+  await page.waitForFunction(() => !!document.querySelector('.day-card'), { timeout: 5000 });
+  await openLater();
   await page.waitForFunction(() => document.body.textContent.includes('Test pompes du mois'), { timeout: 5000 });
   await shot('103-accueil-test-pompes', true);
   await click('Faire le test');
@@ -1088,6 +1153,8 @@ try {
     globalThis.Date = Fake;
   }, sunday);
   await later.goto(BASE, { waitUntil: 'networkidle0' });
+  await later.waitForFunction(() => !!document.querySelector('.day-card'), { timeout: 5000 });
+  await openLater(later);
   await later.waitForFunction(() => document.body.textContent.includes('Bilan de la semaine'), { timeout: 5000 });
   await later.screenshot({ path: `${OUT}/107-accueil-bilan-dimanche.png`, fullPage: true });
   await later.evaluate(() => document.querySelector('.review-card').click());

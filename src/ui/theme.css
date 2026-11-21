@@ -3474,3 +3474,388 @@ button.week-strip__day {
 .remark-item--new {
   border-left: 3px solid var(--accent);
 }
+
+/* ════════════════════════ Accueil repensé (21/11) ════════════════════════ */
+
+/* Titres de section : « Maintenant », « Ta journée ». */
+.home-section {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Carte qu'on peut mettre de côté : le fond « Plus tard » apparaît sous la carte qui glisse.
+   `pan-y` : le défilement vertical reste au navigateur, le geste horizontal revient à la carte. */
+.swipe-card {
+  position: relative;
+  touch-action: pan-y;
+  border-radius: var(--radius-card);
+}
+
+.swipe-card__behind {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  padding-right: 24px;
+  border-radius: var(--radius-card);
+  background: rgba(251, 146, 60, 0.16);
+  color: var(--accent-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.swipe-card__body {
+  position: relative;
+  transition: transform 0.18s ease-out;
+}
+
+.swipe-card__body--dragging {
+  transition: none;
+}
+
+/* La carte reste opaque pendant le geste (le fond « Plus tard » ne doit pas se lire au travers). */
+.swipe-card__body > .card {
+  background: var(--surface-solid);
+}
+
+/* Le libellé de la carte laisse la place au bouton « Plus tard », en haut à droite. */
+.swipe-card__body > .card > .card__label:first-child {
+  padding-right: 92px;
+}
+
+.swipe-card__later {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* Carte du matin : nuit et pesée. */
+.morning-card__night {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.morning-card__weigh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.morning-card__weigh-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.morning-card__sub {
+  font-weight: 600;
+}
+
+.morning-card__hint {
+  font-size: 14px;
+}
+
+/* Bouton contour orange (action d'une carte, moins forte que le bouton principal). */
+.btn--accent-line {
+  flex: 0 0 auto;
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+/* Ligne du plan « si… alors… » : un rappel, pas une carte. */
+.plan-hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.plan-hint__text {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+  border: none;
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.plan-hint__icon {
+  flex: 0 0 auto;
+  color: var(--accent-soft);
+}
+
+.plan-hint__when {
+  color: var(--text);
+}
+
+.plan-hint__close {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+/* Bloc « Ta journée » : un seul cadre, des lignes séparées par un filet. */
+.day-card {
+  gap: 12px;
+}
+
+.day-card__rule {
+  width: 100%;
+  margin: 0;
+  border: none;
+  border-top: 1px solid var(--border);
+}
+
+.day-card__name {
+  font-weight: 600;
+}
+
+.day-card__week {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+}
+
+.done-line {
+  font-size: 14px;
+}
+
+.done-line__check {
+  color: var(--ok);
+  font-weight: 600;
+}
+
+/* Ligne « libellé … valeur → » du bloc (repas, poids). */
+.day-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.day-row__value {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.body-card__line {
+  font-size: 14px;
+}
+
+/* « −0,3 kg/sem. » ne se coupe pas en deux. */
+.day-card .body-card__rate {
+  white-space: nowrap;
+}
+
+.day-card__log {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-card__log .btn--small {
+  min-height: 40px;
+}
+
+/* « Plus tard · n » : replié par défaut. */
+.later-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: var(--tap);
+  padding: 8px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border);
+  background: transparent;
+  text-align: left;
+  font-size: 14px;
+}
+
+.later-toggle__count {
+  font-weight: 600;
+}
+
+.later-toggle__chevron {
+  flex: 0 0 auto;
+  color: var(--text-muted);
+  transition: transform 0.18s;
+}
+
+.later-toggle[aria-expanded='true'] .later-toggle__chevron {
+  transform: rotate(180deg);
+}
+
+.later-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Zone du bas sur une ligne : lieu, durée, puis le bouton qui prend le reste. */
+.start-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+/* Puce de choix à la largeur de la valeur affichée (lieu, durée). La vraie liste est posée
+   par-dessus, transparente : le toucher l'ouvre, le lecteur d'écran la lit. */
+.fit-chip {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-solid);
+  font-weight: 600;
+}
+
+.fit-chip__value {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fit-chip select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  font-size: 16px; /* sous 16 px, certains navigateurs zooment au toucher */
+}
+
+.fit-chip:focus-within {
+  outline: 2px solid var(--accent-soft);
+  outline-offset: 2px;
+}
+
+/* 2e séance : les choix sur une ligne, le bouton en dessous sur toute la largeur. */
+.start-row--stack {
+  flex-wrap: wrap;
+}
+
+.start-row--stack .start-row__go {
+  flex-basis: 100%;
+}
+
+/* Le bouton prend la place qui reste, sans jamais descendre sous la largeur de « Démarrer » ;
+   ce sont les puces qui se tronquent (…) sur un très petit écran. */
+.start-row__go {
+  flex: 1 0 120px;
+  width: auto;
+  min-width: 0;
+  padding: 0 14px;
+}
+
+.start-row .cta {
+  min-height: 56px;
+  border-radius: 18px;
+}
+
+.start-row .cta__title {
+  font-size: 19px;
+}
+
+/* « Rangé dans Plus tard · Annuler », au-dessus de la zone du bas. */
+.undo-toast {
+  position: fixed;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(env(safe-area-inset-bottom) + var(--nav-height) + 84px);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 8px 8px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-strong);
+  background: #1a1018;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  font-size: 14px;
+}
+
+/* Nuits (Carnet › Corps) : une case par jour. Les trois teintes diffèrent aussi en clarté
+   (vert clair, rose, gris sombre) ; la légende et le décompte disent la même chose en mots. */
+.nights-strip {
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.night {
+  display: block;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.night--good {
+  background: var(--ok);
+  border-color: transparent;
+}
+
+.night--ok {
+  background: #6b5a62;
+  border-color: transparent;
+}
+
+.night--bad {
+  background: var(--accent-2);
+  border-color: transparent;
+}
+
+.night--legend {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 4px;
+  border-radius: 3px;
+  vertical-align: baseline;
+}

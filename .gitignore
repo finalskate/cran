@@ -16,3 +16,6 @@ Thumbs.db
 
 # Captures du test de bout en bout
 .e2e/
+
+# Réglages locaux de Claude Code (autorisations personnelles)
+.claude/settings.local.json

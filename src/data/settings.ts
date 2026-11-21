@@ -4,6 +4,7 @@
  */
 import type { AdjustmentRecord, DayOverride } from '../domain/adaptive';
 import type { IfThenPlan } from '../domain/habits';
+import type { HintsSeen } from '../domain/home';
 import type { PhaseEntry, PhaseId } from '../domain/phase';
 import type { GoalChange, PauseEntry } from '../domain/regularity';
 import type { DayChoice } from '../domain/weekPlan';
@@ -85,6 +86,10 @@ export interface SettingsMap {
   pushupTestSnoozed: string;
   /** Rappels de plan « si… alors… » fermés sur l'accueil (clés « jour:moment », voir planMomentKey). */
   planMomentsSeen: string[];
+  /** Cartes de l'accueil mises de côté (clés d'occurrence, voir src/domain/home.ts). */
+  homeDeferred: string[];
+  /** Textes d'aide déjà montrés (ils s'effacent après quelques jours, voir hintVisible). */
+  hintsSeen: HintsSeen;
 }
 
 export type SettingKey = keyof SettingsMap;
@@ -117,6 +122,8 @@ export const SETTING_DEFAULTS = {
   weekReviewDone: '',
   pushupTestSnoozed: '',
   planMomentsSeen: [],
+  homeDeferred: [],
+  hintsSeen: {},
   // Dates : vides tant qu'elles n'ont pas été écrites (installedAt l'est au 1er lancement).
   installedAt: '',
   lastExportAt: '',
